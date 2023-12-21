@@ -7,9 +7,14 @@ export async function readTable(table: Table) {
 
   let rows = [];
   for (const record of records) {
-    let row = { fields: {} };
+    let row = { fields: {}, recordId: record.id };
     for (const header of table.fields) {
-      row.fields[header.name] = record.getCellValue(header);
+      row.fields[header.name] = {
+        "@context": header?.options?.linkedTableId,
+        type: header.type,
+        data: record.getCellValue(header),
+        createdAt: record.createdTime,
+      };
     }
     rows.push(row);
   }
@@ -19,10 +24,23 @@ export async function readTable(table: Table) {
 
 export async function exportData(base: Base) {
   let data = {};
+  // const tables = [base.getTableByNameIfExists("Theme")];
+  // for (const table of tables) {
+  //   data[table.name] = {
+  //     id: table.id,
+  //     name: table.name,
+  //     rows: await readTable(table),
+  //   };
+  // }
   for (const table of base.tables) {
-    data[table.name] = await readTable(table);
+    data[table.name] = {
+      id: table.id,
+      name: table.name,
+      rows: await readTable(table),
+    };
   }
-  downloadJSONLD(data, "data.jsonld");
+  const timestamp = new Date().toISOString();
+  downloadJSONLD(data, `${base.name}-${timestamp}.jsonld`);
   return data;
 }
 
