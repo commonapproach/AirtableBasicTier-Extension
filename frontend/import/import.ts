@@ -19,6 +19,14 @@ export async function importData(jsonData: any, base: Base) {
     }
   }
 
+  // Check if it can Create Tables Fieds
+  for (const tableName in jsonData) {
+    const table = base.getTableByNameIfExists(tableName);
+    if (table) {
+      await checkIfCancreateTableFields(table, jsonData[tableName]);
+    }
+  }
+
   // Create Tables Fieds
   for (const tableName in jsonData) {
     const table = base.getTableByNameIfExists(tableName);
@@ -118,20 +126,13 @@ async function createTable(base: Base, tableData: TableInterface): Promise<void>
   }
 }
 
-async function createTableFields2(base: Base, table: Table, tableData: TableInterface): Promise<void> {
+async function checkIfCancreateTableFields(table: Table, tableData: TableInterface): Promise<void> {
   for (const field of tableData.fields) {
-    if (!table.getFieldByNameIfExists(field.name)) {
-      if (field.type === "multipleRecordLinks") {
-        let tableId = base.getTableByNameIfExists(field.linkedTableName)?.id;
-        if (!tableId) {
-          alert(`Error: Linked Table named ${field.linkedTableName} not found`);
-        }
-        if (SWITCHED_TABLE_IDS.hasOwnProperty(field.linkedTableId)) {
-          tableId = SWITCHED_TABLE_IDS[field.linkedTableId];
-        }
-        await table.createFieldAsync(field.name, field.type as FieldType, { linkedTableId: tableId });
-      } else {
-        await table.createFieldAsync(field.name, field.type as FieldType);
+    if (table.getFieldByNameIfExists(field.name)) {
+      if (field.type !== table.getFieldByNameIfExists(field.name).type) {
+        throw new Error(
+          `Field Type Mismatch, please delete the field ${field.name} on table ${table.name} and try again`
+        );
       }
     }
   }
@@ -148,15 +149,10 @@ async function createTableFields(base: Base, table: Table, tableData: TableInter
         if (SWITCHED_TABLE_IDS.hasOwnProperty(field.linkedTableId)) {
           tableId = SWITCHED_TABLE_IDS[field.linkedTableId];
         }
+        console.log(`creating field ${field.name} on table ${table.name}`);
         await table.createFieldAsync(field.name, field.type as FieldType, { linkedTableId: tableId });
       } else {
         await table.createFieldAsync(field.name, field.type as FieldType);
-      }
-    } else {
-      if (field.type !== table.getFieldByNameIfExists(field.name).type) {
-        throw new Error(
-          `Field Type Mismatch, please delete the field ${field.name} on table ${table.name} and try again`
-        );
       }
     }
   }
