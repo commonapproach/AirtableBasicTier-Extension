@@ -1,8 +1,13 @@
-import { RecordInterface } from "./record.interface";
-
 export type TableInterface = {
-  id: string;
-  name: string;
-  rows: RecordInterface[];
-  fields: { name: string; type: string; isPrimary: boolean; linkedTableId?: string; linkedTableName?: string }[];
+  "@context": string;
+  "@type": string;
+  "@id": string;
+  [key: string]:
+    | string
+    | string[]
+    | {
+        "@context": string;
+        "@type": string;
+        numerical_value: string;
+      };
 };

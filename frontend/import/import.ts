@@ -1,170 +1,223 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable no-prototype-builtins */
 import Base from "@airtable/blocks/dist/types/src/models/base";
-import Table from "@airtable/blocks/dist/types/src/models/table";
-import { LinkedCellInterface, SimpleCellInterface, TableInterface } from "../domain/shared";
+import {
+  LinkedCellInterface,
+  SimpleCellInterface,
+  TableInterface,
+} from "../domain/shared";
 import { FieldType } from "@airtable/blocks/dist/types/src/types/field";
-import { executeInBatches } from "../utils";
+import { executeInBatches, getActualFieldType } from "../utils";
+import {
+  Indicator,
+  IndicatorReport,
+  Organization,
+  Outcome,
+  Theme,
+} from "../domain/models";
 
-const SWITCHED_LINK_IDS: { [key: string]: string } = {};
-const SWITCHED_TABLE_IDS: { [key: string]: string } = {};
-const CREATED_FIELDS_IDS: string[] = [];
+const CREATED_FIELDS_IDS: { [key: string]: string } = {};
+
+const map = {
+  Organization: Organization,
+  Theme: Theme,
+  Outcome: Outcome,
+  Indicator: Indicator,
+  IndicatorReport: IndicatorReport,
+};
 
 export async function importData(jsonData: any, base: Base) {
   // Create Tables if they don't exist
-  for (const tableName in jsonData) {
-    const table = base.getTableByNameIfExists(tableName);
-    if (!table) {
-      await createTable(base, jsonData[tableName]);
-    }
-  }
-
-  // Check if it can Create Tables Fieds
-  for (const tableName in jsonData) {
-    const table = base.getTableByNameIfExists(tableName);
-    if (table) {
-      await checkIfCancreateTableFields(table, jsonData[tableName]);
-    }
-  }
-
-  // Create Tables Fieds
-  for (const tableName in jsonData) {
-    const table = base.getTableByNameIfExists(tableName);
-    if (table) {
-      await createTableFields(base, table, jsonData[tableName]);
-    }
-  }
+  await createTables(base, jsonData);
 
   // Write Simple Records to Tables
-  for (const tableName in jsonData) {
-    const table = base.getTableByNameIfExists(tableName);
-    if (table) {
-      await writeTable(table, jsonData[tableName]);
-    }
-  }
+  await writeTable(base, jsonData);
 
   // Write Linked Records to Tables
-  for (const tableName in jsonData) {
-    const table = base.getTableByNameIfExists(tableName);
-    if (table) {
-      await writeTableLinked(table, jsonData[tableName]);
-    }
-  }
+  await writeTableLinked(base, jsonData);
 
   // Delete All old Records
-  for (const tableName in jsonData) {
-    const table = base.getTableByNameIfExists(tableName);
-    if (table) {
-      await deleteTableRecords(table);
-    }
-  }
+  await deleteTableRecords(base, jsonData);
 
   return true;
 }
 
-async function writeTable(table: Table, data: TableInterface) {
-  let simpleRows: { fields: { [key: string]: SimpleCellInterface } }[] = [];
+async function writeTable(
+  base: Base,
+  tableData: TableInterface[]
+): Promise<void> {
+  for (const data of tableData) {
+    const tableName = data["@type"].split(":")[1];
+    const recordId = data["@id"];
+    const table = base.getTableByNameIfExists(tableName);
 
-  data.rows.forEach((row) => {
-    let simpleRecords: { [key: string]: SimpleCellInterface } = {};
-
-    Object.entries(row.fields).forEach(([key, value]) => {
-      if (value.type !== "multipleRecordLinks") {
-        simpleRecords[key] = value?.data as SimpleCellInterface;
-        SWITCHED_LINK_IDS[row.recordId] = row.recordId;
+    let record = {};
+    Object.entries(data).forEach(([key, value]) => {
+      const cid = new map[tableName]();
+      if (
+        cid.getFieldByName(key)?.type !== "link" &&
+        key !== "@type" &&
+        key !== "@context"
+      ) {
+        if (cid.getFieldByName(key)?.type === "i72") {
+          // @ts-ignore
+          record[key] = value?.numerical_value;
+        } else {
+          record[key] = value;
+        }
       }
     });
 
-    simpleRows.push({ fields: simpleRecords });
-  });
-  let createdIds: string[] = [];
-
-  await executeInBatches(simpleRows, async (batch) => {
-    const resp = await table.createRecordsAsync(batch);
-    createdIds.push(...resp);
-  });
-  CREATED_FIELDS_IDS.push(...createdIds);
-
-  data.rows.map((row, index) => {
-    SWITCHED_LINK_IDS[row.recordId] = createdIds[index];
-  });
+    const respId = await table.createRecordAsync(record);
+    CREATED_FIELDS_IDS[recordId] = respId;
+  }
 }
 
-async function writeTableLinked(table: Table, data: TableInterface) {
-  let linkedRows: { id: string; fields: { [key: string]: LinkedCellInterface[] } }[] = [];
+async function writeTableLinked(
+  base: Base,
+  tableData: TableInterface[]
+): Promise<void> {
+  for (const data of tableData) {
+    const tableName = data["@type"].split(":")[1];
+    const recordId = data["@id"];
+    const table = base.getTableByNameIfExists(tableName);
 
-  data.rows.forEach((row) => {
-    let linkedRecords: { [key: string]: LinkedCellInterface[] } = {};
-    Object.entries(row.fields).forEach(([key, value]) => {
-      if (value.type === "multipleRecordLinks") {
-        linkedRecords[key] = value?.data as LinkedCellInterface[];
+    let record = {};
+    let id: string;
+    Object.entries(data).forEach(([key, value]) => {
+      const cid = new map[tableName]();
+      if (
+        cid.getFieldByName(key)?.type === "link" &&
+        key !== "@type" &&
+        key !== "@context"
+      ) {
+        // Using the function to create the new array
+        id = CREATED_FIELDS_IDS[recordId];
+        if (!value) return;
+
+        const mappedValues = value
+          // @ts-ignore
+          ?.filter((uri) => CREATED_FIELDS_IDS[uri])
+          ?.map((uri) => CREATED_FIELDS_IDS[uri]);
+        record[key] = mappedValues.map((id: string) => ({ id }));
       }
     });
-    linkedRows.push({ id: row.recordId, fields: linkedRecords });
-  });
 
-  linkedRows.map((row) => {
-    row.id = SWITCHED_LINK_IDS[row.id];
-    Object.entries(row.fields).forEach(([key, value]) => {
-      value?.forEach((link: { id: string; name: string }) => {
-        if (SWITCHED_LINK_IDS.hasOwnProperty(link.id)) {
-          link.id = SWITCHED_LINK_IDS[link.id];
-        }
-      });
-    });
-  });
-
-  await executeInBatches(linkedRows, (batch) => table.updateRecordsAsync(batch));
-}
-
-async function createTable(base: Base, tableData: TableInterface): Promise<void> {
-  for (const field of tableData.fields) {
-    if (field.isPrimary) {
-      const resp = await base.createTableAsync(tableData.name, [{ name: field.name, type: field.type } as any]);
-      SWITCHED_TABLE_IDS[tableData.id] = resp.id;
-    }
+    const recordID = await table.updateRecordAsync(id, record);
+    // CREATED_FIELDS_IDS[recordId] = recordID;
   }
 }
 
-async function checkIfCancreateTableFields(table: Table, tableData: TableInterface): Promise<void> {
-  for (const field of tableData.fields) {
-    if (table.getFieldByNameIfExists(field.name)) {
-      if (field.type !== table.getFieldByNameIfExists(field.name).type) {
-        throw new Error(
-          `Field Type Mismatch, please delete the field ${field.name} on table ${table.name} and try again`
-        );
+async function createTables(
+  base: Base,
+  tableData: TableInterface[]
+): Promise<void> {
+  const tablesSet = new Set();
+  tableData.forEach((item) => tablesSet.add(item["@type"].split(":")[1]));
+  const structure = {};
+
+  tableData.forEach((item) => {
+    const tableName = item["@type"].split(":").pop();
+    const cid = new map[tableName]();
+
+    if (!structure[tableName]) {
+      structure[tableName] = { fields: {} };
+    }
+
+    for (const key in item) {
+      if (
+        Object.hasOwnProperty.call(item, key) &&
+        key !== "@context" &&
+        key !== "@type"
+      ) {
+        structure[tableName].fields[key] = {
+          type: cid.getFieldByName(key)?.type,
+          link: cid.getFieldByName(key)?.link?.name,
+        };
+      }
+    }
+  });
+
+  await checkIfCancreateTableFields(base, structure);
+  await createTableFields(base, structure);
+  console.log(structure);
+}
+
+async function checkIfCancreateTableFields(
+  base: Base,
+  structure: any
+): Promise<void> {
+  Object.entries(structure).forEach(([tableName, values]: any) => {
+    const vals = Object.entries(values.fields);
+    const table = base.getTableByNameIfExists(tableName);
+    for (const val of vals) {
+      const [fieldName, fieldData]: any = val;
+      if (table.getFieldByNameIfExists(fieldName)) {
+        if (
+          getActualFieldType(fieldData.type) !==
+          table.getFieldByNameIfExists(fieldName).type
+        ) {
+          throw new Error(
+            `Field Type Mismatch, please delete the field ${fieldName} on table ${table.name} and try again`
+          );
+        }
+      }
+    }
+  });
+}
+
+async function createTableFields(base: Base, structure: any): Promise<void> {
+  for (const data of Object.entries(structure)) {
+    const [tableName, values]: any = data;
+    const vals = Object.entries(values.fields);
+    const table = base.getTableByNameIfExists(tableName);
+    for (const val of vals) {
+      const [fieldName, fieldData]: any = val;
+      if (!table.getFieldByNameIfExists(fieldName)) {
+        if (fieldData.type === "link") {
+          let tableId = base.getTableByNameIfExists(fieldData.link.name)?.id;
+          if (!tableId) {
+            alert(`Error: Linked Table named ${fieldData.link.name} not found`);
+          }
+          console.log(`creating field ${fieldName} on table ${table.name}`);
+          await table.createFieldAsync(
+            fieldName,
+            getActualFieldType(fieldData.type) as FieldType,
+            {
+              linkedTableId: tableId,
+            }
+          );
+        } else {
+          await table.createFieldAsync(
+            fieldName,
+            getActualFieldType(fieldData.type) as FieldType
+          );
+        }
       }
     }
   }
 }
 
-async function createTableFields(base: Base, table: Table, tableData: TableInterface): Promise<void> {
-  for (const field of tableData.fields) {
-    if (!table.getFieldByNameIfExists(field.name)) {
-      if (field.type === "multipleRecordLinks") {
-        let tableId = base.getTableByNameIfExists(field.linkedTableName)?.id;
-        if (!tableId) {
-          alert(`Error: Linked Table named ${field.linkedTableName} not found`);
-        }
-        if (SWITCHED_TABLE_IDS.hasOwnProperty(field.linkedTableId)) {
-          tableId = SWITCHED_TABLE_IDS[field.linkedTableId];
-        }
-        console.log(`creating field ${field.name} on table ${table.name}`);
-        await table.createFieldAsync(field.name, field.type as FieldType, { linkedTableId: tableId });
-      } else {
-        await table.createFieldAsync(field.name, field.type as FieldType);
-      }
-    }
-  }
-}
+async function deleteTableRecords(
+  base: Base,
+  tableData: TableInterface[]
+): Promise<void> {
+  const tablesSet = new Set();
+  tableData.forEach((item) => tablesSet.add(item["@type"].split(":")[1]));
 
-async function deleteTableRecords(table: Table): Promise<void> {
-  const records = (await table.selectRecordsAsync()).records;
-  const recordsToBeDeletedIds: string[] = [];
-  for (const record of records) {
-    if (!CREATED_FIELDS_IDS.includes(record.id)) {
-      recordsToBeDeletedIds.push(record.id);
+  for (const tableName of Array.from(tablesSet)) {
+    const table = base.getTableByNameIfExists(tableName as string);
+    if (table) {
+      const records = (await table.selectRecordsAsync()).records;
+      const recordsToBeDeletedIds: string[] = [];
+      for (const record of records) {
+        if (!Object.values(CREATED_FIELDS_IDS).includes(record.id)) {
+          recordsToBeDeletedIds.push(record.id);
+        }
+      }
+      await executeInBatches(recordsToBeDeletedIds, (batch) =>
+        table.deleteRecordsAsync(batch)
+      );
     }
   }
-  await executeInBatches(recordsToBeDeletedIds, (batch) => table.deleteRecordsAsync(batch));
 }

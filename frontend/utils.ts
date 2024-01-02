@@ -7,7 +7,10 @@
  * @param onSuccess - A callback function that will be called with the parsed JSON data.
  * @returns Promise<void>
  */
-export const handleFileChange = async (event: any, onSuccess: (data: any) => void): Promise<void> => {
+export const handleFileChange = async (
+  event: any,
+  onSuccess: (data: any) => void
+): Promise<void> => {
   const file = event.target.files[0];
   if (file && file.name.endsWith(".jsonld")) {
     const reader = new FileReader();
@@ -60,5 +63,20 @@ export async function executeInBatches<T>(
     const batch = items.slice(i, i + batchSize);
     await task(batch);
     // console.log(`Deleted batch: ${i / batchSize + 1}`, batch);
+  }
+}
+
+export function getActualFieldType(type: string): string {
+  switch (type) {
+    case "string":
+      return "singleLineText";
+    case "text":
+      return "multilineText";
+    case "i72":
+      return "singleLineText";
+    case "link":
+      return "multipleRecordLinks";
+    default:
+      return type;
   }
 }
