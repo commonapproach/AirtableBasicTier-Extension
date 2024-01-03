@@ -1,22 +1,8 @@
 import Base from "@airtable/blocks/dist/types/src/models/base";
 import { downloadJSONLD } from "../utils";
-import { LinkedCellInterface } from "../domain/shared";
-import {
-  Indicator,
-  IndicatorReport,
-  Organization,
-  Outcome,
-  Theme,
-} from "../domain/models";
-
-const map = {
-  Organization: Organization,
-  Theme: Theme,
-  Outcome: Outcome,
-  Indicator: Indicator,
-  IndicatorReport: IndicatorReport,
-};
-
+import { LinkedCellInterface } from "../domain/interfaces/cell.interface";
+import { map } from "../domain/models";
+import { validate } from "../domain/validation/validator";
 export async function exportData(base: Base): Promise<void> {
   const tables = base.tables;
   let data = [];
@@ -54,6 +40,26 @@ export async function exportData(base: Base): Promise<void> {
     }
   }
 
-  const timestamp = new Date().toISOString();
-  downloadJSONLD(data, `${base.name}-${timestamp}.jsonld`);
+  // console.log(data);
+  validate(data);
+
+  downloadJSONLD(data, `${getFileName()}.jsonld`);
+}
+
+function getFileName(): string {
+  const date = new Date();
+
+  // Get the year, month, and day from the date
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1; // Add 1 because months are 0-indexed.
+  const day = date.getDate();
+
+  // Format month and day to ensure they are two digits
+  const monthFormatted = month < 10 ? "0" + month : month;
+  const dayFormatted = day < 10 ? "0" + day : day;
+
+  // Concatenate the components to form the desired format (YYYYMMDD)
+  const timestamp = `${year}${monthFormatted}${dayFormatted}`;
+
+  return `CIDSBasic${"OrganizationName"}${timestamp}`;
 }

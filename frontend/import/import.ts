@@ -1,32 +1,19 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable no-prototype-builtins */
 import Base from "@airtable/blocks/dist/types/src/models/base";
-import {
-  LinkedCellInterface,
-  SimpleCellInterface,
-  TableInterface,
-} from "../domain/shared";
+import { TableInterface } from "../domain/interfaces/table.interface";
 import { FieldType } from "@airtable/blocks/dist/types/src/types/field";
 import { executeInBatches, getActualFieldType } from "../utils";
-import {
-  Indicator,
-  IndicatorReport,
-  Organization,
-  Outcome,
-  Theme,
-} from "../domain/models";
+import { map } from "../domain/models";
+import { validate } from "../domain/validation/validator";
 
 const CREATED_FIELDS_IDS: { [key: string]: string } = {};
 
-const map = {
-  Organization: Organization,
-  Theme: Theme,
-  Outcome: Outcome,
-  Indicator: Indicator,
-  IndicatorReport: IndicatorReport,
-};
-
 export async function importData(jsonData: any, base: Base) {
+
+  // Validate JSON 
+  validate(jsonData);
+
   // Create Tables if they don't exist
   await createTables(base, jsonData);
 
@@ -139,8 +126,29 @@ async function createTables(
   });
 
   await checkIfCancreateTableFields(base, structure);
+  await createTablesIfNotExist(base, structure);
   await createTableFields(base, structure);
   console.log(structure);
+}
+
+async function createTablesIfNotExist(
+  base: Base,
+  structure: any
+): Promise<void> {
+  Object.entries(structure).forEach(([tableName, values]: any) => {
+    const table = base.getTableByNameIfExists(tableName);
+  });
+
+  for (const data of Object.entries(structure)) {
+    const [tableName, values]: any = data;
+    const table = base.getTableByNameIfExists(tableName);
+    if (!table) {
+      console.log(`creating table ${tableName}`);
+      await base.createTableAsync(tableName, [
+        { name: "@id", type: "singleLineText" as FieldType },
+      ]);
+    }
+  }
 }
 
 async function checkIfCancreateTableFields(
@@ -152,10 +160,10 @@ async function checkIfCancreateTableFields(
     const table = base.getTableByNameIfExists(tableName);
     for (const val of vals) {
       const [fieldName, fieldData]: any = val;
-      if (table.getFieldByNameIfExists(fieldName)) {
+      if (table?.getFieldByNameIfExists(fieldName)) {
         if (
           getActualFieldType(fieldData.type) !==
-          table.getFieldByNameIfExists(fieldName).type
+          table?.getFieldByNameIfExists(fieldName).type
         ) {
           throw new Error(
             `Field Type Mismatch, please delete the field ${fieldName} on table ${table.name} and try again`
@@ -171,13 +179,15 @@ async function createTableFields(base: Base, structure: any): Promise<void> {
     const [tableName, values]: any = data;
     const vals = Object.entries(values.fields);
     const table = base.getTableByNameIfExists(tableName);
+    console.log(table.name);
     for (const val of vals) {
+      console.log(val);
       const [fieldName, fieldData]: any = val;
       if (!table.getFieldByNameIfExists(fieldName)) {
         if (fieldData.type === "link") {
-          let tableId = base.getTableByNameIfExists(fieldData.link.name)?.id;
+          let tableId = base.getTableByNameIfExists(fieldData.link)?.id;
           if (!tableId) {
-            alert(`Error: Linked Table named ${fieldData.link.name} not found`);
+            alert(`Error: Linked Table named ${fieldData.link} not found`);
           }
           console.log(`creating field ${fieldName} on table ${table.name}`);
           await table.createFieldAsync(
