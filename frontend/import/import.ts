@@ -10,8 +10,7 @@ import { validate } from "../domain/validation/validator";
 const CREATED_FIELDS_IDS: { [key: string]: string } = {};
 
 export async function importData(jsonData: any, base: Base) {
-
-  // Validate JSON 
+  // Validate JSON
   validate(jsonData);
 
   // Create Tables if they don't exist
@@ -82,6 +81,10 @@ async function writeTableLinked(
         id = CREATED_FIELDS_IDS[recordId];
         if (!value) return;
 
+        // @ts-ignore
+        if (!Array.isArray(value)) value = [value];
+
+        // console.log(tableName, key, value);
         const mappedValues = value
           // @ts-ignore
           ?.filter((uri) => CREATED_FIELDS_IDS[uri])
@@ -90,7 +93,9 @@ async function writeTableLinked(
       }
     });
 
-    const recordID = await table.updateRecordAsync(id, record);
+    if (id && record) {
+      const recordID = await table.updateRecordAsync(id, record);
+    }
     // CREATED_FIELDS_IDS[recordId] = recordID;
   }
 }
@@ -128,7 +133,6 @@ async function createTables(
   await checkIfCancreateTableFields(base, structure);
   await createTablesIfNotExist(base, structure);
   await createTableFields(base, structure);
-  console.log(structure);
 }
 
 async function createTablesIfNotExist(
@@ -179,9 +183,7 @@ async function createTableFields(base: Base, structure: any): Promise<void> {
     const [tableName, values]: any = data;
     const vals = Object.entries(values.fields);
     const table = base.getTableByNameIfExists(tableName);
-    console.log(table.name);
     for (const val of vals) {
-      console.log(val);
       const [fieldName, fieldData]: any = val;
       if (!table.getFieldByNameIfExists(fieldName)) {
         if (fieldData.type === "link") {
@@ -198,6 +200,7 @@ async function createTableFields(base: Base, structure: any): Promise<void> {
             }
           );
         } else {
+          console.log(`creating field ${fieldName} on table ${table.name}`);
           await table.createFieldAsync(
             fieldName,
             getActualFieldType(fieldData.type) as FieldType

@@ -8,13 +8,17 @@ export async function exportData(base: Base): Promise<void> {
   let data = [];
 
   for (const table of tables) {
+    if (!Object.keys(map).includes(table.name)) {
+      continue;
+    }
     const records = (await table.selectRecordsAsync()).records;
 
     const cid = new map[table.name]();
     for (const record of records) {
       try {
         let row = {
-          "@context": "https://schema.org/",
+          "@context":
+            "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
           "@type": `cids:${table.name}`,
         };
         for (const field of cid.getFields()) {
@@ -25,7 +29,8 @@ export async function exportData(base: Base): Promise<void> {
               value?.map((item: LinkedCellInterface) => item.name) ?? "";
           } else if (field.type === "i72") {
             row[field.name] = {
-              "@context": "https://schema.org/",
+              "@context":
+                "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
               "@type": "i72:Measure",
               numerical_value: record.getCellValueAsString(field.name) ?? "",
             };
@@ -40,7 +45,7 @@ export async function exportData(base: Base): Promise<void> {
     }
   }
 
-  // console.log(data);
+  console.log(data);
   validate(data);
 
   downloadJSONLD(data, `${getFileName()}.jsonld`);

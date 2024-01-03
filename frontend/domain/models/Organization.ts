@@ -8,7 +8,7 @@ export class Organization extends Base {
 
   protected _fields = [
     { name: "@id", type: "string", primary: true, unique: true, notNull: true },
-    { name: "hasLegalName", type: "string", unique: false, notNull: true },
+    { name: "org:hasLegalName", type: "string", unique: false, notNull: true },
     {
       name: "hasIndicator",
       type: "link",
@@ -24,7 +24,7 @@ export class Organization extends Base {
       notNull: true,
     },
     {
-      name: "IndicatorReport",
+      name: "hasIndicator",
       type: "link",
       link: IndicatorReport,
       unique: false,

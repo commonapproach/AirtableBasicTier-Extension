@@ -31,17 +31,23 @@ function Main() {
           ref={fileInputRef}
           onChange={(e) =>
             handleFileChange(e, async (josnData) => {
-              try {
                 setHeader("Importing Data...");
                 setText("Wait for a while...");
                 setOpenDialog(true);
                 await importData(josnData, base);
                 setHeader("Success");
                 setText("Data imported successfully");
-              } catch (error) {
-                setHeader("Error");
-                setText(error.message || "Something went wrong");
-              }
+              // try {
+              //   setHeader("Importing Data...");
+              //   setText("Wait for a while...");
+              //   setOpenDialog(true);
+              //   await importData(josnData, base);
+              //   setHeader("Success");
+              //   setText("Data imported successfully");
+              // } catch (error) {
+              //   setHeader("Error");
+              //   setText(error.message || "Something went wrong");
+              // }
             })
           }
           style={{ display: "none" }}

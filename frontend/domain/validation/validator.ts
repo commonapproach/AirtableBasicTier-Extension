@@ -16,7 +16,7 @@ function validateDuplicateIds(
     let cid = new map[tableName]();
     const ids: string[] = [];
     for (const data of tableData) {
-      console.log(data);
+      // console.log(data);
       // if (data["@type"].split(":")[1] === tableName) {
       //   const id = data["@id"];
       //   ids.push(id);
