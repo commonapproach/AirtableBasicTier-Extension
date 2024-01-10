@@ -4,11 +4,28 @@ const DialogContext = createContext({} as any);
 
 function DialogContextProvider({ children }) {
   const [openDialog, setOpenDialog] = useState(false);
-  const [text, setText] = useState();
-  const [header, setHeader] = useState();
+  const [text, setText] = useState<string>();
+  const [header, setHeader] = useState<string>();
+
+  function setDialogContent(
+    header: string,
+    text: string,
+    isOpen: boolean = false
+  ) {
+    setText(text);
+    setHeader(header);
+    setOpenDialog(isOpen);
+  }
+
   return (
     <DialogContext.Provider
-      value={{ openDialog, setOpenDialog, setText, setHeader }}
+      value={{
+        openDialog,
+        setOpenDialog,
+        setText,
+        setHeader,
+        setDialogContent,
+      }}
     >
       <React.Fragment>
         {openDialog && (

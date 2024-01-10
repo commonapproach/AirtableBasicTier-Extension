@@ -1,16 +1,23 @@
 import { TableInterface } from "../interfaces/table.interface";
 import { map } from "../models";
 
-export function validate(tableData: TableInterface[]) {
+let errors = new Set<string>();
+let warnings = new Set<string>();
+export function validate(tableData: TableInterface[]): {
+  errors: string[];
+  warnings: string[];
+} {
   const tablesSet = new Set<any>();
   tableData.forEach((item) => {
     tablesSet.add(item["@type"].split(":")[1]);
   });
 
-  validateDuplicateIds(tableData);
+  validateRecords(tableData);
+
+  return { errors: Array.from(errors), warnings: Array.from(warnings) };
 }
 
-function validateDuplicateIds(tableData: TableInterface[]) {
+function validateRecords(tableData: TableInterface[]) {
   // Records to keep track of unique values
   const uniqueRecords: Record<string, Set<any>> = {};
 
@@ -34,13 +41,24 @@ function validateDuplicateIds(tableData: TableInterface[]) {
 
       // Handle 'i72' type fields
       if (fieldProps.type === "i72") {
-        console.log("i72 Field");
+        //@ts-ignore
+        if (!fieldValue.numerical_value) {
+          console.error(
+            `Invalid value for i72 field ${fieldName}: ${fieldValue} in table ${tableName}`
+          );
+          errors.add(
+            `Invalid value for i72 field <b>${fieldName}</b>: <b>${fieldValue}</b> in table <b>${tableName}</b>`
+          );
+        }
       } else {
         // Validate primary keys
         if (fieldProps?.primary) {
           if (!validatePrimary(fieldValue as string)) {
             console.error(
-              `Invalid primary key: ${fieldValue} for ${fieldName} on ${tableName}`
+              `Invalid primary key: ${fieldValue} for ${fieldName} on table ${tableName}`
+            );
+            errors.add(
+              `Invalid primary key: <b>${fieldValue}</b> for <b>${fieldName}</b> on table <b>${tableName}</b>`
             );
           }
         }
@@ -53,21 +71,30 @@ function validateDuplicateIds(tableData: TableInterface[]) {
             console.error(
               `Duplicate value for unique field ${fieldName}: ${fieldValue} in table ${tableName}`
             );
+            errors.add(
+              `Duplicate value for unique field <b>${fieldName}</b>: <b>${fieldValue}</b> in table <b>${tableName}</b>`
+            );
           }
         }
 
         if (fieldProps?.notNull) {
           if (fieldValue === "" || !fieldValue) {
-            console.error(
+            console.warn(
               `Null value for notNull field ${fieldName} in table ${tableName}`
+            );
+            warnings.add(
+              `Field <b>${fieldName}</b> on table <b>${tableName}</b> is null or empty.`
             );
           }
         }
 
         if (fieldProps?.required) {
           if (fieldValue === "" || !fieldValue) {
-            console.error(
+            console.warn(
               `field ${fieldName} is required in table ${tableName}`
+            );
+            warnings.add(
+              `Field <b>${fieldName}</b> on table <b>${tableName}</b> is required.`
             );
           }
         }

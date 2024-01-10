@@ -8,6 +8,11 @@ import { map } from "../domain/models";
 import { validate } from "../domain/validation/validator";
 
 const CREATED_FIELDS_IDS: { [key: string]: string } = {};
+const CREATED_FIELDS_DATA: {
+  tableName: string;
+  internalId: string;
+  externalId: string;
+}[] = [];
 
 export async function importData(jsonData: any, base: Base) {
   // Validate JSON
@@ -21,6 +26,9 @@ export async function importData(jsonData: any, base: Base) {
 
   // Write Linked Records to Tables
   await writeTableLinked(base, jsonData);
+
+  // Write user's extra fields
+  await writeExtraFields(base);
 
   // Delete All old Records
   await deleteTableRecords(base, jsonData);
@@ -50,15 +58,18 @@ async function writeTable(
           // @ts-ignore
           record[key] = value?.numerical_value;
         } else {
-          console.log(key, value);
           record[key] = value;
         }
       }
     });
 
-    console.log(table.name, record);
     const respId = await table.createRecordAsync(record);
     CREATED_FIELDS_IDS[recordId] = respId;
+    CREATED_FIELDS_DATA.push({
+      tableName,
+      internalId: recordId,
+      externalId: respId,
+    });
   }
 }
 
@@ -87,7 +98,6 @@ async function writeTableLinked(
         // @ts-ignore
         if (!Array.isArray(value)) value = [value];
 
-        // console.log(tableName, key, value);
         const mappedValues = value
           // @ts-ignore
           ?.filter((uri) => CREATED_FIELDS_IDS[uri])
@@ -100,6 +110,32 @@ async function writeTableLinked(
       const recordID = await table.updateRecordAsync(id, record);
     }
     // CREATED_FIELDS_IDS[recordId] = recordID;
+  }
+}
+
+async function writeExtraFields(base: Base): Promise<void> {
+  for (const { tableName, externalId } of CREATED_FIELDS_DATA) {
+    const cid = new map[tableName]();
+    const table = base.getTableByNameIfExists(tableName);
+    const records = await table.selectRecordsAsync();
+    const externalFields = table.fields;
+    const internalFields = cid.getFields().map((item) => item.name);
+    const diffs = externalFields.filter(
+      (x) => !internalFields.includes(x.name)
+    );
+
+    for (const diff of diffs) {
+      if (!Object.keys(map).includes(diff.name)) {
+        for (const record of records.records) {
+          const valueToBeUpdated = await record.getCellValue(diff.name);
+          if (valueToBeUpdated) {
+            await table.updateRecordAsync(externalId, {
+              [diff.name]: valueToBeUpdated,
+            });
+          }
+        }
+      }
+    }
   }
 }
 
@@ -133,7 +169,7 @@ async function createTables(
     }
   });
 
-  // await checkIfCancreateTableFields(base, structure);
+  await checkIfCancreateTableFields(base, structure);
   await createTablesIfNotExist(base, structure);
   await createTableFields(base, structure);
 }
@@ -173,7 +209,7 @@ async function checkIfCancreateTableFields(
           getActualFieldType(fieldData.type) !==
           table?.getFieldByNameIfExists(fieldName).type
         ) {
-          error += `⦿ Field Type Mismatch, please delete the field <b>${fieldName}</b> on table <b>${table.name}</b> and try again <hr/>`;
+          error += `Field Type Mismatch, please delete the field <b>${fieldName}</b> on table <b>${table.name}</b> and try again <hr/>`;
         }
       }
     }
@@ -185,7 +221,6 @@ async function checkIfCancreateTableFields(
 }
 
 async function createTableFields(base: Base, structure: any): Promise<void> {
-  console.log(structure);
   for (const data of Object.entries(structure)) {
     const [tableName, values]: any = data;
     const vals = Object.entries(values.fields);

@@ -8,7 +8,15 @@ import DialogContextProvider, { useDialog } from "./context/DialogContext";
 function Main() {
   const base = useBase();
   const fileInputRef = useRef(null);
-  const { setOpenDialog, setText, setHeader } = useDialog();
+  const { setDialogContent } = useDialog();
+
+  const handleButtonClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+    // Open the file dialog
+    fileInputRef.current.click();
+  };
 
   return (
     <div style={{ padding: 12 }}>
@@ -22,7 +30,7 @@ function Main() {
       >
         <Button
           style={{ border: "1px solid black" }}
-          onClick={() => fileInputRef.current.click()}
+          onClick={handleButtonClick}
         >
           <div
             style={{
@@ -39,33 +47,45 @@ function Main() {
         <input
           type="file"
           ref={fileInputRef}
-          onChange={(e) =>
+          onChange={(e) => {
             handleFileChange(e, async (josnData) => {
               try {
-                setHeader("Importing Data...");
-                setText("Wait for a while...");
-                setOpenDialog(true);
+                setDialogContent(
+                  "Importing Data...",
+                  "Wait for a while...",
+                  true
+                );
                 await importData(josnData, base);
-                setHeader("Success");
-                setText("Data imported successfully");
+                setDialogContent("Success", "Data imported successfully", true);
               } catch (error) {
-                setHeader("Error");
-                setText(error.message || "Something went wrong");
+                setDialogContent(
+                  "Error",
+                  error.message || "Something went wrong",
+                  true
+                );
               }
-            })
-          }
+              // Reset the input value
+              if (document.body.contains(e.target)) {
+                e.target.value = "";
+              }
+            });
+          }}
           style={{ display: "none" }}
           accept=".jsonld,application/ld+json"
         />
+
         <Button
           style={{ border: "1px solid black" }}
           onClick={async () => {
-            setHeader("Exporting Data...");
-            setText("Wait for a while...");
-            setOpenDialog(true);
-            await exportData(base);
-            setHeader("Success");
-            setText("Data exported successfully");
+            try {
+              await exportData(base, setDialogContent);
+            } catch (error) {
+              setDialogContent(
+                "Error",
+                error.message || "Something went wrong",
+                true
+              );
+            }
           }}
         >
           <div
