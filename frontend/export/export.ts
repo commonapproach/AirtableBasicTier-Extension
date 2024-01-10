@@ -63,7 +63,7 @@ export async function exportData(
     setDialogContent(`Warning!`, allWarnings, true);
   }
 
-  // downloadJSONLD(data, `${getFileName()}.jsonld`);
+  downloadJSONLD(data, `${getFileName()}.json`);
 }
 
 function getFileName(): string {

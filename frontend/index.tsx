@@ -50,13 +50,7 @@ function Main() {
           onChange={(e) => {
             handleFileChange(e, async (josnData) => {
               try {
-                setDialogContent(
-                  "Importing Data...",
-                  "Wait for a while...",
-                  true
-                );
-                await importData(josnData, base);
-                setDialogContent("Success", "Data imported successfully", true);
+                await importData(josnData, base, setDialogContent);
               } catch (error) {
                 setDialogContent(
                   "Error",

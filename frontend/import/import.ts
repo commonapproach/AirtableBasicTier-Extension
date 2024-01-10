@@ -14,7 +14,11 @@ const CREATED_FIELDS_DATA: {
   externalId: string;
 }[] = [];
 
-export async function importData(jsonData: any, base: Base) {
+export async function importData(
+  jsonData: any,
+  base: Base,
+  setDialogContent: (header: string, text: string, open: boolean) => void
+) {
   // Validate JSON
   validate(jsonData);
 
@@ -33,7 +37,7 @@ export async function importData(jsonData: any, base: Base) {
   // Delete All old Records
   await deleteTableRecords(base, jsonData);
 
-  return true;
+  setDialogContent("Success!", "Data imported successfully!", true);
 }
 
 async function writeTable(
@@ -109,7 +113,6 @@ async function writeTableLinked(
     if (id && record) {
       const recordID = await table.updateRecordAsync(id, record);
     }
-    // CREATED_FIELDS_IDS[recordId] = recordID;
   }
 }
 
