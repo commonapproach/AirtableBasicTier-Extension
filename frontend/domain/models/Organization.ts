@@ -7,14 +7,28 @@ export class Organization extends Base {
   public name = "Organization";
 
   protected _fields = [
-    { name: "@id", type: "string", primary: true, unique: true, notNull: true },
-    { name: "org:hasLegalName", type: "string", unique: false, notNull: true },
+    {
+      name: "@id",
+      type: "string",
+      primary: true,
+      unique: true,
+      notNull: true,
+      required: true,
+    },
+    {
+      name: "org:hasLegalName",
+      type: "string",
+      unique: false,
+      notNull: true,
+      required: true,
+    },
     {
       name: "hasIndicator",
       type: "link",
       link: Indicator,
       unique: false,
       notNull: true,
+      required: true,
     },
     {
       name: "hasOutcome",
@@ -22,6 +36,7 @@ export class Organization extends Base {
       link: Outcome,
       unique: false,
       notNull: true,
+      required: true,
     },
     {
       name: "hasIndicator",
@@ -29,6 +44,7 @@ export class Organization extends Base {
       link: IndicatorReport,
       unique: false,
       notNull: true,
+      required: true,
     },
   ];
 }

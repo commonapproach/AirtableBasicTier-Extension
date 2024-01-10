@@ -45,7 +45,6 @@ export async function exportData(base: Base): Promise<void> {
     }
   }
 
-  console.log(data);
   validate(data);
 
   downloadJSONLD(data, `${getFileName()}.jsonld`);

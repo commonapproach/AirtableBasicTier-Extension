@@ -42,6 +42,7 @@ async function writeTable(
       const cid = new map[tableName]();
       if (
         cid.getFieldByName(key)?.type !== "link" &&
+        cid.getFieldByName(key)?.type &&
         key !== "@type" &&
         key !== "@context"
       ) {
@@ -49,11 +50,13 @@ async function writeTable(
           // @ts-ignore
           record[key] = value?.numerical_value;
         } else {
+          console.log(key, value);
           record[key] = value;
         }
       }
     });
 
+    console.log(table.name, record);
     const respId = await table.createRecordAsync(record);
     CREATED_FIELDS_IDS[recordId] = respId;
   }
@@ -130,7 +133,7 @@ async function createTables(
     }
   });
 
-  await checkIfCancreateTableFields(base, structure);
+  // await checkIfCancreateTableFields(base, structure);
   await createTablesIfNotExist(base, structure);
   await createTableFields(base, structure);
 }
@@ -159,6 +162,7 @@ async function checkIfCancreateTableFields(
   base: Base,
   structure: any
 ): Promise<void> {
+  let error: string = "";
   Object.entries(structure).forEach(([tableName, values]: any) => {
     const vals = Object.entries(values.fields);
     const table = base.getTableByNameIfExists(tableName);
@@ -169,16 +173,19 @@ async function checkIfCancreateTableFields(
           getActualFieldType(fieldData.type) !==
           table?.getFieldByNameIfExists(fieldName).type
         ) {
-          throw new Error(
-            `Field Type Mismatch, please delete the field ${fieldName} on table ${table.name} and try again`
-          );
+          error += `⦿ Field Type Mismatch, please delete the field <b>${fieldName}</b> on table <b>${table.name}</b> and try again <hr/>`;
         }
       }
     }
   });
+
+  if (error.length > 0) {
+    throw new Error(error);
+  }
 }
 
 async function createTableFields(base: Base, structure: any): Promise<void> {
+  console.log(structure);
   for (const data of Object.entries(structure)) {
     const [tableName, values]: any = data;
     const vals = Object.entries(values.fields);
@@ -191,20 +198,24 @@ async function createTableFields(base: Base, structure: any): Promise<void> {
           if (!tableId) {
             alert(`Error: Linked Table named ${fieldData.link} not found`);
           }
-          console.log(`creating field ${fieldName} on table ${table.name}`);
-          await table.createFieldAsync(
-            fieldName,
-            getActualFieldType(fieldData.type) as FieldType,
-            {
-              linkedTableId: tableId,
-            }
-          );
+          if (fieldData.type) {
+            console.log(`creating field ${fieldName} on table ${table.name}`);
+            await table.createFieldAsync(
+              fieldName,
+              getActualFieldType(fieldData.type) as FieldType,
+              {
+                linkedTableId: tableId,
+              }
+            );
+          }
         } else {
-          console.log(`creating field ${fieldName} on table ${table.name}`);
-          await table.createFieldAsync(
-            fieldName,
-            getActualFieldType(fieldData.type) as FieldType
-          );
+          if (fieldData.type) {
+            console.log(`creating field ${fieldName} on table ${table.name}`);
+            await table.createFieldAsync(
+              fieldName,
+              getActualFieldType(fieldData.type) as FieldType
+            );
+          }
         }
       }
     }

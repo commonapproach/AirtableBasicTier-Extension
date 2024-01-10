@@ -16,4 +16,5 @@ export type FieldType = {
   unique?: boolean;
   notNull?: boolean;
   link?: any;
+  required: boolean;
 };
