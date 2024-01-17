@@ -5,7 +5,13 @@ import { map } from "../domain/models";
 import { validate } from "../domain/validation/validator";
 export async function exportData(
   base: Base,
-  setDialogContent: (header: string, text: string, open: boolean) => void
+  setDialogContent: (
+    header: string,
+    text: string,
+    open: boolean,
+    nextCallback?: () => void
+  ) => void,
+  orgName: string
 ): Promise<void> {
   const tables = base.tables;
   let data = [];
@@ -59,14 +65,24 @@ export async function exportData(
     return;
   }
 
-  if (warnings.length > 0) {
-    setDialogContent(`Warning!`, allWarnings, true);
+  if (allWarnings.length > 0) {
+    setDialogContent(`Warning!`, allWarnings, true, () => {
+      setDialogContent(
+        `Warning!`,
+        "<p>Do you want to export anyway?</p>",
+        true,
+        () => {
+          downloadJSONLD(data, `${getFileName(orgName)}.json`);
+          setDialogContent("", "", false);
+        }
+      );
+    });
+    return;
   }
-
-  downloadJSONLD(data, `${getFileName()}.json`);
+  downloadJSONLD(data, `${getFileName(orgName)}.json`);
 }
 
-function getFileName(): string {
+function getFileName(orgName: string): string {
   const date = new Date();
 
   // Get the year, month, and day from the date
@@ -81,7 +97,7 @@ function getFileName(): string {
   // Concatenate the components to form the desired format (YYYYMMDD)
   const timestamp = `${year}${monthFormatted}${dayFormatted}`;
 
-  return `CIDSBasic${"OrganizationName"}${timestamp}`;
+  return `CIDSBasic${orgName}${timestamp}`;
 }
 
 function checkForNotExportedFields(base: Base) {
@@ -96,7 +112,7 @@ function checkForNotExportedFields(base: Base) {
 
     for (const field of externalFields) {
       if (!internalFields.includes(field)) {
-        warnings += `Field <b>${field}</b> on table <b>${table.name}</b> was not exported<hr/>`;
+        warnings += `Field <b>${field}</b> on table <b>${table.name}</b> will not be exported<hr/>`;
       }
     }
   }

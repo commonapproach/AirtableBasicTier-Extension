@@ -6,15 +6,18 @@ function DialogContextProvider({ children }) {
   const [openDialog, setOpenDialog] = useState(false);
   const [text, setText] = useState<string>();
   const [header, setHeader] = useState<string>();
+  const [callback, setCallback] = useState<() => void>(null);
 
   function setDialogContent(
     header: string,
     text: string,
-    isOpen: boolean = false
+    isOpen: boolean = false,
+    nextCallback: () => any = null
   ) {
     setText(text);
     setHeader(header);
     setOpenDialog(isOpen);
+    setCallback(() => nextCallback);
   }
 
   return (
@@ -34,7 +37,10 @@ function DialogContextProvider({ children }) {
             <Heading>{header}</Heading>
             <p dangerouslySetInnerHTML={{ __html: text }} />
 
-            <Button onClick={() => setOpenDialog(false)}>Close</Button>
+            <div style={{ display: "flex", gap: 4 }}>
+              <Button onClick={() => setOpenDialog(false)}>Close</Button>
+              {callback && <Button onClick={() => callback()}>Next</Button>}
+            </div>
           </Dialog>
         )}
       </React.Fragment>

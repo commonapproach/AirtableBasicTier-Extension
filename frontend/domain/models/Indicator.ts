@@ -16,7 +16,7 @@ export class Indicator extends Base {
     {
       name: "hasName",
       type: "string",
-      unique: false,
+      unique: true,
       notNull: true,
       required: true,
     },

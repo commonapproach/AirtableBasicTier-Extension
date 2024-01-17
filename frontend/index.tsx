@@ -1,5 +1,11 @@
-import { Button, Icon, initializeBlock, useBase } from "@airtable/blocks/ui";
-import React, { useRef } from "react";
+import {
+  Button,
+  Icon,
+  Select,
+  initializeBlock,
+  useBase,
+} from "@airtable/blocks/ui";
+import React, { useEffect, useRef, useState } from "react";
 import { exportData } from "./export/export";
 import { importData } from "./import/import";
 import { handleFileChange } from "./utils";
@@ -9,6 +15,25 @@ function Main() {
   const base = useBase();
   const fileInputRef = useRef(null);
   const { setDialogContent } = useDialog();
+  const [options, setOptions] = useState([]);
+  const [selectedOption, setSelectedOption] = useState(null);
+
+  useEffect(() => {
+    if (options.length > 0) return;
+    const table = base.getTableByNameIfExists("Organization");
+    if (!table) return;
+    table.selectRecordsAsync().then((data) => {
+      const opts = data.records.map((record) => {
+        return {
+          value: record.getCellValue("org:hasLegalName"),
+          label: record.getCellValue("org:hasLegalName"),
+        };
+      });
+
+      setOptions(opts);
+      setSelectedOption(opts[0].value);
+    });
+  }, []);
 
   const handleButtonClick = () => {
     if (fileInputRef.current) {
@@ -65,14 +90,14 @@ function Main() {
             });
           }}
           style={{ display: "none" }}
-          accept=".jsonld,application/ld+json"
+          accept=".jsonld, .json, application/ld+json, application/json"
         />
 
         <Button
           style={{ border: "1px solid black" }}
           onClick={async () => {
             try {
-              await exportData(base, setDialogContent);
+              await exportData(base, setDialogContent, selectedOption);
             } catch (error) {
               setDialogContent(
                 "Error",
@@ -94,6 +119,23 @@ function Main() {
             Export Data
           </div>
         </Button>
+      </div>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          marginTop: 8,
+          marginLeft: "auto",
+          marginRight: "auto",
+        }}
+      >
+        <p>Select an Organization</p>
+        <Select
+          options={options}
+          value={selectedOption}
+          onChange={(newValue) => setSelectedOption(newValue)}
+          width="280px"
+        />
       </div>
     </div>
   );

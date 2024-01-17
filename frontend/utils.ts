@@ -12,7 +12,7 @@ export const handleFileChange = async (
   onSuccess: (data: any) => void
 ): Promise<void> => {
   const file = event.target.files[0];
-  if (file && file.name.endsWith(".jsonld")) {
+  if (file && (file.name.endsWith(".jsonld") || file.name.endsWith(".json"))) {
     const reader = new FileReader();
     reader.onload = async (e) => {
       const data = JSON.parse(e.target.result as any);

@@ -18,7 +18,7 @@ export class Organization extends Base {
     {
       name: "org:hasLegalName",
       type: "string",
-      unique: false,
+      unique: true,
       notNull: true,
       required: true,
     },
