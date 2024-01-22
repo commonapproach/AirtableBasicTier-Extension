@@ -42,7 +42,7 @@ function validateRecords(tableData: TableInterface[]) {
       // Handle 'i72' type fields
       if (fieldProps.type === "i72") {
         //@ts-ignore
-        if (!fieldValue.numerical_value) {
+        if (!fieldValue.numerical_value || !fieldValue['i72:numerical_value']) {
           console.error(
             `Invalid value for i72 field ${fieldName}: ${fieldValue} in table ${tableName}`
           );

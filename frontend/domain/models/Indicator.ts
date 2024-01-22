@@ -24,8 +24,8 @@ export class Indicator extends Base {
       name: "hasDescription",
       type: "text",
       unique: false,
-      notNull: true,
-      required: true,
+      notNull: false,
+      required: false,
     },
     {
       name: "hasIndicatorReport",

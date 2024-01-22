@@ -22,9 +22,9 @@ export class Theme extends Base {
     {
       name: "hasDescription",
       type: "text",
-      unique: true,
-      notNull: true,
-      required: true,
+      unique: false,
+      notNull: false,
+      required: false,
     },
   ];
 }

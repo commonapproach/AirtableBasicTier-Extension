@@ -33,16 +33,16 @@ export class Outcome extends Base {
       type: "link",
       link: Indicator,
       unique: false,
-      notNull: true,
-      required: true,
+      notNull: false,
+      required: false,
     },
     {
       name: "forTheme",
       type: "link",
       link: Theme,
       unique: false,
-      notNull: true,
-      required: true,
+      notNull: false,
+      required: false,
     },
   ];
 }

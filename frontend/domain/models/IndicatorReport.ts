@@ -39,8 +39,8 @@ export class IndicatorReport extends Base {
       type: "link",
       link: Indicator,
       unique: false,
-      notNull: true,
-      required: true,
+      notNull: false,
+      required: false,
     },
   ];
 }

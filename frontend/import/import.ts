@@ -60,7 +60,7 @@ async function writeTable(
       ) {
         if (cid.getFieldByName(key)?.type === "i72") {
           // @ts-ignore
-          record[key] = value?.numerical_value;
+          record[key] = value?.numerical_value || value?.["i72:numerical_value"];
         } else {
           record[key] = value;
         }

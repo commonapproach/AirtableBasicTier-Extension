@@ -1,6 +1,5 @@
 import { Base } from "./Base";
 import { Indicator } from "./Indicator";
-import { IndicatorReport } from "./IndicatorReport";
 import { Outcome } from "./Outcome";
 
 export class Organization extends Base {
@@ -27,24 +26,16 @@ export class Organization extends Base {
       type: "link",
       link: Indicator,
       unique: false,
-      notNull: true,
-      required: true,
+      notNull: false,
+      required: false,
     },
     {
       name: "hasOutcome",
       type: "link",
       link: Outcome,
       unique: false,
-      notNull: true,
-      required: true,
-    },
-    {
-      name: "hasIndicator",
-      type: "link",
-      link: IndicatorReport,
-      unique: false,
-      notNull: true,
-      required: true,
-    },
+      notNull: false,
+      required: false,
+    }
   ];
 }
