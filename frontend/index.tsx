@@ -31,7 +31,9 @@ function Main() {
       });
 
       setOptions(opts);
-      setSelectedOption(opts[0].value);
+      if (opts.length > 0) {
+        setSelectedOption(opts[0].value);
+      }
     });
   }, []);
 
@@ -90,7 +92,6 @@ function Main() {
             });
           }}
           style={{ display: "none" }}
-          accept=".jsonld, .json, application/ld+json, application/json"
         />
 
         <Button

@@ -1,5 +1,6 @@
 import { Base } from "./Base";
 import { Indicator } from "./Indicator";
+import { Theme } from "./Theme";
 
 export class Outcome extends Base {
   public name = "Outcome";
@@ -31,6 +32,14 @@ export class Outcome extends Base {
       name: "hasIndicator",
       type: "link",
       link: Indicator,
+      unique: false,
+      notNull: true,
+      required: true,
+    },
+    {
+      name: "forTheme",
+      type: "link",
+      link: Theme,
       unique: false,
       notNull: true,
       required: true,
