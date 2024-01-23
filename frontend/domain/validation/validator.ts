@@ -41,15 +41,14 @@ function validateRecords(tableData: TableInterface[]) {
 
       // Handle 'i72' type fields
       if (fieldProps.type === "i72") {
-        //@ts-ignore
-        if (!fieldValue.numerical_value || !fieldValue['i72:numerical_value']) {
-          console.error(
-            `Invalid value for i72 field ${fieldName}: ${fieldValue} in table ${tableName}`
-          );
-          errors.add(
-            `Invalid value for i72 field <b>${fieldName}</b>: <b>${fieldValue}</b> in table <b>${tableName}</b>`
-          );
-        }
+        // if (!("numerical_value" in fieldValue)) {
+        //   console.error(
+        //     `Invalid value for i72 field ${fieldName}: ${fieldValue} in table ${tableName}`
+        //   );
+        //   errors.add(
+        //     `Invalid value for i72 field <b>${fieldName}</b>: <b>${fieldValue}</b> in table <b>${tableName}</b>`
+        //   );
+        // }
       } else {
         // Validate primary keys
         if (fieldProps?.primary) {

@@ -17,10 +17,40 @@ const CREATED_FIELDS_DATA: {
 export async function importData(
   jsonData: any,
   base: Base,
-  setDialogContent: (header: string, text: string, open: boolean) => void
+  setDialogContent: (
+    header: string,
+    text: string,
+    open: boolean,
+    nextCallback?: () => void
+  ) => void
 ) {
   // Validate JSON
-  validate(jsonData);
+  const { errors, warnings } = validate(jsonData);
+
+  if (errors.length > 0) {
+    setDialogContent(
+      `Error!`,
+      errors.map((item) => `<p>${item}</p>`).join(""),
+      true
+    );
+    return;
+  }
+
+  const allWarnings = warnings.join("<hr/>");
+
+  if (allWarnings.length > 0) {
+    setDialogContent(`Warning!`, allWarnings, true, () => {
+      setDialogContent(
+        `Warning!`,
+        "<p>Do you want to export anyway?</p>",
+        true,
+        () => {
+          setDialogContent("", "", false);
+        }
+      );
+    });
+    return;
+  }
 
   // Create Tables if they don't exist
   await createTables(base, jsonData);
@@ -59,8 +89,9 @@ async function writeTable(
         key !== "@context"
       ) {
         if (cid.getFieldByName(key)?.type === "i72") {
-          // @ts-ignore
-          record[key] = value?.numerical_value || value?.["i72:numerical_value"];
+          record[key] =
+            // @ts-ignore
+            value?.numerical_value || value?.["i72:numerical_value"];
         } else {
           record[key] = value;
         }
