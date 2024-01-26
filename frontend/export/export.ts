@@ -3,6 +3,7 @@ import { downloadJSONLD } from "../utils";
 import { LinkedCellInterface } from "../domain/interfaces/cell.interface";
 import { map } from "../domain/models";
 import { validate } from "../domain/validation/validator";
+import { Base as BaseModel } from "../domain/models/Base";
 export async function exportData(
   base: Base,
   setDialogContent: (
@@ -16,6 +17,18 @@ export async function exportData(
   const tables = base.tables;
   let data = [];
 
+  const tableNames = tables.map((item) => item.name);
+  for (const [key] of Object.entries(map)) {
+    if (!tableNames.includes(key)) {
+      setDialogContent(
+        "Error!",
+        `Table <b>${key}</b> is missing. Please import the schema first.`,
+        true
+      );
+      return;
+    }
+  }
+
   for (const table of tables) {
     // If the table is not in the map, skip it
     if (!Object.keys(map).includes(table.name)) {
@@ -24,7 +37,7 @@ export async function exportData(
 
     const records = (await table.selectRecordsAsync()).records;
 
-    const cid = new map[table.name]();
+    const cid: BaseModel = new map[table.name]();
     for (const record of records) {
       let row = {
         "@context":
@@ -34,15 +47,23 @@ export async function exportData(
       for (const field of cid.getFields()) {
         if (field.type === "link") {
           const value = record.getCellValue(field.name);
-          row[field.name] =
-            //@ts-ignore
-            value?.map((item: LinkedCellInterface) => item.name) ?? "";
+          if (field.representedType === "array") {
+            row[field.name] =
+              //@ts-ignore
+              value?.map((item: LinkedCellInterface) => item.name) ??
+              field?.defaultValue;
+          } else if (field.representedType === "string") {
+            row[field.name] =
+              //@ts-ignore
+              value[0]?.name ?? field?.defaultValue;
+          }
         } else if (field.type === "i72") {
           row[field.name] = {
             "@context":
               "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
             "@type": "i72:Measure",
-            numerical_value: record.getCellValueAsString(field.name) ?? "",
+            numerical_value:
+              record.getCellValueAsString(field.name) ?? field?.defaultValue,
           };
         } else {
           row[field.name] = record.getCellValue(field.name) ?? "";

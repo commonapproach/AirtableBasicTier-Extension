@@ -42,32 +42,47 @@ export async function importData(
     setDialogContent(`Warning!`, allWarnings, true, () => {
       setDialogContent(
         `Warning!`,
-        "<p>Do you want to export anyway?</p>",
+        "<p>Do you want to import anyway?</p>",
         true,
-        () => {
-          setDialogContent("", "", false);
+        async () => {
+          setDialogContent("Wait a moment...", "Importing data...", true);
+          // Create Tables if they don't exist
+          await createTables(base, jsonData);
+
+          // Write Simple Records to Tables
+          await writeTable(base, jsonData);
+
+          // Write Linked Records to Tables
+          await writeTableLinked(base, jsonData);
+
+          // Write user's extra fields
+          await writeExtraFields(base);
+
+          // Delete All old Records
+          await deleteTableRecords(base, jsonData);
+
+          setDialogContent("Success!", "Data imported successfully!", true);
         }
       );
     });
-    return;
+  } else {
+    // Create Tables if they don't exist
+    await createTables(base, jsonData);
+
+    // Write Simple Records to Tables
+    await writeTable(base, jsonData);
+
+    // Write Linked Records to Tables
+    await writeTableLinked(base, jsonData);
+
+    // Write user's extra fields
+    await writeExtraFields(base);
+
+    // Delete All old Records
+    await deleteTableRecords(base, jsonData);
+
+    setDialogContent("Success!", "Data imported successfully!", true);
   }
-
-  // Create Tables if they don't exist
-  await createTables(base, jsonData);
-
-  // Write Simple Records to Tables
-  await writeTable(base, jsonData);
-
-  // Write Linked Records to Tables
-  await writeTableLinked(base, jsonData);
-
-  // Write user's extra fields
-  await writeExtraFields(base);
-
-  // Delete All old Records
-  await deleteTableRecords(base, jsonData);
-
-  setDialogContent("Success!", "Data imported successfully!", true);
 }
 
 async function writeTable(
@@ -132,6 +147,9 @@ async function writeTableLinked(
 
         // @ts-ignore
         if (!Array.isArray(value)) value = [value];
+
+        // remove duplicates from value
+        value = [...new Set(value as string[])];
 
         const mappedValues = value
           // @ts-ignore

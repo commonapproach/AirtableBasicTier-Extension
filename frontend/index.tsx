@@ -100,6 +100,7 @@ function Main() {
             try {
               await exportData(base, setDialogContent, selectedOption);
             } catch (error) {
+              console.log(error)
               setDialogContent(
                 "Error",
                 error.message || "Something went wrong",

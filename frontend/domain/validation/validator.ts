@@ -3,12 +3,14 @@ import { map } from "../models";
 
 let errors = new Set<string>();
 let warnings = new Set<string>();
+let indicatorsUrls = [];
 export function validate(tableData: TableInterface[]): {
   errors: string[];
   warnings: string[];
 } {
   const tablesSet = new Set<any>();
   tableData.forEach((item) => {
+    if (validateTypeProp(item)) return;
     tablesSet.add(item["@type"].split(":")[1]);
   });
 
@@ -21,13 +23,51 @@ function validateRecords(tableData: TableInterface[]) {
   // Records to keep track of unique values
   const uniqueRecords: Record<string, Set<any>> = {};
 
+  validateIndicatorsInOrganizations(tableData);
+
   for (const data of tableData) {
+    if (validateTypeProp(data)) return;
     const tableName = data["@type"].split(":")[1];
     const cid = new map[tableName](); // Initialize the schema for the table
 
     // Initialize a record for this table if not already present
     if (!uniqueRecords[tableName]) {
       uniqueRecords[tableName] = new Set();
+    }
+
+    //check if required fields are present
+    for (const field of cid.getFields()) {
+      if (field.required && !Object.keys(data).includes(field.name)) {
+        errors.add(
+          `Required field <b>${field.name}</b> is missing in table <b>${tableName}</b>`
+        );
+        console.warn(
+          `Required field <b>${field.name}</b> is missing in table <b>${tableName}</b>`
+        );
+      }
+    }
+
+    for (const field of cid.getFields()) {
+      if (field.semiRequired && !Object.keys(data).includes(field.name)) {
+        warnings.add(
+          `Required field <b>${field.name}</b> is missing in table <b>${tableName}</b>`
+        );
+        console.warn(
+          `Required field <b>${field.name}</b> is missing in table <b>${tableName}</b>`
+        );
+      }
+    }
+
+    // check if notNull fields are not null
+    for (const field of cid.getFields()) {
+      if (field.notNull && Object.keys(data)?.length === 0) {
+        errors.add(
+          `Field <b>${field.name}</b> is null or empty in table <b>${tableName}</b>`
+        );
+        console.error(
+          `Field <b>${field.name}</b> is null or empty in table <b>${tableName}</b>`
+        );
+      }
     }
 
     for (const [fieldName, fieldValue] of Object.entries(data)) {
@@ -37,6 +77,19 @@ function validateRecords(tableData: TableInterface[]) {
 
       if (!fieldProps) {
         continue;
+      }
+
+      if (Array.isArray(fieldValue)) {
+        // check if fieldValue has duplicate values
+        const uniqueValues = new Set(fieldValue);
+        if (uniqueValues.size !== fieldValue.length) {
+          console.warn(
+            `Duplicate values in field <b>${fieldName}</b> in table <b>${tableName}</b>`
+          );
+          warnings.add(
+            `Duplicate values in field <b>${fieldName}</b> in table <b>${tableName}</b>`
+          );
+        }
       }
 
       // Handle 'i72' type fields
@@ -101,6 +154,7 @@ function validateRecords(tableData: TableInterface[]) {
     }
   }
 }
+
 function validatePrimary(value: string): boolean {
   return value.startsWith("http://") || value.startsWith("https://");
 }
@@ -127,5 +181,57 @@ function validateUnique(
     // Record this value as encountered and return true
     uniqueRecords[uniqueKey].add(fieldValue);
     return true;
+  }
+}
+
+function validateTypeProp(data: any): boolean {
+  if (!("@type" in data)) {
+    errors.add("<b>@type</b> must be present in the data");
+    return true;
+  }
+  if (data["@type"].length === 0) {
+    errors.add("<b>@type</b> cannot be empty");
+    return true;
+  }
+  try {
+    data["@type"]?.split(":")[1].length === 0;
+  } catch (error) {
+    errors.add("<b>@type</b> must follow the format <b>cids:tableName</b>");
+    return true;
+  }
+  const tableName = data["@type"]?.split(":")[1];
+  if (!map[tableName]) {
+    errors.add(`Table <b>${tableName}</b> does not exist`);
+    return true;
+  }
+  return false;
+}
+
+function validateIndicatorsInOrganizations(tableData: TableInterface[]) {
+  for (const data of tableData) {
+    if (validateTypeProp(data)) return;
+    const tableName = data["@type"].split(":")[1];
+    if (tableName == "Organization") {
+      // @ts-ignore
+      data["hasIndicator"].forEach((item) => {
+        indicatorsUrls.push(item);
+      });
+    }
+  }
+
+  for (const data of tableData) {
+    if (validateTypeProp(data)) return;
+    const tableName = data["@type"].split(":")[1];
+    if (tableName == "Indicator") {
+      // @ts-ignore
+      if (data["@id"] && !indicatorsUrls.includes(data["@id"])) {
+        warnings.add(
+          `Indicator <b>${data["@id"]}</b> does not exist in the Organization table`
+        );
+        console.warn(
+          `Indicator <b>${data["@id"]}</b> does not exist in the Organization table`
+        );
+      }
+    }
   }
 }
