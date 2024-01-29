@@ -55,7 +55,6 @@ function Main() {
       <Loading isLoading={isLoading} />
       <ExportDialog
         base={base}
-        setDialogContent={setDialogContent}
         isDialogOpen={isExportDialogOpen}
         setDialogOpen={setIsExportDialogOpen}
       />
@@ -118,17 +117,17 @@ function Main() {
               backgroundColor: "rgba(0,0,0,0)",
             }}
             onClick={async () => {
-              try {
-                setIsExportDialogOpen(true);
-                // await exportData(base, setDialogContent, selectedOption);
-              } catch (error) {
-                console.log(error);
-                setDialogContent(
-                  "Error",
-                  error.message || "Something went wrong",
-                  true
-                );
-              }
+              // try {
+              setIsExportDialogOpen(true);
+              // await exportData(base, setDialogContent, selectedOption);
+              // } catch (error) {
+              //   console.log(error);
+              //   setDialogContent(
+              //     "Error",
+              //     error.message || "Something went wrong",
+              //     true
+              //   );
+              // }
             }}
           >
             <div
