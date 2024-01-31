@@ -4,7 +4,7 @@ import Base from "@airtable/blocks/dist/types/src/models/base";
 import { TableInterface } from "../domain/interfaces/table.interface";
 import { FieldType } from "@airtable/blocks/dist/types/src/types/field";
 import { executeInBatches, getActualFieldType } from "../utils";
-import { map } from "../domain/models";
+import { Organization, map } from "../domain/models";
 import { validate } from "../domain/validation/validator";
 
 const CREATED_FIELDS_IDS: { [key: string]: string } = {};
@@ -13,6 +13,7 @@ const CREATED_FIELDS_DATA: {
   internalId: string;
   externalId: string;
 }[] = [];
+let CURRENT_IMPORTING_ORG = "";
 
 export async function importData(
   jsonData: any,
@@ -24,19 +25,44 @@ export async function importData(
     nextCallback?: () => void
   ) => void
 ) {
-  // Validate JSON
-  const { errors, warnings } = validate(jsonData);
-
-  if (errors.length > 0) {
+  // Check if the user has CREATOR permission
+  if (!base.hasPermissionToCreateTable()) {
     setDialogContent(
       `Error!`,
-      errors.map((item) => `<p>${item}</p>`).join(""),
+      "You don't have permission to create tables in this base, please contact the base owner to give you <b>CREATOR</b> permission.",
       true
     );
     return;
   }
 
-  const allWarnings = warnings.join("<hr/>");
+  const jsonDataByOrgs = await splitJsonDataByOrganization(base, jsonData);
+
+  let allErrors = "";
+  let allWarnings = "";
+
+  Object.values(jsonDataByOrgs).forEach((item: any) => {
+    // Check if json data is a valid json array
+    if (!Array.isArray(item)) {
+      setDialogContent(
+        `Error!`,
+        "Invalid JSON data, please check the data and try again.",
+        true
+      );
+      return;
+    }
+
+    // Validate JSON
+    const { errors, warnings } = validate(item);
+    allErrors = errors.join("<hr/>");
+    allWarnings = warnings.join("<hr/>");
+  });
+
+  console.log(allWarnings, allErrors);
+
+  if (allErrors.length > 0) {
+    setDialogContent(`Error!`, allErrors, true);
+    return;
+  }
 
   if (allWarnings.length > 0) {
     setDialogContent(`Warning!`, allWarnings, true, () => {
@@ -46,43 +72,36 @@ export async function importData(
         true,
         async () => {
           setDialogContent("Wait a moment...", "Importing data...", true);
-          // Create Tables if they don't exist
-          await createTables(base, jsonData);
 
-          // Write Simple Records to Tables
-          await writeTable(base, jsonData);
-
-          // Write Linked Records to Tables
-          await writeTableLinked(base, jsonData);
-
-          // Write user's extra fields
-          await writeExtraFields(base);
-
-          // Delete All old Records
-          await deleteTableRecords(base, jsonData);
-
-          setDialogContent("Success!", "Data imported successfully!", true);
+          Object.entries(jsonDataByOrgs).forEach(async ([orgId, item]) => {
+            await importByData(base, item, orgId);
+          });
         }
       );
     });
   } else {
-    // Create Tables if they don't exist
-    await createTables(base, jsonData);
-
-    // Write Simple Records to Tables
-    await writeTable(base, jsonData);
-
-    // Write Linked Records to Tables
-    await writeTableLinked(base, jsonData);
-
-    // Write user's extra fields
-    await writeExtraFields(base);
-
-    // Delete All old Records
-    await deleteTableRecords(base, jsonData);
-
-    setDialogContent("Success!", "Data imported successfully!", true);
+    Object.entries(jsonDataByOrgs).forEach(async ([orgId, item]) => {
+      await importByData(base, item, orgId);
+    });
   }
+}
+
+async function importByData(base: Base, jsonData: any, orgId: string) {
+  CURRENT_IMPORTING_ORG = orgId;
+  // Create Tables if they don't exist
+  await createTables(base, jsonData);
+
+  // Write Simple Records to Tables
+  await writeTable(base, jsonData);
+
+  // Write Linked Records to Tables
+  await writeTableLinked(base, jsonData);
+
+  // Write user's extra fields
+  await writeExtraFields(base);
+
+  // Delete All old Records
+  await deleteTableRecords(base, jsonData);
 }
 
 async function writeTable(
@@ -322,7 +341,11 @@ async function deleteTableRecords(
       const records = (await table.selectRecordsAsync()).records;
       const recordsToBeDeletedIds: string[] = [];
       for (const record of records) {
-        if (!Object.values(CREATED_FIELDS_IDS).includes(record.id)) {
+        const recordId = record.getCellValueAsString("@id");
+        if (
+          !Object.values(CREATED_FIELDS_IDS).includes(record.id) &&
+          recordId.includes(CURRENT_IMPORTING_ORG)
+        ) {
           recordsToBeDeletedIds.push(record.id);
         }
       }
@@ -331,4 +354,38 @@ async function deleteTableRecords(
       );
     }
   }
+}
+
+async function splitJsonDataByOrganization(base: Base, jsonData: any) {
+  const tableOrganizations = new Set();
+  const fileOrganizations = new Set();
+  const organizationCid = new Organization();
+
+  const orgs = jsonData.filter(
+    (item: any) => item["@type"] === `cids:${organizationCid.name}`
+  );
+  orgs.map((item: any) => {
+    fileOrganizations.add(item["@id"]);
+  });
+
+  const organizationTable = base.getTableByNameIfExists(organizationCid.name);
+  (await organizationTable.selectRecordsAsync()).records.forEach((record) => {
+    tableOrganizations.add(record.getCellValueAsString("@id"));
+  });
+
+  // I want to separe my json data based on fileOrganizations
+  const jsonDataByOrgs = {};
+  Array.from(fileOrganizations).forEach((item: any) => {
+    const records = [];
+    jsonData.map((data) => {
+      if (data["@id"].includes(item)) {
+        records.push(data);
+      }
+    });
+    jsonDataByOrgs[item] = records;
+  });
+
+  return jsonDataByOrgs;
+  // console.log("TO", tableOrganizations);
+  // console.log("FO", fileOrganizations);
 }

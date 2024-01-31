@@ -5,22 +5,28 @@
  * Finally, calls the `onSuccess` callback function with the parsed JSON data.
  * @param event - The event object triggered by the file input element.
  * @param onSuccess - A callback function that will be called with the parsed JSON data.
+ * @param onError - A callback function that will be called if an error occurs.
  * @returns Promise<void>
  */
 export const handleFileChange = async (
   event: any,
-  onSuccess: (data: any) => void
+  onSuccess: (data: any) => void,
+  onError: (error: any) => void
 ): Promise<void> => {
   const file = event.target.files[0];
   if (file && (file.name.endsWith(".jsonld") || file.name.endsWith(".json"))) {
     const reader = new FileReader();
     reader.onload = async (e) => {
-      const data = JSON.parse(e.target.result as any);
-      onSuccess(data);
+      try {
+        const data = JSON.parse(e.target.result as any);
+        onSuccess(data);
+      } catch (error) {
+        onError(new Error("File is not a valid JSON/JSON-LD file."));
+      }
     };
     reader.readAsText(file);
   } else {
-    alert("Please select a JSON-LD file.");
+    onError(new Error("File is not a JSON/JSON-LD file."));
   }
 };
 

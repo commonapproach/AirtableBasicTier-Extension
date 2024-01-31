@@ -91,23 +91,33 @@ function Main() {
             type="file"
             ref={fileInputRef}
             onChange={(e) => {
-              handleFileChange(e, async (josnData) => {
-                setIsLoading(true);
-                try {
+              handleFileChange(
+                e,
+                async (josnData) => {
+                  setIsLoading(true);
                   await importData(josnData, base, setDialogContent);
-                } catch (error) {
+                  // try {
+                  // } catch (error) {
+                  //   setDialogContent(
+                  //     "Error",
+                  //     error.message || "Something went wrong",
+                  //     true
+                  //   );
+                  // }
+                  // Reset the input value
+                  if (document.body.contains(e.target)) {
+                    e.target.value = "";
+                  }
+                  setIsLoading(false);
+                },
+                (error) => {
                   setDialogContent(
                     "Error",
                     error.message || "Something went wrong",
                     true
                   );
                 }
-                // Reset the input value
-                if (document.body.contains(e.target)) {
-                  e.target.value = "";
-                }
-                setIsLoading(false);
-              });
+              );
             }}
             style={{ display: "none" }}
           />
