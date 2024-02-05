@@ -90,20 +90,20 @@ function Main() {
           <input
             type="file"
             ref={fileInputRef}
-            onChange={(e) => {
+            onChange={async (e) => {
               handleFileChange(
                 e,
                 async (josnData) => {
                   setIsLoading(true);
-                  await importData(josnData, base, setDialogContent);
-                  // try {
-                  // } catch (error) {
-                  //   setDialogContent(
-                  //     "Error",
-                  //     error.message || "Something went wrong",
-                  //     true
-                  //   );
-                  // }
+                  try {
+                    await importData(josnData, base, setDialogContent);
+                  } catch (error) {
+                    setDialogContent(
+                      "Error",
+                      error.message || "Something went wrong",
+                      true
+                    );
+                  }
                   // Reset the input value
                   if (document.body.contains(e.target)) {
                     e.target.value = "";

@@ -7,8 +7,8 @@ import { executeInBatches, getActualFieldType } from "../utils";
 import { Organization, map } from "../domain/models";
 import { validate } from "../domain/validation/validator";
 
-const CREATED_FIELDS_IDS: { [key: string]: string } = {};
-const CREATED_FIELDS_DATA: {
+let CREATED_FIELDS_IDS: { [key: string]: string } = {};
+let CREATED_FIELDS_DATA: {
   tableName: string;
   internalId: string;
   externalId: string;
@@ -40,8 +40,8 @@ export async function importData(
   let allErrors = "";
   let allWarnings = "";
 
+  // Check if json data is a valid json array
   Object.values(jsonDataByOrgs).forEach((item: any) => {
-    // Check if json data is a valid json array
     if (!Array.isArray(item)) {
       setDialogContent(
         `Error!`,
@@ -57,8 +57,6 @@ export async function importData(
     allWarnings = warnings.join("<hr/>");
   });
 
-  console.log(allWarnings, allErrors);
-
   if (allErrors.length > 0) {
     setDialogContent(`Error!`, allErrors, true);
     return;
@@ -71,22 +69,40 @@ export async function importData(
         "<p>Do you want to import anyway?</p>",
         true,
         async () => {
-          setDialogContent("Wait a moment...", "Importing data...", true);
-
-          Object.entries(jsonDataByOrgs).forEach(async ([orgId, item]) => {
-            await importByData(base, item, orgId);
-          });
+          importFileData(base, jsonDataByOrgs, setDialogContent);
         }
       );
     });
   } else {
-    Object.entries(jsonDataByOrgs).forEach(async ([orgId, item]) => {
-      await importByData(base, item, orgId);
-    });
+    importFileData(base, jsonDataByOrgs, setDialogContent);
   }
 }
 
-async function importByData(base: Base, jsonData: any, orgId: string) {
+async function importFileData(
+  base: Base,
+  jsonDataByOrgs: any,
+  setDialogContent: any
+) {
+  setDialogContent("Wait a moment...", "Importing data...", true);
+  for (const [orgId, item] of Object.entries(jsonDataByOrgs)) {
+    try {
+      await importByData(base, item, orgId, setDialogContent);
+      CREATED_FIELDS_DATA = [];
+      CREATED_FIELDS_IDS = {};
+      CURRENT_IMPORTING_ORG = "";
+    } catch (error) {
+      setDialogContent("Error", error.message || "Something went wrong", true);
+      return;
+    }
+  }
+}
+
+async function importByData(
+  base: Base,
+  jsonData: any,
+  orgId: string,
+  setDialogContent: any
+) {
   CURRENT_IMPORTING_ORG = orgId;
   // Create Tables if they don't exist
   await createTables(base, jsonData);
@@ -102,6 +118,12 @@ async function importByData(base: Base, jsonData: any, orgId: string) {
 
   // Delete All old Records
   await deleteTableRecords(base, jsonData);
+
+  setDialogContent(
+    `Success!`,
+    "Your data has been successfully imported.",
+    true
+  );
 }
 
 async function writeTable(
@@ -185,6 +207,7 @@ async function writeTableLinked(
 }
 
 async function writeExtraFields(base: Base): Promise<void> {
+  console.log(CREATED_FIELDS_DATA);
   for (const { tableName, externalId } of CREATED_FIELDS_DATA) {
     const cid = new map[tableName]();
     const table = base.getTableByNameIfExists(tableName);
@@ -199,7 +222,7 @@ async function writeExtraFields(base: Base): Promise<void> {
       if (!Object.keys(map).includes(diff.name)) {
         for (const record of records.records) {
           const valueToBeUpdated = await record.getCellValue(diff.name);
-          if (valueToBeUpdated) {
+          if (valueToBeUpdated && record.name.includes(CURRENT_IMPORTING_ORG)) {
             await table.updateRecordAsync(externalId, {
               [diff.name]: valueToBeUpdated,
             });
@@ -214,8 +237,6 @@ async function createTables(
   base: Base,
   tableData: TableInterface[]
 ): Promise<void> {
-  const tablesSet = new Set();
-  tableData.forEach((item) => tablesSet.add(item["@type"].split(":")[1]));
   const structure = {};
 
   tableData.forEach((item) => {
@@ -241,20 +262,12 @@ async function createTables(
   });
 
   await checkIfCancreateTableFields(base, structure);
-  await createTablesIfNotExist(base, structure);
+  await createTablesIfNotExist(base);
   await createTableFields(base, structure);
 }
 
-async function createTablesIfNotExist(
-  base: Base,
-  structure: any
-): Promise<void> {
-  Object.entries(structure).forEach(([tableName, values]: any) => {
-    const table = base.getTableByNameIfExists(tableName);
-  });
-
-  for (const data of Object.entries(structure)) {
-    const [tableName, values]: any = data;
+async function createTablesIfNotExist(base: Base): Promise<void> {
+  for (const tableName of Object.keys(map)) {
     const table = base.getTableByNameIfExists(tableName);
     if (!table) {
       console.log(`creating table ${tableName}`);
@@ -333,7 +346,11 @@ async function deleteTableRecords(
   tableData: TableInterface[]
 ): Promise<void> {
   const tablesSet = new Set();
-  tableData.forEach((item) => tablesSet.add(item["@type"].split(":")[1]));
+  const tableIds = [];
+  tableData.forEach((item) => {
+    tablesSet.add(item["@type"].split(":")[1])
+    tableIds.push(item["@id"]);
+  });
 
   for (const tableName of Array.from(tablesSet)) {
     const table = base.getTableByNameIfExists(tableName as string);
@@ -344,13 +361,15 @@ async function deleteTableRecords(
         const recordId = record.getCellValueAsString("@id");
         if (
           !Object.values(CREATED_FIELDS_IDS).includes(record.id) &&
-          recordId.includes(CURRENT_IMPORTING_ORG)
+          recordId.includes(CURRENT_IMPORTING_ORG) &&
+          tableIds.includes(recordId)
         ) {
           recordsToBeDeletedIds.push(record.id);
         }
       }
-      await executeInBatches(recordsToBeDeletedIds, (batch) =>
-        table.deleteRecordsAsync(batch)
+      await executeInBatches(
+        recordsToBeDeletedIds,
+        async (batch) => await table.deleteRecordsAsync(batch)
       );
     }
   }

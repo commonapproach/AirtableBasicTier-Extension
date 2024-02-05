@@ -53,9 +53,8 @@ export async function exportData(
               value?.map((item: LinkedCellInterface) => item.name) ??
               field?.defaultValue;
           } else if (field.representedType === "string") {
-            row[field.name] =
-              //@ts-ignore
-              value[0]?.name ?? field?.defaultValue;
+            //@ts-ignore
+            row[field.name] = value ? value[0]?.name : field?.defaultValue;
           }
         } else if (field.type === "i72") {
           row[field.name] = {
