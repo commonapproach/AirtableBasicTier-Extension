@@ -210,7 +210,6 @@ async function writeExtraFields(base: Base): Promise<void> {
   for (const { tableName, externalId } of CREATED_FIELDS_DATA) {
     const cid = new map[tableName]();
     const table = base.getTableByNameIfExists(tableName);
-    console.log(table);
     const records = await table.selectRecordsAsync();
     const externalFields = table.fields;
     const internalFields = cid.getFields().map((item) => item.name);
@@ -239,7 +238,6 @@ async function createTables(
 ): Promise<void> {
   const structure = {};
 
-  console.log(tableData);
   tableData.forEach((item) => {
     const tableName = item["@type"].split(":").pop();
     const cid = new map[tableName]();
