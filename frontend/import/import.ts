@@ -36,7 +36,7 @@ export async function importData(
   }
 
   const jsonDataByOrgs = await splitJsonDataByOrganization(base, jsonData);
-
+  
   let allErrors = "";
   let allWarnings = "";
 
@@ -207,10 +207,10 @@ async function writeTableLinked(
 }
 
 async function writeExtraFields(base: Base): Promise<void> {
-  console.log(CREATED_FIELDS_DATA);
   for (const { tableName, externalId } of CREATED_FIELDS_DATA) {
     const cid = new map[tableName]();
     const table = base.getTableByNameIfExists(tableName);
+    console.log(table);
     const records = await table.selectRecordsAsync();
     const externalFields = table.fields;
     const internalFields = cid.getFields().map((item) => item.name);
@@ -239,6 +239,7 @@ async function createTables(
 ): Promise<void> {
   const structure = {};
 
+  console.log(tableData);
   tableData.forEach((item) => {
     const tableName = item["@type"].split(":").pop();
     const cid = new map[tableName]();
@@ -387,12 +388,17 @@ async function splitJsonDataByOrganization(base: Base, jsonData: any) {
     fileOrganizations.add(item["@id"]);
   });
 
-  const organizationTable = base.getTableByNameIfExists(organizationCid.name);
+  let organizationTable = base.getTableByNameIfExists(organizationCid.name);
+  if (!organizationTable) {
+    await createTables(base, orgs);
+    await writeTable(base, orgs);
+  }
+
+  organizationTable = base.getTableByNameIfExists(organizationCid.name);
   (await organizationTable.selectRecordsAsync()).records.forEach((record) => {
     tableOrganizations.add(record.getCellValueAsString("@id"));
   });
 
-  // I want to separe my json data based on fileOrganizations
   const jsonDataByOrgs = {};
   Array.from(fileOrganizations).forEach((item: any) => {
     const records = [];
@@ -405,6 +411,4 @@ async function splitJsonDataByOrganization(base: Base, jsonData: any) {
   });
 
   return jsonDataByOrgs;
-  // console.log("TO", tableOrganizations);
-  // console.log("FO", fileOrganizations);
 }
