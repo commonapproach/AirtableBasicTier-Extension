@@ -381,13 +381,19 @@ async function deleteTableRecords(
 
   for (const tableName of Array.from(tablesSet)) {
     const table = base.getTableByNameIfExists(tableName as string);
-    const recordsToBeRecriated: Record[] = [];
     if (table) {
       const linkedRecordsRecriated = {};
       const records = (await table.selectRecordsAsync()).records;
       const recordsToBeDeletedIds: string[] = [];
       for (const record of records) {
         const recordId = record.getCellValueAsString("@id");
+        if (
+          !Object.values(CREATED_FIELDS_IDS).includes(record.id) &&
+          tableName === "Theme" &&
+          tableIds.includes(recordId)
+        ) {
+          recordsToBeDeletedIds.push(record.id);
+        }
         if (
           !Object.values(CREATED_FIELDS_IDS).includes(record.id) &&
           recordId.includes(CURRENT_IMPORTING_ORG) &&
