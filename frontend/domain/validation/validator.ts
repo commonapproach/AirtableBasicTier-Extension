@@ -38,6 +38,11 @@ function validateRecords(tableData: TableInterface[]) {
     //check if required fields are present
     for (const field of cid.getFields()) {
       if (field.required && !Object.keys(data).includes(field.name)) {
+        if (field.name === "value") {
+          if (Object.keys(data).includes("i72:value")) {
+            continue;
+          }
+        }
         errors.add(
           `Required field <b>${field.name}</b> is missing in table <b>${tableName}</b>`
         );

@@ -226,8 +226,6 @@ async function writeTableLinked(
     }
 
     if (id && record) {
-      console.log(tableName);
-      console.log({ oldRecord }, { record });
       const recordID = await table.updateRecordAsync(id, record);
     }
   }
