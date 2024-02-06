@@ -139,6 +139,9 @@ async function writeTable(
 
     let record = {};
     Object.entries(data).forEach(([key, value]) => {
+      if (key === "i72:value") {
+        key = "value";
+      }
       const cid = new map[tableName]();
       if (
         cid.getFieldByName(key)?.type !== "link" &&
@@ -146,7 +149,7 @@ async function writeTable(
         key !== "@type" &&
         key !== "@context"
       ) {
-        if (cid.getFieldByName(key)?.type === "i72") {
+        if (cid.getFieldByName(key)?.type === "i72" || key === "i72:value") {
           record[key] =
             // @ts-ignore
             value?.numerical_value || value?.["i72:numerical_value"];
