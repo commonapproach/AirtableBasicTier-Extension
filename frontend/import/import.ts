@@ -6,6 +6,8 @@ import { FieldType } from "@airtable/blocks/dist/types/src/types/field";
 import { executeInBatches, getActualFieldType } from "../utils";
 import { Organization, map } from "../domain/models";
 import { validate } from "../domain/validation/validator";
+import Record from "@airtable/blocks/dist/types/src/models/record";
+import Table from "@airtable/blocks/dist/types/src/models/table";
 
 let CREATED_FIELDS_IDS: { [key: string]: string } = {};
 let CREATED_FIELDS_DATA: {
@@ -36,7 +38,7 @@ export async function importData(
   }
 
   const jsonDataByOrgs = await splitJsonDataByOrganization(base, jsonData);
-  
+
   let allErrors = "";
   let allWarnings = "";
 
@@ -174,8 +176,10 @@ async function writeTableLinked(
     const table = base.getTableByNameIfExists(tableName);
 
     let record = {};
+    let oldRecord = {};
     let id: string;
-    Object.entries(data).forEach(([key, value]) => {
+
+    for (let [key, value] of Object.entries(data)) {
       const cid = new map[tableName]();
       if (
         cid.getFieldByName(key)?.type === "link" &&
@@ -192,15 +196,38 @@ async function writeTableLinked(
         // remove duplicates from value
         value = [...new Set(value as string[])];
 
+        const tbl = base.getTableByNameIfExists(tableName);
+        const linkedFields = tbl.fields.filter(
+          (field) => field.type === "multipleRecordLinks"
+        );
+        const records = (await tbl.selectRecordsAsync()).records;
+        const filteredRecords = records.filter(
+          (rcd) => rcd.getCellValueAsString("@id") === recordId
+        );
+        const oldRecord = filteredRecords.filter((rcd) => rcd.id !== id)[0];
+        const newRecord = filteredRecords.filter((rcd) => rcd.id === id)[0];
+
         const mappedValues = value
           // @ts-ignore
           ?.filter((uri) => CREATED_FIELDS_IDS[uri])
           ?.map((uri) => CREATED_FIELDS_IDS[uri]);
         record[key] = mappedValues.map((id: string) => ({ id }));
+
+        oldRecord[key] =
+          // @ts-ignore
+          oldRecord.getCellValue(key)?.map((item) => {
+            return { id: item.id };
+          }) || [];
       }
-    });
+    }
+
+    if (id && oldRecord) {
+      const recordID = await table.updateRecordAsync(id, oldRecord);
+    }
 
     if (id && record) {
+      console.log(tableName);
+      console.log({ oldRecord }, { record });
       const recordID = await table.updateRecordAsync(id, record);
     }
   }
@@ -347,13 +374,15 @@ async function deleteTableRecords(
   const tablesSet = new Set();
   const tableIds = [];
   tableData.forEach((item) => {
-    tablesSet.add(item["@type"].split(":")[1])
+    tablesSet.add(item["@type"].split(":")[1]);
     tableIds.push(item["@id"]);
   });
 
   for (const tableName of Array.from(tablesSet)) {
     const table = base.getTableByNameIfExists(tableName as string);
+    const recordsToBeRecriated: Record[] = [];
     if (table) {
+      const linkedRecordsRecriated = {};
       const records = (await table.selectRecordsAsync()).records;
       const recordsToBeDeletedIds: string[] = [];
       for (const record of records) {
@@ -364,12 +393,18 @@ async function deleteTableRecords(
           tableIds.includes(recordId)
         ) {
           recordsToBeDeletedIds.push(record.id);
+        } else {
+          if (!Object.values(CREATED_FIELDS_IDS).includes(record.id)) {
+            appendNewInfoToUserRecords(table, record, linkedRecordsRecriated);
+          }
         }
       }
-      await executeInBatches(
-        recordsToBeDeletedIds,
-        async (batch) => await table.deleteRecordsAsync(batch)
-      );
+      setTimeout(async () => {
+        await executeInBatches(
+          recordsToBeDeletedIds,
+          async (batch) => await table.deleteRecordsAsync(batch)
+        );
+      }, 2000);
     }
   }
 }
@@ -404,9 +439,44 @@ async function splitJsonDataByOrganization(base: Base, jsonData: any) {
       if (data["@id"].includes(item)) {
         records.push(data);
       }
+
+      // Expeption for theme table to be added to all organizations
+      if (data["@type"] === "cids:Theme") {
+        records.push(data);
+      }
     });
     jsonDataByOrgs[item] = records;
   });
 
   return jsonDataByOrgs;
+}
+
+async function appendNewInfoToUserRecords(
+  table: Table,
+  record: Record,
+  linkedRecordsRecriated: any
+) {
+  let linkFields: string[] = [];
+  for (const field of table.fields) {
+    if (field.config.type === "multipleRecordLinks") {
+      linkFields.push(field.name);
+    }
+  }
+  for (const linkFieldName of linkFields) {
+    const newIds = [];
+    const parentTableName =
+      // @ts-ignore
+      record.selectLinkedRecordsFromCell(linkFieldName).parentTable.name;
+
+    const oldValues: any = record.getCellValue(linkFieldName);
+    if (!oldValues) continue;
+
+    for (const oldValue of oldValues) {
+      newIds.push({ id: CREATED_FIELDS_IDS[oldValue.name] });
+    }
+
+    linkedRecordsRecriated[parentTableName] = newIds;
+  }
+
+  await table.updateRecordAsync(record.id, linkedRecordsRecriated);
 }
