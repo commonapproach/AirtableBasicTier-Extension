@@ -235,7 +235,7 @@ async function writeTableLinked(
 }
 
 async function writeExtraFields(base: Base): Promise<void> {
-  for (const { tableName, externalId } of CREATED_FIELDS_DATA) {
+  for (const { tableName, externalId, internalId } of CREATED_FIELDS_DATA) {
     const cid = new map[tableName]();
     const table = base.getTableByNameIfExists(tableName);
     const records = await table.selectRecordsAsync();
@@ -248,11 +248,16 @@ async function writeExtraFields(base: Base): Promise<void> {
     for (const diff of diffs) {
       if (!Object.keys(map).includes(diff.name)) {
         for (const record of records.records) {
-          const valueToBeUpdated = await record.getCellValue(diff.name);
-          if (valueToBeUpdated && record.name.includes(CURRENT_IMPORTING_ORG)) {
-            await table.updateRecordAsync(externalId, {
-              [diff.name]: valueToBeUpdated,
-            });
+          if (record.name === internalId && record.id !== externalId) {
+            const valueToBeUpdated = record.getCellValue(diff.name);
+            if (
+              valueToBeUpdated &&
+              record.name.includes(CURRENT_IMPORTING_ORG)
+            ) {
+              await table.updateRecordAsync(externalId, {
+                [diff.name]: valueToBeUpdated,
+              });
+            }
           }
         }
       }
