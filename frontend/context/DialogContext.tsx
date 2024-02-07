@@ -21,12 +21,13 @@ function DialogContextProvider({ children }) {
   }
 
   useEffect(() => {
-    if(!openDialog){
-      setText(null)
-      setHeader(null)
-      setCallback(null)
+    console.log({ openDialog });
+    if (!openDialog) {
+      setText(null);
+      setHeader(null);
+      setCallback(null);
     }
-  },[openDialog])
+  }, [openDialog]);
 
   return (
     <DialogContext.Provider
