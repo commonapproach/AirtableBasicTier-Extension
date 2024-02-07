@@ -53,13 +53,24 @@ function validateRecords(tableData: TableInterface[]) {
     }
 
     for (const field of cid.getFields()) {
-      if (field.semiRequired && !Object.keys(data).includes(field.name)) {
-        warnings.add(
-          `Required field <b>${field.name}</b> is missing in table <b>${tableName}</b>`
-        );
-        console.warn(
-          `Required field <b>${field.name}</b> is missing in table <b>${tableName}</b>`
-        );
+      if (field.semiRequired) {
+        if (!Object.keys(data).includes(field.name)) {
+          warnings.add(
+            `Required field <b>${field.name}</b> is missing in table <b>${tableName}</b>`
+          );
+          console.warn(
+            `Required field <b>${field.name}</b> is missing in table <b>${tableName}</b>`
+          );
+        }
+        // @ts-ignore
+        if (data[field.name].length === 0) {
+          warnings.add(
+            `Field <b>${field.name}</b> is empty in table <b>${tableName}</b>`
+          );
+          console.warn(
+            `Field <b>${field.name}</b> is empty in table <b>${tableName}</b>`
+          );
+        }
       }
     }
 
