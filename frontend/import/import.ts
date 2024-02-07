@@ -216,11 +216,13 @@ async function writeTableLinked(
           ?.map((uri) => CREATED_FIELDS_IDS[uri]);
         record[key] = mappedValues.map((id: string) => ({ id }));
 
-        oldRecord[key] =
-          // @ts-ignore
-          oldRecord.getCellValue(key)?.map((item) => {
-            return { id: item.id };
-          }) || [];
+        if (oldRecord) {
+          oldRecord[key] =
+            // @ts-ignore
+            oldRecord?.getCellValue(key)?.map((item) => {
+              return { id: item.id };
+            }) || [];
+        }
       }
     }
 
@@ -249,7 +251,7 @@ async function writeExtraFields(base: Base): Promise<void> {
       if (!Object.keys(map).includes(diff.name)) {
         for (const record of records.records) {
           if (record.name === internalId && record.id !== externalId) {
-            const valueToBeUpdated = record.getCellValue(diff.name);
+            const valueToBeUpdated = record?.getCellValue(diff.name);
             if (
               valueToBeUpdated &&
               record.name.includes(CURRENT_IMPORTING_ORG)
@@ -480,7 +482,7 @@ async function appendNewInfoToUserRecords(
       // @ts-ignore
       record.selectLinkedRecordsFromCell(linkFieldName).parentTable.name;
 
-    const oldValues: any = record.getCellValue(linkFieldName);
+    const oldValues: any = record?.getCellValue(linkFieldName);
     if (!oldValues) continue;
 
     for (const oldValue of oldValues) {

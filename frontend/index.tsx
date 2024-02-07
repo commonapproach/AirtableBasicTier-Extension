@@ -98,6 +98,7 @@ function Main() {
                   try {
                     await importData(josnData, base, setDialogContent);
                   } catch (error) {
+                    console.error(error)
                     setDialogContent(
                       "Error",
                       error.message || "Something went wrong",
