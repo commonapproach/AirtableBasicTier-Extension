@@ -75,9 +75,11 @@ export async function exportData(
   const { errors, warnings } = validate(data);
 
   const emptyTableWarning = await checkForEmptyTables(base);
-  const allWarnings = checkForNotExportedFields(base) + warnings.join("<hr/>") + emptyTableWarning;
-
-
+  const allWarnings =
+    checkForNotExportedFields(base) +
+    warnings.join("<hr/>") +
+    "<hr/>" +
+    emptyTableWarning;
 
   if (errors.length > 0) {
     setDialogContent(
@@ -134,7 +136,7 @@ function checkForNotExportedFields(base: Base) {
     const externalFields = table.fields.map((item) => item.name);
 
     for (const field of externalFields) {
-      if(Object.keys(map).includes(field)) {
+      if (Object.keys(map).includes(field)) {
         continue;
       }
       if (!internalFields.includes(field)) {

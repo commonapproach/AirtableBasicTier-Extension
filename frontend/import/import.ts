@@ -35,6 +35,17 @@ export async function importData(
       "You don't have permission to create tables in this base, please contact the base owner to give you <b>CREATOR</b> permission.",
       true
     );
+    setIsImporting(false);
+    return;
+  }
+
+  if (!checkIfHasOneOrganization(jsonData)) {
+    setDialogContent(
+      `Error!`,
+      "You can't import without at least one organization.",
+      true
+    );
+    setIsImporting(false);
     return;
   }
 
@@ -163,7 +174,8 @@ async function writeTable(
         if (cid.getFieldByName(key)?.type === "i72" || key === "i72:value") {
           record[key] =
             // @ts-ignore
-            value?.numerical_value?.toString() || value?.["i72:numerical_value"]?.toString();
+            value?.numerical_value?.toString() ||
+            value?.["i72:numerical_value"]?.toString();
         } else {
           record[key] = value;
         }
@@ -514,10 +526,10 @@ async function appendNewInfoToUserRecords(
   }
 
   try {
-    await table.updateRecordAsync(
-      record.id,
-      removeUndefinedIds(linkedRecordsRecriated)
-    );
+    const val = removeEmptyArrays(removeUndefinedIds(linkedRecordsRecriated));
+    if (Object.keys(val).length > 0) {
+      await table.updateRecordAsync(record.id, val);
+    }
   } catch (error) {
     console.log(error);
   }
@@ -537,4 +549,27 @@ async function appendNewInfoToUserRecords(
       return acc;
     }, {});
   }
+
+  function removeEmptyArrays(obj) {
+    return Object.entries(obj).reduce((acc, [key, value]) => {
+      if (Array.isArray(value) && value.length > 0) {
+        acc[key] = value;
+      } else if (!Array.isArray(value)) {
+        acc[key] = value;
+      }
+      return acc;
+    }, {});
+  }
 }
+
+const checkIfHasOneOrganization = (jsonData: any) => {
+  const allTableNames = new Set();
+  for (const data of jsonData) {
+    const tableName = data["@type"].split(":")[1];
+    allTableNames.add(tableName);
+  }
+  if (!Array.from(allTableNames).includes(Organization.name)) {
+    return false;
+  }
+  return true;
+};
