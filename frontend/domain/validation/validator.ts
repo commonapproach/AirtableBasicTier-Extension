@@ -33,6 +33,7 @@ function validateRecords(tableData: TableInterface[]) {
   for (const data of tableData) {
     if (validateTypeProp(data)) return;
     const tableName = data["@type"].split(":")[1];
+    const id = data["@id"];
     const cid = new map[tableName](); // Initialize the schema for the table
 
     // Initialize a record for this table if not already present
@@ -139,7 +140,7 @@ function validateRecords(tableData: TableInterface[]) {
         // Validate unique fields
         if (fieldProps?.unique) {
           if (
-            !validateUnique(tableName, fieldName, fieldValue, uniqueRecords)
+            !validateUnique(tableName, fieldName, fieldValue, uniqueRecords, id)
           ) {
             console.error(
               `Duplicate value for unique field ${fieldName}: ${fieldValue} in table ${tableName}`
@@ -184,10 +185,14 @@ function validateUnique(
   tableName: string,
   fieldName: string,
   fieldValue: any,
-  uniqueRecords: Record<string, Set<any>>
+  uniqueRecords: Record<string, Set<any>>,
+  id: string
 ): boolean {
   // Unique key for this field in the format "tableName.fieldName"
-  const uniqueKey = `${tableName}.${fieldName}`;
+  const urlObject = new URL(id);
+  const baseUrl = `${urlObject.protocol}//${urlObject.hostname}`;
+
+  const uniqueKey = `${tableName}.${fieldName}.${baseUrl}`;
 
   // Initialize a record for this field if not already present
   if (!uniqueRecords[uniqueKey]) {

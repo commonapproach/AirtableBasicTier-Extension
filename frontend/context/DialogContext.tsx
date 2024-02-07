@@ -21,7 +21,6 @@ function DialogContextProvider({ children }) {
   }
 
   useEffect(() => {
-    console.log({ openDialog });
     if (!openDialog) {
       setText(null);
       setHeader(null);
