@@ -1,5 +1,5 @@
 import { Button, Dialog, Heading } from "@airtable/blocks/ui";
-import React, { useState, createContext, useContext } from "react";
+import React, { useState, createContext, useContext, useEffect } from "react";
 const DialogContext = createContext({} as any);
 
 function DialogContextProvider({ children }) {
@@ -19,6 +19,14 @@ function DialogContextProvider({ children }) {
     setOpenDialog(isOpen);
     setCallback(() => nextCallback);
   }
+
+  useEffect(() => {
+    if(!openDialog){
+      setText(null)
+      setHeader(null)
+      setCallback(null)
+    }
+  },[openDialog])
 
   return (
     <DialogContext.Provider
