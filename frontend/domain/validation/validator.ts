@@ -68,7 +68,7 @@ function validateRecords(tableData: TableInterface[]) {
           );
         }
         // @ts-ignore
-        if (data[field.name].length === 0) {
+        if (data[field.name]?.length === 0) {
           validatorWarnings.add(
             `Field <b>${field.name}</b> is empty in table <b>${tableName}</b>`
           );
