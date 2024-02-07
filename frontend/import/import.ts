@@ -163,7 +163,7 @@ async function writeTable(
         if (cid.getFieldByName(key)?.type === "i72" || key === "i72:value") {
           record[key] =
             // @ts-ignore
-            value?.numerical_value.toString() || value?.["i72:numerical_value"].toString();
+            value?.numerical_value?.toString() || value?.["i72:numerical_value"]?.toString();
         } else {
           record[key] = value;
         }
