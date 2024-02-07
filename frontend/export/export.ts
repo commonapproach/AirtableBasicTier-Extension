@@ -74,7 +74,10 @@ export async function exportData(
 
   const { errors, warnings } = validate(data);
 
-  const allWarnings = checkForNotExportedFields(base) + warnings.join("<hr/>");
+  const emptyTableWarning = await checkForEmptyTables(base);
+  const allWarnings = checkForNotExportedFields(base) + warnings.join("<hr/>") + emptyTableWarning;
+
+
 
   if (errors.length > 0) {
     setDialogContent(
@@ -134,6 +137,20 @@ function checkForNotExportedFields(base: Base) {
       if (!internalFields.includes(field)) {
         warnings += `Field <b>${field}</b> on table <b>${table.name}</b> will not be exported<hr/>`;
       }
+    }
+  }
+  return warnings;
+}
+
+async function checkForEmptyTables(base: Base) {
+  let warnings = "";
+  for (const table of base.tables) {
+    if (!Object.keys(map).includes(table.name)) {
+      continue;
+    }
+    const records = await table.selectRecordsAsync();
+    if (records.records.length === 0) {
+      warnings += `Table <b>${table.name}</b> is empty<hr/>`;
     }
   }
   return warnings;
