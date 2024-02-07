@@ -22,6 +22,7 @@ function Main() {
   // const [selectedOption, setSelectedOption] = useState(null);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
   // useEffect(() => {
   //   if (options.length > 0) return;
@@ -73,6 +74,7 @@ function Main() {
               backgroundColor: "rgba(0,0,0,0)",
             }}
             onClick={handleButtonClick}
+            disabled={isImporting}
           >
             <div
               style={{
@@ -96,9 +98,10 @@ function Main() {
                 async (josnData) => {
                   setIsLoading(true);
                   try {
-                    await importData(josnData, base, setDialogContent);
+                    await importData(josnData, base, setDialogContent, setIsImporting);
                   } catch (error) {
-                    console.error(error)
+                    setIsImporting(false);
+                    console.log(error)
                     setDialogContent(
                       "Error",
                       error.message || "Something went wrong",
@@ -127,6 +130,7 @@ function Main() {
               border: "1px solid #50b7e0",
               backgroundColor: "rgba(0,0,0,0)",
             }}
+            disabled={isImporting}
             onClick={async () => {
               // try {
               setIsExportDialogOpen(true);

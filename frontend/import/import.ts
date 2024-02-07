@@ -25,7 +25,8 @@ export async function importData(
     text: string,
     open: boolean,
     nextCallback?: () => void
-  ) => void
+  ) => void,
+  setIsImporting: (value: boolean) => void
 ) {
   // Check if the user has CREATOR permission
   if (!base.hasPermissionToCreateTable()) {
@@ -71,28 +72,36 @@ export async function importData(
         "<p>Do you want to import anyway?</p>",
         true,
         async () => {
-          importFileData(base, jsonDataByOrgs, setDialogContent);
+          importFileData(
+            base,
+            jsonDataByOrgs,
+            setDialogContent,
+            setIsImporting
+          );
         }
       );
     });
   } else {
-    importFileData(base, jsonDataByOrgs, setDialogContent);
+    importFileData(base, jsonDataByOrgs, setDialogContent, setIsImporting);
   }
 }
 
 async function importFileData(
   base: Base,
   jsonDataByOrgs: any,
-  setDialogContent: any
+  setDialogContent: any,
+  setIsImporting
 ) {
   setDialogContent("Wait a moment...", "Importing data...", true);
+  setIsImporting(true);
   for (const [orgId, item] of Object.entries(jsonDataByOrgs)) {
     try {
-      await importByData(base, item, orgId, setDialogContent);
+      await importByData(base, item, orgId, setDialogContent, setIsImporting);
       CREATED_FIELDS_DATA = [];
       CREATED_FIELDS_IDS = {};
       CURRENT_IMPORTING_ORG = "";
     } catch (error) {
+      setIsImporting(false);
       setDialogContent("Error", error.message || "Something went wrong", true);
       return;
     }
@@ -103,7 +112,8 @@ async function importByData(
   base: Base,
   jsonData: any,
   orgId: string,
-  setDialogContent: any
+  setDialogContent: any,
+  setIsImporting: any
 ) {
   CURRENT_IMPORTING_ORG = orgId;
   // Create Tables if they don't exist
@@ -126,6 +136,7 @@ async function importByData(
     "Your data has been successfully imported.",
     true
   );
+  setIsImporting(false);
 }
 
 async function writeTable(
@@ -152,7 +163,7 @@ async function writeTable(
         if (cid.getFieldByName(key)?.type === "i72" || key === "i72:value") {
           record[key] =
             // @ts-ignore
-            value?.numerical_value || value?.["i72:numerical_value"];
+            value?.numerical_value.toString() || value?.["i72:numerical_value"].toString();
         } else {
           record[key] = value;
         }
@@ -226,7 +237,7 @@ async function writeTableLinked(
       }
     }
 
-    if (id && oldRecord) {
+    if (id && oldRecord && Object.keys(oldRecord).length > 0) {
       const recordID = await table.updateRecordAsync(id, oldRecord);
     }
 
@@ -251,11 +262,19 @@ async function writeExtraFields(base: Base): Promise<void> {
       if (!Object.keys(map).includes(diff.name)) {
         for (const record of records.records) {
           if (record.name === internalId && record.id !== externalId) {
-            const valueToBeUpdated = record?.getCellValue(diff.name);
+            let valueToBeUpdated = record?.getCellValue(diff.name);
             if (
               valueToBeUpdated &&
               record.name.includes(CURRENT_IMPORTING_ORG)
             ) {
+              if (Array.isArray(valueToBeUpdated)) {
+                valueToBeUpdated = valueToBeUpdated.map((item) => {
+                  return { id: item.id };
+                });
+              }
+              console.log(table.name, {
+                [diff.name]: valueToBeUpdated,
+              });
               await table.updateRecordAsync(externalId, {
                 [diff.name]: valueToBeUpdated,
               });
@@ -489,8 +508,33 @@ async function appendNewInfoToUserRecords(
       newIds.push({ id: CREATED_FIELDS_IDS[oldValue.name] });
     }
 
-    linkedRecordsRecriated[parentTableName] = newIds;
+    if (newIds) {
+      linkedRecordsRecriated[parentTableName] = newIds;
+    }
   }
 
-  await table.updateRecordAsync(record.id, linkedRecordsRecriated);
+  try {
+    await table.updateRecordAsync(
+      record.id,
+      removeUndefinedIds(linkedRecordsRecriated)
+    );
+  } catch (error) {
+    console.log(error);
+  }
+
+  function removeUndefinedIds(obj) {
+    return Object.entries(obj).reduce((acc, [key, value]) => {
+      // Check if the value is an array
+      if (Array.isArray(value)) {
+        // Filter out objects where `id` is `undefined`
+        const filtered = value.filter((item) => item.id !== undefined);
+        // Update the accumulator with the filtered array
+        acc[key] = filtered;
+      } else {
+        // If not an array, just copy the value as is
+        acc[key] = value;
+      }
+      return acc;
+    }, {});
+  }
 }
