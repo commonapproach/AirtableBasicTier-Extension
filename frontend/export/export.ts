@@ -134,6 +134,9 @@ function checkForNotExportedFields(base: Base) {
     const externalFields = table.fields.map((item) => item.name);
 
     for (const field of externalFields) {
+      if(Object.keys(map).includes(field)) {
+        continue;
+      }
       if (!internalFields.includes(field)) {
         warnings += `Field <b>${field}</b> on table <b>${table.name}</b> will not be exported<hr/>`;
       }
