@@ -55,7 +55,7 @@ export class Outcome extends Base {
       unique: false,
       notNull: false,
       required: false,
-      semiRequired: false,
+      semiRequired: true,
     },
   ];
 }

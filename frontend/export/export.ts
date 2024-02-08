@@ -78,7 +78,6 @@ export async function exportData(
   const allWarnings =
     checkForNotExportedFields(base) +
     warnings.join("<hr/>") +
-    "<hr/>" +
     emptyTableWarning;
 
   if (errors.length > 0) {
@@ -155,7 +154,7 @@ async function checkForEmptyTables(base: Base) {
     }
     const records = await table.selectRecordsAsync();
     if (records.records.length === 0) {
-      warnings += `Table <b>${table.name}</b> is empty<hr/>`;
+      warnings += `<hr/>Table <b>${table.name}</b> is empty<hr/>`;
     }
   }
   return warnings;

@@ -107,7 +107,7 @@ async function importFileData(
   setIsImporting(true);
   for (const [orgId, item] of Object.entries(jsonDataByOrgs)) {
     try {
-      await importByData(base, item, orgId, setDialogContent, setIsImporting);
+      await importByData(base, item, orgId);
       CREATED_FIELDS_DATA = [];
       CREATED_FIELDS_IDS = {};
       CURRENT_IMPORTING_ORG = "";
@@ -117,15 +117,15 @@ async function importFileData(
       return;
     }
   }
+  setDialogContent(
+    `Success!`,
+    "Your data has been successfully imported.",
+    true
+  );
+  setIsImporting(false);
 }
 
-async function importByData(
-  base: Base,
-  jsonData: any,
-  orgId: string,
-  setDialogContent: any,
-  setIsImporting: any
-) {
+async function importByData(base: Base, jsonData: any, orgId: string) {
   CURRENT_IMPORTING_ORG = orgId;
   // Create Tables if they don't exist
   await createTables(base, jsonData);
@@ -141,13 +141,6 @@ async function importByData(
 
   // Delete All old Records
   await deleteTableRecords(base, jsonData);
-
-  setDialogContent(
-    `Success!`,
-    "Your data has been successfully imported.",
-    true
-  );
-  setIsImporting(false);
 }
 
 async function writeTable(
@@ -444,12 +437,70 @@ async function deleteTableRecords(
           }
         }
       }
+      await moveFieldsReference(base, table.name, recordsToBeDeletedIds);
       setTimeout(async () => {
         await executeInBatches(
           recordsToBeDeletedIds,
           async (batch) => await table.deleteRecordsAsync(batch)
         );
       }, 2000);
+    }
+  }
+}
+
+async function moveFieldsReference(
+  base: Base,
+  tableName: string,
+  recordsToBeDeletedIds: string[]
+) {
+  const allTables = base.tables;
+  const table = base.getTableByNameIfExists(tableName);
+  const records = (await table.selectRecordsAsync()).records;
+  for (const record of records) {
+    if (recordsToBeDeletedIds.includes(record.id)) {
+      const oldRecord = record;
+
+      let newRecord: Record;
+      for (const rec of records) {
+        if (rec.name === oldRecord.name && rec.id !== oldRecord.id) {
+          newRecord = rec;
+        }
+      }
+
+      for (const tbl of allTables) {
+        const tblRecords = (await tbl.selectRecordsAsync()).records;
+        const tblFields = tbl.fields;
+
+        for (const field of tblFields) {
+          if (
+            field.type === "multipleRecordLinks"
+            // @ts-ignore
+            // && field.parentTable.name === tableName
+          ) {
+            for (const rec of tblRecords) {
+              const linkedValues: any = rec.getCellValue(field.name) ?? [];
+              let mergedData: any = [];
+              for (let linkedValue of linkedValues) {
+                if (linkedValue.id === oldRecord.id) {
+                  linkedValue.id = newRecord.id;
+                  mergedData = linkedValues.map((item) => {
+                    return { id: item.id };
+                  });
+                }
+              }
+              if (mergedData.length > 0) {
+                try {
+                  await tbl.updateRecordAsync(rec.id, {
+                    [field.name]: mergedData,
+                  });
+                } catch (error) {
+                  console.log(error);
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }
