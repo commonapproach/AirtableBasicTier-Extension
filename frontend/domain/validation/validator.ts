@@ -10,6 +10,13 @@ export function validate(tableData: TableInterface[]): {
 } {
   validatorWarnings.clear();
   validatorErrors.clear();
+
+  validateIfEmptyFile(tableData);
+
+  validateIfIdIsValidUrl(tableData);
+
+  tableData = removeEmptyRows(tableData);
+
   const tablesSet = new Set<any>();
   tableData.forEach((item) => {
     if (validateTypeProp(item)) return;
@@ -189,6 +196,7 @@ function validateUnique(
   id: string
 ): boolean {
   // Unique key for this field in the format "tableName.fieldName"
+  if (!id) return false;
   const urlObject = new URL(id);
   const baseUrl = `${urlObject.protocol}//${urlObject.hostname}`;
 
@@ -261,5 +269,45 @@ function validateIndicatorsInOrganizations(tableData: TableInterface[]) {
         );
       }
     }
+  }
+}
+
+function removeEmptyRows(tableData: TableInterface[]) {
+  const result = tableData.filter((item) => {
+    if (item["@id"].length === 0) {
+      console.log("FOUND EMPTY ID");
+    } else {
+      return item;
+    }
+  });
+
+  return result;
+}
+
+function validateIfIdIsValidUrl(tableData: TableInterface[]) {
+  tableData.map((item) => {
+    let tableName;
+    try {
+      tableName = item["@type"].split(":")[1];
+    } catch (error) {
+      validatorErrors.add(
+        `<b>@type</b> on table <b>${item["@type"]}</b> must be present`
+      );
+    }
+
+    try {
+      new URL(item["@id"]);
+    } catch (error) {
+      validatorErrors.add(
+        `<b>@id</b> on table <b>${tableName}</b> must be a valid URL data`
+      );
+      return;
+    }
+  });
+}
+
+function validateIfEmptyFile(tableData: TableInterface[]) {
+  if (!Array.isArray(tableData) || tableData.length === 0) {
+    validatorErrors.add("Table data is empty or not an array");
   }
 }

@@ -39,6 +39,12 @@ export async function importData(
     return;
   }
 
+  if (validateIfEmptyFile(jsonData)) {
+    setDialogContent(`Error!`, "Table data is empty or not an array", true);
+    setIsImporting(false);
+    return;
+  }
+
   if (!checkIfHasOneOrganization(jsonData)) {
     setDialogContent(
       `Error!`,
@@ -48,6 +54,8 @@ export async function importData(
     setIsImporting(false);
     return;
   }
+
+  jsonData = removeDupplicatedLinks(jsonData);
 
   const jsonDataByOrgs = await splitJsonDataByOrganization(base, jsonData);
 
@@ -603,6 +611,9 @@ async function appendNewInfoToUserRecords(
 
   function removeEmptyArrays(obj) {
     return Object.entries(obj).reduce((acc, [key, value]) => {
+      if (key in map) {
+        return acc;
+      }
       if (Array.isArray(value) && value.length > 0) {
         acc[key] = value;
       } else if (!Array.isArray(value)) {
@@ -616,11 +627,32 @@ async function appendNewInfoToUserRecords(
 const checkIfHasOneOrganization = (jsonData: any) => {
   const allTableNames = new Set();
   for (const data of jsonData) {
-    const tableName = data["@type"].split(":")[1];
-    allTableNames.add(tableName);
+    try {
+      const tableName = data["@type"].split(":")[1];
+      allTableNames.add(tableName);
+    } catch (error) {
+      return false;
+    }
   }
   if (!Array.from(allTableNames).includes(Organization.name)) {
     return false;
   }
   return true;
 };
+
+function removeDupplicatedLinks(jsonData: any) {
+  for (const data of jsonData) {
+    for (const [key, value] of Object.entries(data)) {
+      if (Array.isArray(value)) {
+        data[key] = [...new Set(value)];
+      }
+    }
+  }
+  return jsonData;
+}
+
+function validateIfEmptyFile(tableData: TableInterface[]) {
+  if (!Array.isArray(tableData) || tableData.length === 0) {
+    return true;
+  }
+}
