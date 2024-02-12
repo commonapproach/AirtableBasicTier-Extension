@@ -68,7 +68,6 @@ export async function executeInBatches<T>(
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);
     await task(batch);
-    // console.log(`Deleted batch: ${i / batchSize + 1}`, batch);
   }
 }
 

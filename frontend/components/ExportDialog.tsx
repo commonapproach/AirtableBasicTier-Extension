@@ -36,7 +36,6 @@ const ExportDialog: React.FC<ExportDialogProps> = ({
     try {
       await exportData(base, setDialogContent, cleanedOrgName);
     } catch (error) {
-      console.log(error);
       setDialogContent("Error", error.message || "Something went wrong", true);
     }
 

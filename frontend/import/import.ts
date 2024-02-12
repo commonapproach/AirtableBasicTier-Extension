@@ -292,9 +292,6 @@ async function writeExtraFields(base: Base): Promise<void> {
                   return { id: item.id };
                 });
               }
-              console.log(table.name, {
-                [diff.name]: valueToBeUpdated,
-              });
               await table.updateRecordAsync(externalId, {
                 [diff.name]: valueToBeUpdated,
               });
@@ -343,7 +340,6 @@ async function createTablesIfNotExist(base: Base): Promise<void> {
   for (const tableName of Object.keys(map)) {
     const table = base.getTableByNameIfExists(tableName);
     if (!table) {
-      console.log(`creating table ${tableName}`);
       await base.createTableAsync(tableName, [
         { name: "@id", type: "singleLineText" as FieldType },
       ]);
@@ -391,7 +387,6 @@ async function createTableFields(base: Base, structure: any): Promise<void> {
             alert(`Error: Linked Table named ${fieldData.link} not found`);
           }
           if (fieldData.type) {
-            console.log(`creating field ${fieldName} on table ${table.name}`);
             await table.createFieldAsync(
               fieldName,
               getActualFieldType(fieldData.type) as FieldType,
@@ -402,7 +397,6 @@ async function createTableFields(base: Base, structure: any): Promise<void> {
           }
         } else {
           if (fieldData.type) {
-            console.log(`creating field ${fieldName} on table ${table.name}`);
             await table.createFieldAsync(
               fieldName,
               getActualFieldType(fieldData.type) as FieldType
@@ -509,7 +503,7 @@ async function moveFieldsReference(
                     [field.name]: mergedData,
                   });
                 } catch (error) {
-                  console.log(error);
+                  // for now we are ignoring the error
                 }
               }
             }
@@ -597,7 +591,7 @@ async function appendNewInfoToUserRecords(
       await table.updateRecordAsync(record.id, val);
     }
   } catch (error) {
-    console.log(error);
+    // for now we are ignoring the error
   }
 
   function removeUndefinedIds(obj) {

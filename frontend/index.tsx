@@ -83,7 +83,6 @@ function Main() {
                     );
                   } catch (error) {
                     setIsImporting(false);
-                    console.log(error);
                     setDialogContent(
                       "Error",
                       error.message || "Something went wrong",
