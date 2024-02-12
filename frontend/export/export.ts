@@ -1,9 +1,9 @@
 import Base from "@airtable/blocks/dist/types/src/models/base";
-import { downloadJSONLD } from "../utils";
 import { LinkedCellInterface } from "../domain/interfaces/cell.interface";
 import { map } from "../domain/models";
-import { validate } from "../domain/validation/validator";
 import { Base as BaseModel } from "../domain/models/Base";
+import { validate } from "../domain/validation/validator";
+import { downloadJSONLD } from "../utils";
 export async function exportData(
   base: Base,
   setDialogContent: (
@@ -57,13 +57,17 @@ export async function exportData(
             row[field.name] = value ? value[0]?.name : field?.defaultValue;
           }
         } else if (field.type === "i72") {
-          row[field.name] = {
-            "@context":
-              "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
-            "@type": "i72:Measure",
-            numerical_value:
-              record.getCellValueAsString(field.name) ?? field?.defaultValue,
-          };
+          if (field.name === "i72:value") {
+            row[field.name] = {
+              "@context":
+                "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
+              "@type": "i72:Measure",
+              "i72:numerical_value":
+                record.getCellValueAsString(field.name) ?? field?.defaultValue,
+              "i72:unit_of_measure":
+                record.getCellValueAsString("i72:unit_of_measure") ?? "",
+            };
+          }
         } else {
           row[field.name] = record.getCellValue(field.name) ?? "";
         }
