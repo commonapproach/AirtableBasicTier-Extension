@@ -55,6 +55,16 @@ export async function importData(
     return;
   }
 
+  if (!doAllRecordsHaveId(jsonData)) {
+    setDialogContent(
+      `Error!`,
+      "All records must have an <b>@id</b> property.",
+      true
+    );
+    setIsImporting(false);
+    return;
+  }
+
   jsonData = removeDupplicatedLinks(jsonData);
 
   const jsonDataByOrgs = await splitJsonDataByOrganization(base, jsonData);
@@ -629,6 +639,7 @@ const checkIfHasOneOrganization = (jsonData: any) => {
   const allTableNames = new Set();
   for (const data of jsonData) {
     try {
+      if (!data["@type"]) continue;
       const tableName = data["@type"].split(":")[1];
       allTableNames.add(tableName);
     } catch (error) {
@@ -656,4 +667,13 @@ function validateIfEmptyFile(tableData: TableInterface[]) {
   if (!Array.isArray(tableData) || tableData.length === 0) {
     return true;
   }
+}
+
+function doAllRecordsHaveId(tableData: TableInterface[]) {
+  for (const data of tableData) {
+    if (data["@id"] === undefined) {
+      return false;
+    }
+  }
+  return true;
 }
