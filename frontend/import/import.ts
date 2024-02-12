@@ -1,13 +1,13 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable no-prototype-builtins */
 import Base from "@airtable/blocks/dist/types/src/models/base";
-import { TableInterface } from "../domain/interfaces/table.interface";
-import { FieldType } from "@airtable/blocks/dist/types/src/types/field";
-import { executeInBatches, getActualFieldType } from "../utils";
-import { Organization, map } from "../domain/models";
-import { validate } from "../domain/validation/validator";
 import Record from "@airtable/blocks/dist/types/src/models/record";
 import Table from "@airtable/blocks/dist/types/src/models/table";
+import { FieldType } from "@airtable/blocks/dist/types/src/types/field";
+import { TableInterface } from "../domain/interfaces/table.interface";
+import { Organization, map } from "../domain/models";
+import { validate } from "../domain/validation/validator";
+import { executeInBatches, getActualFieldType } from "../utils";
 
 let CREATED_FIELDS_IDS: { [key: string]: string } = {};
 let CREATED_FIELDS_DATA: {
@@ -162,8 +162,8 @@ async function writeTable(
 
     let record = {};
     Object.entries(data).forEach(([key, value]) => {
-      if (key === "i72:value") {
-        key = "value";
+      if (key === "value") {
+        key = "i72:value";
       }
       const cid = new map[tableName]();
       if (
@@ -172,11 +172,18 @@ async function writeTable(
         key !== "@type" &&
         key !== "@context"
       ) {
-        if (cid.getFieldByName(key)?.type === "i72" || key === "i72:value") {
+        if (cid.getFieldByName(key)?.type === "i72" || key === "value") {
           record[key] =
             // @ts-ignore
             value?.numerical_value?.toString() ||
             value?.["i72:numerical_value"]?.toString();
+
+          // Extract the unit_of_measure value
+          let unit_of_measure =
+            value?.["i72:unit_of_measure"] || value?.["unit_of_measure"];
+          if (unit_of_measure) {
+            record["i72:unit_of_measure"] = unit_of_measure;
+          }
         } else {
           record[key] = value;
         }
@@ -327,7 +334,7 @@ async function createTables(
     }
   });
 
-  await checkIfCancreateTableFields(base, structure);
+  await checkIfCanCreateTableFields(base, structure);
   await createTablesIfNotExist(base);
   await createTableFields(base, structure);
 }
@@ -344,7 +351,7 @@ async function createTablesIfNotExist(base: Base): Promise<void> {
   }
 }
 
-async function checkIfCancreateTableFields(
+async function checkIfCanCreateTableFields(
   base: Base,
   structure: any
 ): Promise<void> {

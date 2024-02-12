@@ -51,8 +51,8 @@ function validateRecords(tableData: TableInterface[]) {
     //check if required fields are present
     for (const field of cid.getFields()) {
       if (field.required && !Object.keys(data).includes(field.name)) {
-        if (field.name === "value") {
-          if (Object.keys(data).includes("i72:value")) {
+        if (field.name === "i72:value") {
+          if (Object.keys(data).includes("value")) {
             continue;
           }
         }

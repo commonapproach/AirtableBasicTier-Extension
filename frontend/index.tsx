@@ -2,15 +2,13 @@ import {
   Button,
   Icon,
   Text,
-  // Select,
   initializeBlock,
   useBase,
 } from "@airtable/blocks/ui";
-import React, { /* useEffect, */ useRef, useState } from "react";
+import React, { useRef, useState } from "react";
+import ExportDialog from "./components/ExportDialog";
 import Loading from "./components/Loading";
 import DialogContextProvider, { useDialog } from "./context/DialogContext";
-// import { exportData } from "./export/export";
-import ExportDialog from "./components/ExportDialog";
 import { importData } from "./import/import";
 import { handleFileChange } from "./utils";
 
@@ -18,30 +16,9 @@ function Main() {
   const base = useBase();
   const fileInputRef = useRef(null);
   const { setDialogContent } = useDialog();
-  // const [options, setOptions] = useState([]);
-  // const [selectedOption, setSelectedOption] = useState(null);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-
-  // useEffect(() => {
-  //   if (options.length > 0) return;
-  //   const table = base.getTableByNameIfExists("Organization");
-  //   if (!table) return;
-  //   table.selectRecordsAsync().then((data) => {
-  //     const opts = data.records.map((record) => {
-  //       return {
-  //         value: record.getCellValue("org:hasLegalName"),
-  //         label: record.getCellValue("org:hasLegalName"),
-  //       };
-  //     });
-
-  //     setOptions(opts);
-  //     if (opts.length > 0) {
-  //       setSelectedOption(opts[0].value);
-  //     }
-  //   });
-  // }, []);
 
   const handleButtonClick = () => {
     if (fileInputRef.current) {
@@ -98,10 +75,15 @@ function Main() {
                 async (josnData) => {
                   setIsLoading(true);
                   try {
-                    await importData(josnData, base, setDialogContent, setIsImporting);
+                    await importData(
+                      josnData,
+                      base,
+                      setDialogContent,
+                      setIsImporting
+                    );
                   } catch (error) {
                     setIsImporting(false);
-                    console.log(error)
+                    console.log(error);
                     setDialogContent(
                       "Error",
                       error.message || "Something went wrong",
@@ -132,17 +114,7 @@ function Main() {
             }}
             disabled={isImporting}
             onClick={async () => {
-              // try {
               setIsExportDialogOpen(true);
-              // await exportData(base, setDialogContent, selectedOption);
-              // } catch (error) {
-              //   console.log(error);
-              //   setDialogContent(
-              //     "Error",
-              //     error.message || "Something went wrong",
-              //     true
-              //   );
-              // }
             }}
           >
             <div
@@ -159,24 +131,6 @@ function Main() {
             </div>
           </Button>
         </div>
-        {/* <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            marginTop: 8,
-            marginLeft: "auto",
-            marginRight: "auto",
-          }}
-        >
-          <p>Select an Organization</p>
-          <Select
-            options={options}
-            value={selectedOption}
-            onChange={(newValue) => setSelectedOption(newValue)}
-            width="280px"
-          />
-        </div> */}
-
         <div
           style={{
             display: "flex",
