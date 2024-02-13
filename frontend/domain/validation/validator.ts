@@ -51,15 +51,12 @@ function validateRecords(tableData: TableInterface[]) {
     //check if required fields are present
     for (const field of cid.getFields()) {
       if (field.required && !Object.keys(data).includes(field.name)) {
-        if (field.name === "value") {
-          if (Object.keys(data).includes("i72:value")) {
+        if (field.name === "i72:value") {
+          if (Object.keys(data).includes("value")) {
             continue;
           }
         }
         validatorErrors.add(
-          `Required field <b>${field.name}</b> is missing in table <b>${tableName}</b>`
-        );
-        console.warn(
           `Required field <b>${field.name}</b> is missing in table <b>${tableName}</b>`
         );
       }
@@ -71,16 +68,10 @@ function validateRecords(tableData: TableInterface[]) {
           validatorWarnings.add(
             `Required field <b>${field.name}</b> is missing in table <b>${tableName}</b>`
           );
-          console.warn(
-            `Required field <b>${field.name}</b> is missing in table <b>${tableName}</b>`
-          );
         }
         // @ts-ignore
         if (data[field.name]?.length === 0) {
           validatorWarnings.add(
-            `Field <b>${field.name}</b> is empty in table <b>${tableName}</b>`
-          );
-          console.warn(
             `Field <b>${field.name}</b> is empty in table <b>${tableName}</b>`
           );
         }
@@ -91,9 +82,6 @@ function validateRecords(tableData: TableInterface[]) {
     for (const field of cid.getFields()) {
       if (field.notNull && Object.keys(data)?.length === 0) {
         validatorErrors.add(
-          `Field <b>${field.name}</b> is null or empty in table <b>${tableName}</b>`
-        );
-        console.error(
           `Field <b>${field.name}</b> is null or empty in table <b>${tableName}</b>`
         );
       }
@@ -112,9 +100,6 @@ function validateRecords(tableData: TableInterface[]) {
         // check if fieldValue has duplicate values
         const uniqueValues = new Set(fieldValue);
         if (uniqueValues.size !== fieldValue.length) {
-          console.warn(
-            `Duplicate values in field <b>${fieldName}</b> in table <b>${tableName}</b>`
-          );
           validatorWarnings.add(
             `Duplicate values in field <b>${fieldName}</b> in table <b>${tableName}</b>`
           );
@@ -124,9 +109,6 @@ function validateRecords(tableData: TableInterface[]) {
       // Handle 'i72' type fields
       if (fieldProps.type === "i72") {
         // if (!("numerical_value" in fieldValue)) {
-        //   console.error(
-        //     `Invalid value for i72 field ${fieldName}: ${fieldValue} in table ${tableName}`
-        //   );
         //   validatorErrors.add(
         //     `Invalid value for i72 field <b>${fieldName}</b>: <b>${fieldValue}</b> in table <b>${tableName}</b>`
         //   );
@@ -135,9 +117,6 @@ function validateRecords(tableData: TableInterface[]) {
         // Validate primary keys
         if (fieldProps?.primary) {
           if (!validatePrimary(fieldValue as string)) {
-            console.error(
-              `Invalid primary key: ${fieldValue} for ${fieldName} on table ${tableName}`
-            );
             validatorErrors.add(
               `Invalid primary key: <b>${fieldValue}</b> for <b>${fieldName}</b> on table <b>${tableName}</b>`
             );
@@ -149,9 +128,6 @@ function validateRecords(tableData: TableInterface[]) {
           if (
             !validateUnique(tableName, fieldName, fieldValue, uniqueRecords, id)
           ) {
-            console.error(
-              `Duplicate value for unique field ${fieldName}: ${fieldValue} in table ${tableName}`
-            );
             validatorErrors.add(
               `Duplicate value for unique field <b>${fieldName}</b>: <b>${fieldValue}</b> in table <b>${tableName}</b>`
             );
@@ -160,9 +136,6 @@ function validateRecords(tableData: TableInterface[]) {
 
         if (fieldProps?.notNull) {
           if (fieldValue === "" || !fieldValue) {
-            console.warn(
-              `Null value for notNull field ${fieldName} in table ${tableName}`
-            );
             validatorWarnings.add(
               `Field <b>${fieldName}</b> on table <b>${tableName}</b> is null or empty.`
             );
@@ -171,9 +144,6 @@ function validateRecords(tableData: TableInterface[]) {
 
         if (fieldProps?.required) {
           if (fieldValue === "" || !fieldValue) {
-            console.warn(
-              `field ${fieldName} is required in table ${tableName}`
-            );
             validatorWarnings.add(
               `Field <b>${fieldName}</b> on table <b>${tableName}</b> is required.`
             );
@@ -264,9 +234,6 @@ function validateIndicatorsInOrganizations(tableData: TableInterface[]) {
         validatorWarnings.add(
           `Indicator <b>${data["@id"]}</b> does not exist in the Organization table`
         );
-        console.warn(
-          `Indicator <b>${data["@id"]}</b> does not exist in the Organization table`
-        );
       }
     }
   }
@@ -275,7 +242,7 @@ function validateIndicatorsInOrganizations(tableData: TableInterface[]) {
 function removeEmptyRows(tableData: TableInterface[]) {
   const result = tableData.filter((item) => {
     if (item["@id"].length === 0) {
-      console.log("FOUND EMPTY ID");
+      // @ts-ignore
     } else {
       return item;
     }

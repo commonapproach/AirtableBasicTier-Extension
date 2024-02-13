@@ -1,13 +1,13 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable no-prototype-builtins */
 import Base from "@airtable/blocks/dist/types/src/models/base";
-import { TableInterface } from "../domain/interfaces/table.interface";
-import { FieldType } from "@airtable/blocks/dist/types/src/types/field";
-import { executeInBatches, getActualFieldType } from "../utils";
-import { Organization, map } from "../domain/models";
-import { validate } from "../domain/validation/validator";
 import Record from "@airtable/blocks/dist/types/src/models/record";
 import Table from "@airtable/blocks/dist/types/src/models/table";
+import { FieldType } from "@airtable/blocks/dist/types/src/types/field";
+import { TableInterface } from "../domain/interfaces/table.interface";
+import { Organization, map } from "../domain/models";
+import { validate } from "../domain/validation/validator";
+import { executeInBatches, getActualFieldType } from "../utils";
 
 let CREATED_FIELDS_IDS: { [key: string]: string } = {};
 let CREATED_FIELDS_DATA: {
@@ -49,6 +49,16 @@ export async function importData(
     setDialogContent(
       `Error!`,
       "You can't import without at least one organization.",
+      true
+    );
+    setIsImporting(false);
+    return;
+  }
+
+  if (!doAllRecordsHaveId(jsonData)) {
+    setDialogContent(
+      `Error!`,
+      "All records must have an <b>@id</b> property.",
       true
     );
     setIsImporting(false);
@@ -162,8 +172,8 @@ async function writeTable(
 
     let record = {};
     Object.entries(data).forEach(([key, value]) => {
-      if (key === "i72:value") {
-        key = "value";
+      if (key === "value") {
+        key = "i72:value";
       }
       const cid = new map[tableName]();
       if (
@@ -172,11 +182,18 @@ async function writeTable(
         key !== "@type" &&
         key !== "@context"
       ) {
-        if (cid.getFieldByName(key)?.type === "i72" || key === "i72:value") {
+        if (cid.getFieldByName(key)?.type === "i72" || key === "value") {
           record[key] =
             // @ts-ignore
             value?.numerical_value?.toString() ||
             value?.["i72:numerical_value"]?.toString();
+
+          // Extract the unit_of_measure value
+          let unit_of_measure =
+            value?.["i72:unit_of_measure"] || value?.["unit_of_measure"];
+          if (unit_of_measure) {
+            record["i72:unit_of_measure"] = unit_of_measure;
+          }
         } else {
           record[key] = value;
         }
@@ -285,9 +302,6 @@ async function writeExtraFields(base: Base): Promise<void> {
                   return { id: item.id };
                 });
               }
-              console.log(table.name, {
-                [diff.name]: valueToBeUpdated,
-              });
               await table.updateRecordAsync(externalId, {
                 [diff.name]: valueToBeUpdated,
               });
@@ -327,7 +341,7 @@ async function createTables(
     }
   });
 
-  await checkIfCancreateTableFields(base, structure);
+  await checkIfCanCreateTableFields(base, structure);
   await createTablesIfNotExist(base);
   await createTableFields(base, structure);
 }
@@ -336,7 +350,6 @@ async function createTablesIfNotExist(base: Base): Promise<void> {
   for (const tableName of Object.keys(map)) {
     const table = base.getTableByNameIfExists(tableName);
     if (!table) {
-      console.log(`creating table ${tableName}`);
       await base.createTableAsync(tableName, [
         { name: "@id", type: "singleLineText" as FieldType },
       ]);
@@ -344,7 +357,7 @@ async function createTablesIfNotExist(base: Base): Promise<void> {
   }
 }
 
-async function checkIfCancreateTableFields(
+async function checkIfCanCreateTableFields(
   base: Base,
   structure: any
 ): Promise<void> {
@@ -384,7 +397,6 @@ async function createTableFields(base: Base, structure: any): Promise<void> {
             alert(`Error: Linked Table named ${fieldData.link} not found`);
           }
           if (fieldData.type) {
-            console.log(`creating field ${fieldName} on table ${table.name}`);
             await table.createFieldAsync(
               fieldName,
               getActualFieldType(fieldData.type) as FieldType,
@@ -395,7 +407,6 @@ async function createTableFields(base: Base, structure: any): Promise<void> {
           }
         } else {
           if (fieldData.type) {
-            console.log(`creating field ${fieldName} on table ${table.name}`);
             await table.createFieldAsync(
               fieldName,
               getActualFieldType(fieldData.type) as FieldType
@@ -502,7 +513,7 @@ async function moveFieldsReference(
                     [field.name]: mergedData,
                   });
                 } catch (error) {
-                  console.log(error);
+                  // for now we are ignoring the error
                 }
               }
             }
@@ -590,7 +601,7 @@ async function appendNewInfoToUserRecords(
       await table.updateRecordAsync(record.id, val);
     }
   } catch (error) {
-    console.log(error);
+    // for now we are ignoring the error
   }
 
   function removeUndefinedIds(obj) {
@@ -628,6 +639,7 @@ const checkIfHasOneOrganization = (jsonData: any) => {
   const allTableNames = new Set();
   for (const data of jsonData) {
     try {
+      if (!data["@type"]) continue;
       const tableName = data["@type"].split(":")[1];
       allTableNames.add(tableName);
     } catch (error) {
@@ -655,4 +667,13 @@ function validateIfEmptyFile(tableData: TableInterface[]) {
   if (!Array.isArray(tableData) || tableData.length === 0) {
     return true;
   }
+}
+
+function doAllRecordsHaveId(tableData: TableInterface[]) {
+  for (const data of tableData) {
+    if (data["@id"] === undefined) {
+      return false;
+    }
+  }
+  return true;
 }
