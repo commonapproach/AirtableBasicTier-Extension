@@ -1,7 +1,7 @@
 import Base from "@airtable/blocks/dist/types/src/models/base";
 import { downloadJSONLD } from "../utils";
 import { LinkedCellInterface } from "../domain/interfaces/cell.interface";
-import { map } from "../domain/models";
+import { ignoredFields, map } from "../domain/models";
 import { validate } from "../domain/validation/validator";
 import { Base as BaseModel } from "../domain/models/Base";
 export async function exportData(
@@ -135,7 +135,7 @@ function checkForNotExportedFields(base: Base) {
     const externalFields = table.fields.map((item) => item.name);
 
     for (const field of externalFields) {
-      if (Object.keys(map).includes(field)) {
+      if (Object.keys(map).includes(field) || ignoredFields[table.name]?.includes(field)) {
         continue;
       }
       if (!internalFields.includes(field)) {

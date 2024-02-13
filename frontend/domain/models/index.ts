@@ -12,6 +12,12 @@ export const map = {
   IndicatorReport: IndicatorReport,
 };
 
+export const ignoredFields = {
+  Theme: ["hasOutcome"],
+  Outcome: ["forOrganization"],
+  Indicator: ["forOrganization", "forOutcome"],
+};
+
 export * from "./Organization";
 export * from "./Theme";
 export * from "./Outcome";
