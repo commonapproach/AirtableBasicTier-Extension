@@ -49,8 +49,8 @@ export class Outcome extends Base {
     {
       name: "forTheme",
       type: "link",
-      representedType: "string",
-      defaultValue: "",
+      representedType: "array",
+      defaultValue: [],
       link: Theme,
       unique: false,
       notNull: false,
