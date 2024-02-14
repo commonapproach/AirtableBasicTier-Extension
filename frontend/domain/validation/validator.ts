@@ -167,7 +167,17 @@ function validateUnique(
 ): boolean {
   // Unique key for this field in the format "tableName.fieldName"
   if (!id) return false;
-  const urlObject = new URL(id);
+  let urlObject;
+
+  try {
+    urlObject = new URL(id);
+  } catch (error) {
+    validatorErrors.add(
+      `<b>@id</b> on table <b>${tableName}</b> must be a valid URL data.`
+    );
+    return false;
+  }
+
   const baseUrl = `${urlObject.protocol}//${urlObject.hostname}`;
 
   const uniqueKey = `${tableName}.${fieldName}.${baseUrl}`;
