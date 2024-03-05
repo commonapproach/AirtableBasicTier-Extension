@@ -1,8 +1,8 @@
 import Base from "@airtable/blocks/dist/types/src/models/base";
 import { LinkedCellInterface } from "../domain/interfaces/cell.interface";
 import { ignoredFields, map } from "../domain/models";
-import { validate } from "../domain/validation/validator";
 import { Base as BaseModel } from "../domain/models/Base";
+import { validate } from "../domain/validation/validator";
 import { downloadJSONLD } from "../utils";
 export async function exportData(
   base: Base,
@@ -41,7 +41,7 @@ export async function exportData(
     for (const record of records) {
       let row = {
         "@context":
-          "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
+          "http://ontology.commonapproach.org/contexts/cidsContext.json",
         "@type": `cids:${table.name}`,
       };
       for (const field of cid.getFields()) {
@@ -60,7 +60,7 @@ export async function exportData(
           if (field.name === "i72:value") {
             row[field.name] = {
               "@context":
-                "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
+                "http://ontology.commonapproach.org/contexts/cidsContext.json",
               "@type": "i72:Measure",
               "i72:numerical_value":
                 record.getCellValueAsString(field.name) ?? field?.defaultValue,
@@ -139,7 +139,10 @@ function checkForNotExportedFields(base: Base) {
     const externalFields = table.fields.map((item) => item.name);
 
     for (const field of externalFields) {
-      if (Object.keys(map).includes(field) || ignoredFields[table.name]?.includes(field)) {
+      if (
+        Object.keys(map).includes(field) ||
+        ignoredFields[table.name]?.includes(field)
+      ) {
         continue;
       }
       if (!internalFields.includes(field)) {
