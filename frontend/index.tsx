@@ -140,8 +140,9 @@ function Main() {
           }}
         >
           <img
-            src="./static/common_approach_logo_300x71.png"
+            src="https://www.commonapproach.org/wp-content/uploads/2022/02/Common-Approach-logo_symbol-only.png"
             alt="Common Approach To Impact Measurement"
+            width={200}
           />
           <Text variant="paragraph" style={{ margin: 10 }}>
             Compliant with Common Impact Data Standard Version 2.1
