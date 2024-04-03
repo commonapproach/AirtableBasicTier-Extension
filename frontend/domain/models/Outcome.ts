@@ -3,8 +3,6 @@ import { Indicator } from "./Indicator";
 import { Theme } from "./Theme";
 
 export class Outcome extends Base {
-  public name = "Outcome";
-
   protected _fields = [
     {
       name: "@id",

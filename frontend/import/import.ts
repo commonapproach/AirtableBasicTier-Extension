@@ -5,7 +5,7 @@ import Record from "@airtable/blocks/dist/types/src/models/record";
 import Table from "@airtable/blocks/dist/types/src/models/table";
 import { FieldType } from "@airtable/blocks/dist/types/src/types/field";
 import { TableInterface } from "../domain/interfaces/table.interface";
-import { Organization, map } from "../domain/models";
+import { map } from "../domain/models";
 import { validate } from "../domain/validation/validator";
 import { executeInBatches, getActualFieldType } from "../utils";
 
@@ -28,6 +28,9 @@ export async function importData(
   ) => void,
   setIsImporting: (value: boolean) => void
 ) {
+  console.log("importData");
+  console.log("jsonData", jsonData);
+
   // Check if the user has CREATOR permission
   if (!base.hasPermissionToCreateTable()) {
     setDialogContent(
@@ -46,6 +49,7 @@ export async function importData(
   }
 
   if (!checkIfHasOneOrganization(jsonData)) {
+    console.log("checkIfHasOneOrganization");
     setDialogContent(
       `Error!`,
       "You can't import without at least one organization.",
@@ -527,22 +531,21 @@ async function moveFieldsReference(
 async function splitJsonDataByOrganization(base: Base, jsonData: any) {
   const tableOrganizations = new Set();
   const fileOrganizations = new Set();
-  const organizationCid = new Organization();
 
   const orgs = jsonData.filter(
-    (item: any) => item["@type"] === `cids:${organizationCid.name}`
+    (item: any) => item["@type"] === "cids:Organization"
   );
   orgs.map((item: any) => {
     fileOrganizations.add(item["@id"]);
   });
 
-  let organizationTable = base.getTableByNameIfExists(organizationCid.name);
+  let organizationTable = base.getTableByNameIfExists("Organization");
   if (!organizationTable) {
     await createTables(base, orgs);
     await writeTable(base, orgs);
   }
 
-  organizationTable = base.getTableByNameIfExists(organizationCid.name);
+  organizationTable = base.getTableByNameIfExists("Organization");
   (await organizationTable.selectRecordsAsync()).records.forEach((record) => {
     tableOrganizations.add(record.getCellValueAsString("@id"));
   });
@@ -646,7 +649,7 @@ const checkIfHasOneOrganization = (jsonData: any) => {
       return false;
     }
   }
-  if (!Array.from(allTableNames).includes(Organization.name)) {
+  if (!Array.from(allTableNames).includes("Organization")) {
     return false;
   }
   return true;
