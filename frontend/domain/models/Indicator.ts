@@ -2,6 +2,7 @@ import { Base } from "./Base";
 import { IndicatorReport } from "./IndicatorReport";
 
 export class Indicator extends Base {
+  static className = "Indicator";
   protected _fields = [
     {
       name: "@id",

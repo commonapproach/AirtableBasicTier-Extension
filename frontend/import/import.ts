@@ -28,9 +28,6 @@ export async function importData(
   ) => void,
   setIsImporting: (value: boolean) => void
 ) {
-  console.log("importData");
-  console.log("jsonData", jsonData);
-
   // Check if the user has CREATOR permission
   if (!base.hasPermissionToCreateTable()) {
     setDialogContent(
@@ -49,7 +46,6 @@ export async function importData(
   }
 
   if (!checkIfHasOneOrganization(jsonData)) {
-    console.log("checkIfHasOneOrganization");
     setDialogContent(
       `Error!`,
       "You can't import without at least one organization.",
@@ -196,7 +192,8 @@ async function writeTable(
           let unit_of_measure =
             value?.["i72:unit_of_measure"] || value?.["unit_of_measure"];
           if (unit_of_measure) {
-            record["i72:unit_of_measure"] = unit_of_measure;
+            // Don't add the unit_of_measure to the record, since it's not a table field
+            // record["i72:unit_of_measure"] = unit_of_measure;
           }
         } else {
           record[key] = value;
@@ -204,6 +201,7 @@ async function writeTable(
       }
     });
 
+    console.log({ record });
     const respId = await table.createRecordAsync(record);
     CREATED_FIELDS_IDS[recordId] = respId;
     CREATED_FIELDS_DATA.push({
@@ -339,7 +337,7 @@ async function createTables(
       ) {
         structure[tableName].fields[key] = {
           type: cid.getFieldByName(key)?.type,
-          link: cid.getFieldByName(key)?.link?.name,
+          link: cid.getFieldByName(key)?.link?.className,
         };
       }
     }

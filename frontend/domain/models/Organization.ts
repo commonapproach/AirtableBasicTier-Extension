@@ -3,6 +3,7 @@ import { Indicator } from "./Indicator";
 import { Outcome } from "./Outcome";
 
 export class Organization extends Base {
+  static className = "Organization";
   protected _fields = [
     {
       name: "@id",

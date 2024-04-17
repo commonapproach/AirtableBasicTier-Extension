@@ -1,6 +1,7 @@
 import { Base } from "./Base";
 
 export class Theme extends Base {
+  static className = "Theme";
   protected _fields = [
     {
       name: "@id",
