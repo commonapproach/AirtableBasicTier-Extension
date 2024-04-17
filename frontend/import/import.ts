@@ -5,7 +5,7 @@ import Record from "@airtable/blocks/dist/types/src/models/record";
 import Table from "@airtable/blocks/dist/types/src/models/table";
 import { FieldType } from "@airtable/blocks/dist/types/src/types/field";
 import { TableInterface } from "../domain/interfaces/table.interface";
-import { map } from "../domain/models";
+import { IndicatorReport, map } from "../domain/models";
 import { validate } from "../domain/validation/validator";
 import { executeInBatches, getActualFieldType } from "../utils";
 
@@ -192,8 +192,7 @@ async function writeTable(
           let unit_of_measure =
             value?.["i72:unit_of_measure"] || value?.["unit_of_measure"];
           if (unit_of_measure) {
-            // Don't add the unit_of_measure to the record, since it's not a table field
-            // record["i72:unit_of_measure"] = unit_of_measure;
+            record["i72:unit_of_measure"] = unit_of_measure;
           }
         } else {
           record[key] = value;
@@ -201,7 +200,6 @@ async function writeTable(
       }
     });
 
-    console.log({ record });
     const respId = await table.createRecordAsync(record);
     CREATED_FIELDS_IDS[recordId] = respId;
     CREATED_FIELDS_DATA.push({
@@ -390,6 +388,9 @@ async function createTableFields(base: Base, structure: any): Promise<void> {
     const [tableName, values]: any = data;
     const vals = Object.entries(values.fields);
     const table = base.getTableByNameIfExists(tableName);
+    if (tableName === IndicatorReport.className) {
+      vals.push(["i72:unit_of_measure", { type: "i72", link: undefined }]);
+    }
     for (const val of vals) {
       const [fieldName, fieldData]: any = val;
       if (!table.getFieldByNameIfExists(fieldName)) {
