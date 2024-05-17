@@ -1,10 +1,15 @@
 import { TableInterface } from "../interfaces/table.interface";
 import { map } from "../models";
 
+type Operation = "import" | "export";
+
 let validatorErrors = new Set<string>();
 let validatorWarnings = new Set<string>();
 let indicatorsUrls = [];
-export function validate(tableData: TableInterface[]): {
+export function validate(
+  tableData: TableInterface[],
+  operation: Operation = "export"
+): {
   errors: string[];
   warnings: string[];
 } {
@@ -13,17 +18,15 @@ export function validate(tableData: TableInterface[]): {
 
   validateIfEmptyFile(tableData);
 
-  validateIfIdIsValidUrl(tableData);
+  validateIfIdIsValidUrl(tableData, operation);
 
   tableData = removeEmptyRows(tableData);
 
-  const tablesSet = new Set<any>();
   tableData.forEach((item) => {
-    if (validateTypeProp(item)) return;
-    tablesSet.add(item["@type"].split(":")[1]);
+    validateTypeProp(item);
   });
 
-  validateRecords(tableData);
+  validateRecords(tableData, operation);
 
   return {
     errors: Array.from(validatorErrors),
@@ -31,7 +34,7 @@ export function validate(tableData: TableInterface[]): {
   };
 }
 
-function validateRecords(tableData: TableInterface[]) {
+function validateRecords(tableData: TableInterface[], operation: Operation) {
   // Records to keep track of unique values
   const uniqueRecords: Record<string, Set<any>> = {};
 
@@ -56,9 +59,15 @@ function validateRecords(tableData: TableInterface[]) {
             continue;
           }
         }
-        validatorErrors.add(
-          `Required field <b>${field.name}</b> is missing in table <b>${tableName}</b>`
-        );
+        if (operation === "import" && field.name !== "@id") {
+          validatorWarnings.add(
+            `Required field <b>${field.name}</b> is missing in table <b>${tableName}</b>`
+          );
+        } else {
+          validatorErrors.add(
+            `Required field <b>${field.name}</b> is missing in table <b>${tableName}</b>`
+          );
+        }
       }
     }
 
@@ -117,9 +126,15 @@ function validateRecords(tableData: TableInterface[]) {
         // Validate primary keys
         if (fieldProps?.primary) {
           if (!validatePrimary(fieldValue as string)) {
-            validatorErrors.add(
-              `Invalid primary key: <b>${fieldValue}</b> for <b>${fieldName}</b> on table <b>${tableName}</b>`
-            );
+            if (operation === "import") {
+              validatorWarnings.add(
+                `Invalid URL format: <b>${fieldValue}</b> for <b>${fieldName}</b> on table <b>${tableName}</b>`
+              );
+            } else {
+              validatorErrors.add(
+                `Invalid URL format: <b>${fieldValue}</b> for <b>${fieldName}</b> on table <b>${tableName}</b>`
+              );
+            }
           }
         }
 
@@ -128,9 +143,12 @@ function validateRecords(tableData: TableInterface[]) {
           if (
             !validateUnique(tableName, fieldName, fieldValue, uniqueRecords, id)
           ) {
-            validatorErrors.add(
-              `Duplicate value for unique field <b>${fieldName}</b>: <b>${fieldValue}</b> in table <b>${tableName}</b>`
-            );
+            const msg = `Duplicate value for unique field <b>${fieldName}</b>: <b>${fieldValue}</b> in table <b>${tableName}</b>`;
+            if (operation === "import") {
+              validatorWarnings.add(msg);
+            } else {
+              validatorErrors.add(msg);
+            }
           }
         }
 
@@ -155,7 +173,17 @@ function validateRecords(tableData: TableInterface[]) {
 }
 
 function validatePrimary(value: string): boolean {
-  return value.startsWith("http://") || value.startsWith("https://");
+  // return value.startsWith("http://") || value.startsWith("https://");
+  const pattern = new RegExp(
+    "^([a-zA-Z]+:\\/\\/)?" + // protocol
+      "((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|" + // domain name
+      "((\\d{1,3}\\.){3}\\d{1,3}))" + // OR IP (v4) address
+      "(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*" + // port and path
+      "(\\?[;&a-z\\d%_.~+=-]*)?" + // query string
+      "(\\#[-a-z\\d_]*)?$", // fragment locator
+    "i"
+  );
+  return pattern.test(value);
 }
 
 function validateUnique(
@@ -173,7 +201,7 @@ function validateUnique(
     urlObject = new URL(id);
   } catch (error) {
     validatorErrors.add(
-      `<b>@id</b> on table <b>${tableName}</b> must be a valid URL data.`
+      `<b>@id</b> on table <b>${tableName}</b> must be formatted as a valid URL`
     );
     return false;
   }
@@ -217,7 +245,9 @@ function validateTypeProp(data: any): boolean {
   }
   const tableName = data["@type"]?.split(":")[1];
   if (!map[tableName]) {
-    validatorErrors.add(`Table <b>${tableName}</b> does not exist`);
+    validatorWarnings.add(
+      `Table <b>${tableName}</b> is not recognized in the basic tier and will be ignored.`
+    );
     return true;
   }
   return false;
@@ -228,6 +258,12 @@ function validateIndicatorsInOrganizations(tableData: TableInterface[]) {
     if (validateTypeProp(data)) return;
     const tableName = data["@type"].split(":")[1];
     if (tableName == "Organization") {
+      if (!data["hasIndicator"]) {
+        validatorWarnings.add(
+          `Organization <b>${data["org:hasLegalName"]}</b> has no indicators`
+        );
+        data["hasIndicator"] = [];
+      }
       // @ts-ignore
       data["hasIndicator"].forEach((item) => {
         indicatorsUrls.push(item);
@@ -250,18 +286,13 @@ function validateIndicatorsInOrganizations(tableData: TableInterface[]) {
 }
 
 function removeEmptyRows(tableData: TableInterface[]) {
-  const result = tableData.filter((item) => {
-    if (item["@id"].length === 0) {
-      // @ts-ignore
-    } else {
-      return item;
-    }
-  });
-
-  return result;
+  return tableData.filter((item) => item["@id"].length > 0);
 }
 
-function validateIfIdIsValidUrl(tableData: TableInterface[]) {
+function validateIfIdIsValidUrl(
+  tableData: TableInterface[],
+  operation: Operation
+) {
   tableData.map((item) => {
     let tableName;
     try {
@@ -275,8 +306,14 @@ function validateIfIdIsValidUrl(tableData: TableInterface[]) {
     try {
       new URL(item["@id"]);
     } catch (error) {
+      if (operation === "import") {
+        validatorWarnings.add(
+          `Invalid URL format: <b>${item["@id"]}</b> for <b>@id</b> on table <b>${tableName}</b>`
+        );
+        return;
+      }
       validatorErrors.add(
-        `<b>@id</b> on table <b>${tableName}</b> must be a valid URL data`
+        `Invalid URL format: <b>${item["@id"]}</b> for <b>@id</b> on table <b>${tableName}</b>`
       );
       return;
     }

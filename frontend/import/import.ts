@@ -84,7 +84,10 @@ export async function importData(
     }
 
     // Validate JSON
-    const { errors, warnings } = validate(item);
+    let { errors, warnings } = validate(item, "import");
+
+    warnings = [...warnings, ...warnIfUnrecognizedFieldsWillBeIgnored(item)];
+
     allErrors = errors.join("<hr/>");
     allWarnings = warnings.join("<hr/>");
   });
@@ -125,7 +128,13 @@ async function importFileData(
   setIsImporting(true);
   for (const [orgId, item] of Object.entries(jsonDataByOrgs)) {
     try {
-      await importByData(base, item, orgId);
+      // Ignore types/classes that are not recognized
+      const filteredItems = Array.isArray(item)
+        ? item.filter((data) =>
+            Object.keys(map).includes(data["@type"].split(":")[1])
+          )
+        : item;
+      await importByData(base, filteredItems, orgId);
       CREATED_FIELDS_DATA = [];
       CREATED_FIELDS_IDS = {};
       CURRENT_IMPORTING_ORG = "";
@@ -172,6 +181,14 @@ async function writeTable(
 
     let record = {};
     Object.entries(data).forEach(([key, value]) => {
+      if (
+        !checkIfFieldISRecognized(tableName, key) &&
+        key !== "@type" &&
+        key !== "@context" &&
+        key !== "value"
+      ) {
+        return;
+      }
       if (key === "value") {
         key = "i72:value";
       }
@@ -295,7 +312,8 @@ async function writeExtraFields(base: Base): Promise<void> {
             let valueToBeUpdated = record?.getCellValue(diff.name);
             if (
               valueToBeUpdated &&
-              record.name.includes(CURRENT_IMPORTING_ORG)
+              (record.name.includes(CURRENT_IMPORTING_ORG) ||
+                tableName === "Theme")
             ) {
               if (Array.isArray(valueToBeUpdated)) {
                 valueToBeUpdated = valueToBeUpdated.map((item) => {
@@ -327,9 +345,13 @@ async function createTables(
       structure[tableName] = { fields: {} };
     }
 
-    for (const key in item) {
+    for (let key in item) {
+      if (key === "value") {
+        key = "i72:value";
+      }
       if (
         Object.hasOwnProperty.call(item, key) &&
+        checkIfFieldISRecognized(tableName, key) &&
         key !== "@context" &&
         key !== "@type"
       ) {
@@ -442,17 +464,14 @@ async function deleteTableRecords(
         const recordId = record.getCellValueAsString("@id");
         if (
           !Object.values(CREATED_FIELDS_IDS).includes(record.id) &&
-          tableName === "Theme" &&
           tableIds.includes(recordId)
         ) {
-          recordsToBeDeletedIds.push(record.id);
-        }
-        if (
-          !Object.values(CREATED_FIELDS_IDS).includes(record.id) &&
-          recordId.includes(CURRENT_IMPORTING_ORG) &&
-          tableIds.includes(recordId)
-        ) {
-          recordsToBeDeletedIds.push(record.id);
+          if (
+            tableName === "Theme" ||
+            recordId.includes(CURRENT_IMPORTING_ORG)
+          ) {
+            recordsToBeDeletedIds.push(record.id);
+          }
         } else {
           if (!Object.values(CREATED_FIELDS_IDS).includes(record.id)) {
             appendNewInfoToUserRecords(table, record, linkedRecordsRecriated);
@@ -678,4 +697,41 @@ function doAllRecordsHaveId(tableData: TableInterface[]) {
     }
   }
   return true;
+}
+
+function warnIfUnrecognizedFieldsWillBeIgnored(tableData: TableInterface[]) {
+  const warnings = [];
+  const classesSet = new Set();
+  for (const data of tableData) {
+    const tableName = data["@type"].split(":")[1];
+    if (!Object.keys(map).includes(tableName)) {
+      continue;
+    }
+    if (classesSet.has(tableName)) {
+      continue;
+    }
+    classesSet.add(tableName);
+    const cid = new map[tableName]();
+    for (const key in data) {
+      if (
+        !checkIfFieldISRecognized(tableName, key) &&
+        key !== "@type" &&
+        key !== "@context" &&
+        key !== "value"
+      ) {
+        warnings.push(
+          `Table <b>${tableName}</b> has unrecognized field <b>${key}</b>. This field will be ignored.`
+        );
+      }
+    }
+  }
+  return warnings;
+}
+
+function checkIfFieldISRecognized(tableName: string, fieldName: string) {
+  const cid = new map[tableName]();
+  return cid
+    .getFields()
+    .map((item) => item.name)
+    .includes(fieldName);
 }
