@@ -44,35 +44,53 @@ export async function exportData(
           "http://ontology.commonapproach.org/contexts/cidsContext.json",
         "@type": `cids:${table.name}`,
       };
+      let isEmpty = true; // Flag to check if the row is empty
       for (const field of cid.getFields()) {
         if (field.type === "link") {
-          const value = record.getCellValue(field.name);
+          const value: any = record.getCellValue(field.name);
           if (field.representedType === "array") {
-            row[field.name] =
-              //@ts-ignore
+            const fieldValue =
               value?.map((item: LinkedCellInterface) => item.name) ??
               field?.defaultValue;
+            if (fieldValue && fieldValue.length > 0) {
+              isEmpty = false;
+            }
+            row[field.name] = fieldValue;
           } else if (field.representedType === "string") {
-            //@ts-ignore
-            row[field.name] = value ? value[0]?.name : field?.defaultValue;
+            const fieldValue = value ? value[0]?.name : field?.defaultValue;
+            if (fieldValue) {
+              isEmpty = false;
+            }
+            row[field.name] = fieldValue;
           }
         } else if (field.type === "i72") {
           if (field.name === "i72:value") {
+            const numericalValue =
+              record.getCellValueAsString(field.name) ?? field?.defaultValue;
+            const unitOfMeasure =
+              record.getCellValueAsString("i72:unit_of_measure") ?? "";
+            if (numericalValue || unitOfMeasure) {
+              isEmpty = false;
+            }
             row[field.name] = {
               "@context":
                 "http://ontology.commonapproach.org/contexts/cidsContext.json",
               "@type": "i72:Measure",
-              "i72:numerical_value":
-                record.getCellValueAsString(field.name) ?? field?.defaultValue,
-              "i72:unit_of_measure":
-                record.getCellValueAsString("i72:unit_of_measure") ?? "",
+              "i72:numerical_value": numericalValue,
+              "i72:unit_of_measure": unitOfMeasure,
             };
           }
         } else {
-          row[field.name] = record.getCellValue(field.name) ?? "";
+          const fieldValue = record.getCellValue(field.name) ?? "";
+          if (fieldValue) {
+            isEmpty = false;
+          }
+          row[field.name] = fieldValue;
         }
       }
-      data.push(row);
+      if (!isEmpty) {
+        data.push(row);
+      }
     }
   }
 

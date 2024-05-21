@@ -129,6 +129,31 @@ function Main() {
               Export Data
             </div>
           </Button>
+          <Button
+            style={{
+              border: "1px solid #FF8B3C",
+              backgroundColor: "rgba(0,0,0,0)",
+            }}
+            disabled={isImporting}
+            onClick={async () => {
+              window.open(
+                "https://www.commonapproach.org/wp-content/uploads/2024/02/Common-Approach_Guide-for-Basic-Tier-Template-for-Airtable-version-2024-01-16.pdf"
+              );
+            }}
+          >
+            <div
+              style={{
+                alignItems: "center",
+                textAlign: "center",
+                display: "flex",
+                gap: 2,
+                color: "#FF8B3C",
+              }}
+            >
+              <Icon name="book" size={16} />
+              User Guide
+            </div>
+          </Button>
         </div>
         <div
           style={{
