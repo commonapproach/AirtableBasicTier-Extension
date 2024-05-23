@@ -54,8 +54,11 @@ function validateRecords(tableData: TableInterface[], operation: Operation) {
     //check if required fields are present
     for (const field of cid.getFields()) {
       if (field.required && !Object.keys(data).includes(field.name)) {
-        if (field.name === "i72:value") {
-          if (Object.keys(data).includes("value")) {
+        if (field.name === "i72:value" || field.name === "org:hasLegalName") {
+          if (
+            Object.keys(data).includes("value") ||
+            Object.keys(data).includes("hasLegalName")
+          ) {
             continue;
           }
         }
@@ -96,8 +99,14 @@ function validateRecords(tableData: TableInterface[], operation: Operation) {
       }
     }
 
-    for (const [fieldName, fieldValue] of Object.entries(data)) {
+    for (let [fieldName, fieldValue] of Object.entries(data)) {
       if (fieldName === "@context" || fieldName === "@type") continue;
+      if (fieldName === "value") {
+        fieldName = "i72:value";
+      }
+      if (fieldName === "hasLegalName") {
+        fieldName = "org:hasLegalName";
+      }
 
       const fieldProps: any = cid.getFieldByName(fieldName);
 
@@ -123,28 +132,13 @@ function validateRecords(tableData: TableInterface[], operation: Operation) {
         //   );
         // }
       } else {
-        // Validate primary keys
-        if (fieldProps?.primary) {
-          if (!validatePrimary(fieldValue as string)) {
-            if (operation === "import") {
-              validatorWarnings.add(
-                `Invalid URL format: <b>${fieldValue}</b> for <b>${fieldName}</b> on table <b>${tableName}</b>`
-              );
-            } else {
-              validatorErrors.add(
-                `Invalid URL format: <b>${fieldValue}</b> for <b>${fieldName}</b> on table <b>${tableName}</b>`
-              );
-            }
-          }
-        }
-
         // Validate unique fields
         if (fieldProps?.unique) {
           if (
             !validateUnique(tableName, fieldName, fieldValue, uniqueRecords, id)
           ) {
             const msg = `Duplicate value for unique field <b>${fieldName}</b>: <b>${fieldValue}</b> in table <b>${tableName}</b>`;
-            if (operation === "import") {
+            if (fieldName !== "@id") {
               validatorWarnings.add(msg);
             } else {
               validatorErrors.add(msg);
@@ -170,20 +164,6 @@ function validateRecords(tableData: TableInterface[], operation: Operation) {
       }
     }
   }
-}
-
-function validatePrimary(value: string): boolean {
-  // return value.startsWith("http://") || value.startsWith("https://");
-  const pattern = new RegExp(
-    "^([a-zA-Z]+:\\/\\/)?" + // protocol
-      "((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|" + // domain name
-      "((\\d{1,3}\\.){3}\\d{1,3}))" + // OR IP (v4) address
-      "(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*" + // port and path
-      "(\\?[;&a-z\\d%_.~+=-]*)?" + // query string
-      "(\\#[-a-z\\d_]*)?$", // fragment locator
-    "i"
-  );
-  return pattern.test(value);
 }
 
 function validateUnique(
@@ -260,7 +240,9 @@ function validateIndicatorsInOrganizations(tableData: TableInterface[]) {
     if (tableName == "Organization") {
       if (!data["hasIndicator"]) {
         validatorWarnings.add(
-          `Organization <b>${data["org:hasLegalName"]}</b> has no indicators`
+          `Organization <b>${
+            data["org:hasLegalName"] || data["hasLegalName"]
+          }</b> has no indicators`
         );
         data["hasIndicator"] = [];
       }

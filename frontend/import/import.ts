@@ -185,12 +185,16 @@ async function writeTable(
         !checkIfFieldISRecognized(tableName, key) &&
         key !== "@type" &&
         key !== "@context" &&
-        key !== "value"
+        key !== "value" &&
+        key !== "hasLegalName"
       ) {
         return;
       }
       if (key === "value") {
         key = "i72:value";
+      }
+      if (key === "hasLegalName") {
+        key = "org:hasLegalName";
       }
       const cid = new map[tableName]();
       if (
@@ -348,6 +352,9 @@ async function createTables(
     for (let key in item) {
       if (key === "value") {
         key = "i72:value";
+      }
+      if (key === "hasLegalName") {
+        key = "org:hasLegalName";
       }
       if (
         Object.hasOwnProperty.call(item, key) &&
@@ -717,7 +724,8 @@ function warnIfUnrecognizedFieldsWillBeIgnored(tableData: TableInterface[]) {
         !checkIfFieldISRecognized(tableName, key) &&
         key !== "@type" &&
         key !== "@context" &&
-        key !== "value"
+        key !== "value" &&
+        key !== "hasLegalName"
       ) {
         warnings.push(
           `Table <b>${tableName}</b> has unrecognized field <b>${key}</b>. This field will be ignored.`
