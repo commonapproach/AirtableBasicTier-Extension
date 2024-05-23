@@ -65,7 +65,7 @@ export async function importData(
     return;
   }
 
-  jsonData = removeDupplicatedLinks(jsonData);
+  jsonData = removeDuplicatedLinks(jsonData);
 
   const jsonDataByOrgs = await splitJsonDataByOrganization(base, jsonData);
 
@@ -461,6 +461,8 @@ async function deleteTableRecords(
     tableIds.push(item["@id"]);
   });
 
+  const allRecordsToBeDeleted: { table: Table; ids: string[] }[] = [];
+
   for (const tableName of Array.from(tablesSet)) {
     const table = base.getTableByNameIfExists(tableName as string);
     if (table) {
@@ -486,13 +488,14 @@ async function deleteTableRecords(
         }
       }
       await moveFieldsReference(base, table.name, recordsToBeDeletedIds);
-      setTimeout(async () => {
-        await executeInBatches(
-          recordsToBeDeletedIds,
-          async (batch) => await table.deleteRecordsAsync(batch)
-        );
-      }, 2000);
+      allRecordsToBeDeleted.push({ table, ids: recordsToBeDeletedIds });
     }
+  }
+
+  for (const { table, ids } of allRecordsToBeDeleted) {
+    await executeInBatches(ids, async (batch) => {
+      await table.deleteRecordsAsync(batch);
+    });
   }
 }
 
@@ -680,7 +683,7 @@ const checkIfHasOneOrganization = (jsonData: any) => {
   return true;
 };
 
-function removeDupplicatedLinks(jsonData: any) {
+function removeDuplicatedLinks(jsonData: any) {
   for (const data of jsonData) {
     for (const [key, value] of Object.entries(data)) {
       if (Array.isArray(value)) {
