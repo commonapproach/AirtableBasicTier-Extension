@@ -174,12 +174,17 @@ async function writeTable(
   base: Base,
   tableData: TableInterface[]
 ): Promise<void> {
+  const recordBatches: {
+    tableName: string;
+    records: Array<{ fields: { [key: string]: unknown } }>;
+  }[] = [];
+
   for (const data of tableData) {
     const tableName = data["@type"].split(":")[1];
     const recordId = data["@id"];
     const table = base.getTableByNameIfExists(tableName);
 
-    let record = {};
+    let record: { [key: string]: unknown } = {};
     Object.entries(data).forEach(([key, value]) => {
       if (
         !checkIfFieldISRecognized(tableName, key) &&
@@ -221,12 +226,28 @@ async function writeTable(
       }
     });
 
-    const respId = await table.createRecordAsync(record);
-    CREATED_FIELDS_IDS[recordId] = respId;
-    CREATED_FIELDS_DATA.push({
-      tableName,
-      internalId: recordId,
-      externalId: respId,
+    const batch = recordBatches.find((batch) => batch.tableName === tableName);
+    if (batch) {
+      batch.records.push({ fields: record });
+    } else {
+      recordBatches.push({ tableName, records: [{ fields: record }] });
+    }
+  }
+
+  // Create records in batches using executeInBatches function
+  for (const batch of recordBatches) {
+    const table = base.getTableByNameIfExists(batch.tableName);
+    await executeInBatches(batch.records, async (recordsBatch) => {
+      const recordIds = await table.createRecordsAsync(recordsBatch);
+      recordIds.forEach((id, index) => {
+        const originalRecordId: any = recordsBatch[index].fields["@id"];
+        CREATED_FIELDS_IDS[originalRecordId] = id;
+        CREATED_FIELDS_DATA.push({
+          tableName: batch.tableName,
+          internalId: originalRecordId,
+          externalId: id,
+        });
+      });
     });
   }
 }
@@ -235,13 +256,18 @@ async function writeTableLinked(
   base: Base,
   tableData: TableInterface[]
 ): Promise<void> {
+  const updates: {
+    tableName: string;
+    updates: Array<{ id: string; fields: { [key: string]: unknown } }>;
+  }[] = [];
+
   for (const data of tableData) {
     const tableName = data["@type"].split(":")[1];
     const recordId = data["@id"];
     const table = base.getTableByNameIfExists(tableName);
 
-    let record = {};
-    let oldRecord = {};
+    let record: { [key: string]: unknown } = {};
+    let oldRecord: { [key: string]: unknown } = {};
     let id: string;
 
     for (let [key, value] of Object.entries(data)) {
@@ -269,8 +295,8 @@ async function writeTableLinked(
         const filteredRecords = records.filter(
           (rcd) => rcd.getCellValueAsString("@id") === recordId
         );
-        const oldRecord = filteredRecords.filter((rcd) => rcd.id !== id)[0];
-        const newRecord = filteredRecords.filter((rcd) => rcd.id === id)[0];
+        const oldRecordData = filteredRecords.filter((rcd) => rcd.id !== id)[0];
+        const newRecordData = filteredRecords.filter((rcd) => rcd.id === id)[0];
 
         const mappedValues = value
           // @ts-ignore
@@ -278,10 +304,10 @@ async function writeTableLinked(
           ?.map((uri) => CREATED_FIELDS_IDS[uri]);
         record[key] = mappedValues.map((id: string) => ({ id }));
 
-        if (oldRecord) {
+        if (oldRecordData) {
           oldRecord[key] =
             // @ts-ignore
-            oldRecord?.getCellValue(key)?.map((item) => {
+            oldRecordData?.getCellValue(key)?.map((item) => {
               return { id: item.id };
             }) || [];
         }
@@ -289,12 +315,34 @@ async function writeTableLinked(
     }
 
     if (id && oldRecord && Object.keys(oldRecord).length > 0) {
-      const recordID = await table.updateRecordAsync(id, oldRecord);
+      const updateBatch = updates.find(
+        (batch) => batch.tableName === tableName
+      );
+      if (updateBatch) {
+        updateBatch.updates.push({ id, fields: oldRecord });
+      } else {
+        updates.push({ tableName, updates: [{ id, fields: oldRecord }] });
+      }
     }
 
-    if (id && record) {
-      const recordID = await table.updateRecordAsync(id, record);
+    if (id && Object.keys(record).length > 0) {
+      const updateBatch = updates.find(
+        (batch) => batch.tableName === tableName
+      );
+      if (updateBatch) {
+        updateBatch.updates.push({ id, fields: record });
+      } else {
+        updates.push({ tableName, updates: [{ id, fields: record }] });
+      }
     }
+  }
+
+  // Execute the updates in batches
+  for (const updateBatch of updates) {
+    const table = base.getTableByNameIfExists(updateBatch.tableName);
+    await executeInBatches(updateBatch.updates, async (batch) => {
+      await table.updateRecordsAsync(batch);
+    });
   }
 }
 
