@@ -9,6 +9,7 @@ import React, { useRef, useState } from "react";
 import ExportDialog from "./components/ExportDialog";
 import Loading from "./components/Loading";
 import DialogContextProvider, { useDialog } from "./context/DialogContext";
+import { createTables } from "./helpers/createTables";
 import { importData } from "./import/import";
 import { handleFileChange } from "./utils";
 
@@ -127,6 +128,44 @@ function Main() {
             >
               <Icon name="download" size={16} />
               Export Data
+            </div>
+          </Button>
+          <Button
+            style={{
+              border: "1px solid #2d62d7",
+              backgroundColor: "rgba(0,0,0,0)",
+            }}
+            disabled={isImporting}
+            onClick={async () => {
+              setIsLoading(true);
+              try {
+                await createTables();
+                setDialogContent(
+                  "Success",
+                  "Tables created successfully",
+                  true
+                );
+              } catch (error) {
+                setDialogContent(
+                  "Error",
+                  error.message || "Something went wrong",
+                  true
+                );
+              }
+              setIsLoading(false);
+            }}
+          >
+            <div
+              style={{
+                alignItems: "center",
+                textAlign: "center",
+                display: "flex",
+                gap: 2,
+                color: "#2d62d7",
+              }}
+            >
+              <Icon name="plus" size={16} />
+              Create Tables
             </div>
           </Button>
           <Button

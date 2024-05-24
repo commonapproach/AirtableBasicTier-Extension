@@ -3,11 +3,11 @@
 import Base from "@airtable/blocks/dist/types/src/models/base";
 import Record from "@airtable/blocks/dist/types/src/models/record";
 import Table from "@airtable/blocks/dist/types/src/models/table";
-import { FieldType } from "@airtable/blocks/dist/types/src/types/field";
 import { TableInterface } from "../domain/interfaces/table.interface";
-import { IndicatorReport, map } from "../domain/models";
+import { map } from "../domain/models";
 import { validate } from "../domain/validation/validator";
-import { executeInBatches, getActualFieldType } from "../utils";
+import { createTables } from "../helpers/createTables";
+import { executeInBatches } from "../utils";
 
 let CREATED_FIELDS_IDS: { [key: string]: string } = {};
 let CREATED_FIELDS_DATA: {
@@ -155,7 +155,7 @@ async function importFileData(
 async function importByData(base: Base, jsonData: any, orgId: string) {
   CURRENT_IMPORTING_ORG = orgId;
   // Create Tables if they don't exist
-  await createTables(base, jsonData);
+  await createTables();
 
   // Write Simple Records to Tables
   await writeTable(base, jsonData);
@@ -335,121 +335,6 @@ async function writeExtraFields(base: Base): Promise<void> {
   }
 }
 
-async function createTables(
-  base: Base,
-  tableData: TableInterface[]
-): Promise<void> {
-  const structure = {};
-
-  tableData.forEach((item) => {
-    const tableName = item["@type"].split(":").pop();
-    const cid = new map[tableName]();
-
-    if (!structure[tableName]) {
-      structure[tableName] = { fields: {} };
-    }
-
-    for (let key in item) {
-      if (key === "value") {
-        key = "i72:value";
-      }
-      if (key === "hasLegalName") {
-        key = "org:hasLegalName";
-      }
-      if (
-        Object.hasOwnProperty.call(item, key) &&
-        checkIfFieldISRecognized(tableName, key) &&
-        key !== "@context" &&
-        key !== "@type"
-      ) {
-        structure[tableName].fields[key] = {
-          type: cid.getFieldByName(key)?.type,
-          link: cid.getFieldByName(key)?.link?.className,
-        };
-      }
-    }
-  });
-
-  await checkIfCanCreateTableFields(base, structure);
-  await createTablesIfNotExist(base);
-  await createTableFields(base, structure);
-}
-
-async function createTablesIfNotExist(base: Base): Promise<void> {
-  for (const tableName of Object.keys(map)) {
-    const table = base.getTableByNameIfExists(tableName);
-    if (!table) {
-      await base.createTableAsync(tableName, [
-        { name: "@id", type: "singleLineText" as FieldType },
-      ]);
-    }
-  }
-}
-
-async function checkIfCanCreateTableFields(
-  base: Base,
-  structure: any
-): Promise<void> {
-  let error: string = "";
-  Object.entries(structure).forEach(([tableName, values]: any) => {
-    const vals = Object.entries(values.fields);
-    const table = base.getTableByNameIfExists(tableName);
-    for (const val of vals) {
-      const [fieldName, fieldData]: any = val;
-      if (table?.getFieldByNameIfExists(fieldName)) {
-        if (
-          getActualFieldType(fieldData.type) !==
-          table?.getFieldByNameIfExists(fieldName).type
-        ) {
-          error += `Field Type Mismatch, please delete the field <b>${fieldName}</b> on table <b>${table.name}</b> and try again <hr/>`;
-        }
-      }
-    }
-  });
-
-  if (error.length > 0) {
-    throw new Error(error);
-  }
-}
-
-async function createTableFields(base: Base, structure: any): Promise<void> {
-  for (const data of Object.entries(structure)) {
-    const [tableName, values]: any = data;
-    const vals = Object.entries(values.fields);
-    const table = base.getTableByNameIfExists(tableName);
-    if (tableName === IndicatorReport.className) {
-      vals.push(["i72:unit_of_measure", { type: "i72", link: undefined }]);
-    }
-    for (const val of vals) {
-      const [fieldName, fieldData]: any = val;
-      if (!table.getFieldByNameIfExists(fieldName)) {
-        if (fieldData.type === "link") {
-          let tableId = base.getTableByNameIfExists(fieldData.link)?.id;
-          if (!tableId) {
-            alert(`Error: Linked Table named ${fieldData.link} not found`);
-          }
-          if (fieldData.type) {
-            await table.createFieldAsync(
-              fieldName,
-              getActualFieldType(fieldData.type) as FieldType,
-              {
-                linkedTableId: tableId,
-              }
-            );
-          }
-        } else {
-          if (fieldData.type) {
-            await table.createFieldAsync(
-              fieldName,
-              getActualFieldType(fieldData.type) as FieldType
-            );
-          }
-        }
-      }
-    }
-  }
-}
-
 async function deleteTableRecords(
   base: Base,
   tableData: TableInterface[]
@@ -569,7 +454,7 @@ async function splitJsonDataByOrganization(base: Base, jsonData: any) {
 
   let organizationTable = base.getTableByNameIfExists("Organization");
   if (!organizationTable) {
-    await createTables(base, orgs);
+    await createTables();
     await writeTable(base, orgs);
   }
 
