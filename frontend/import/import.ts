@@ -4,7 +4,7 @@ import Base from "@airtable/blocks/dist/types/src/models/base";
 import Record from "@airtable/blocks/dist/types/src/models/record";
 import Table from "@airtable/blocks/dist/types/src/models/table";
 import { TableInterface } from "../domain/interfaces/table.interface";
-import { map } from "../domain/models";
+import { IndicatorReport, Organization, map } from "../domain/models";
 import { validate } from "../domain/validation/validator";
 import { createTables } from "../helpers/createTables";
 import { executeInBatches } from "../utils";
@@ -625,6 +625,10 @@ function warnIfUnrecognizedFieldsWillBeIgnored(tableData: TableInterface[]) {
 }
 
 function checkIfFieldISRecognized(tableName: string, fieldName: string) {
+  if (tableName === Organization.className && fieldName === "hasLegalName")
+    return true;
+  if (tableName === IndicatorReport.className && fieldName === "value")
+    return true;
   const cid = new map[tableName]();
   return cid
     .getFields()
