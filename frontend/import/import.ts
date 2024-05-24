@@ -5,7 +5,7 @@ import Record from "@airtable/blocks/dist/types/src/models/record";
 import Table from "@airtable/blocks/dist/types/src/models/table";
 import { FieldType } from "@airtable/blocks/dist/types/src/types/field";
 import { TableInterface } from "../domain/interfaces/table.interface";
-import { IndicatorReport, map } from "../domain/models";
+import { IndicatorReport, Organization, map } from "../domain/models";
 import { validate } from "../domain/validation/validator";
 import { executeInBatches, getActualFieldType } from "../utils";
 
@@ -357,7 +357,6 @@ async function createTables(
         key = "org:hasLegalName";
       }
       if (
-        Object.hasOwnProperty.call(item, key) &&
         checkIfFieldISRecognized(tableName, key) &&
         key !== "@context" &&
         key !== "@type"
@@ -740,6 +739,8 @@ function warnIfUnrecognizedFieldsWillBeIgnored(tableData: TableInterface[]) {
 }
 
 function checkIfFieldISRecognized(tableName: string, fieldName: string) {
+  if(tableName === Organization.className && fieldName === "hasLegalName") return true;
+  if(tableName === IndicatorReport.className && fieldName === "value") return true;
   const cid = new map[tableName]();
   return cid
     .getFields()
