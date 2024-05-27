@@ -1,5 +1,6 @@
 import { Button, Dialog, Heading } from "@airtable/blocks/ui";
-import React, { useState, createContext, useContext, useEffect } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { FormattedMessage } from "react-intl";
 const DialogContext = createContext({} as any);
 
 function DialogContextProvider({ children }) {
@@ -46,8 +47,20 @@ function DialogContextProvider({ children }) {
             <p dangerouslySetInnerHTML={{ __html: text }} />
 
             <div style={{ display: "flex", gap: 4 }}>
-              <Button onClick={() => setOpenDialog(false)}>Close</Button>
-              {callback && <Button onClick={() => callback()}>Next</Button>}
+              <Button onClick={() => setOpenDialog(false)}>
+                <FormattedMessage
+                  id="generics.button.close"
+                  defaultMessage="Close"
+                />
+              </Button>
+              {callback && (
+                <Button onClick={() => callback()}>
+                  <FormattedMessage
+                    id="generics.button.next"
+                    defaultMessage="Next"
+                  />
+                </Button>
+              )}
             </div>
           </Dialog>
         )}

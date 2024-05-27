@@ -6,11 +6,14 @@ import {
   useBase,
 } from "@airtable/blocks/ui";
 import React, { useRef, useState } from "react";
+import { FormattedMessage, IntlProvider, useIntl } from "react-intl";
 import ExportDialog from "./components/ExportDialog";
 import Loading from "./components/Loading";
 import DialogContextProvider, { useDialog } from "./context/DialogContext";
 import { createTables } from "./helpers/createTables";
 import { importData } from "./import/import";
+import English from "./localization/en.json";
+import French from "./localization/fr.json";
 import { handleFileChange } from "./utils";
 
 function Main() {
@@ -20,6 +23,7 @@ function Main() {
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const intl = useIntl();
 
   const handleButtonClick = () => {
     if (fileInputRef.current) {
@@ -64,7 +68,10 @@ function Main() {
               }}
             >
               <Icon name="upload" size={16} />
-              Import Data
+              <FormattedMessage
+                id="app.button.importData"
+                defaultMessage="Import Data"
+              />
             </div>
           </Button>
           <input
@@ -80,13 +87,20 @@ function Main() {
                       josnData,
                       base,
                       setDialogContent,
-                      setIsImporting
+                      setIsImporting,
+                      intl
                     );
                   } catch (error) {
                     setIsImporting(false);
                     setDialogContent(
-                      "Error",
-                      error.message || "Something went wrong",
+                      intl.formatMessage({
+                        id: "generics.error",
+                        defaultMessage: "Error",
+                      }),
+                      intl.formatMessage({
+                        id: "generics.error.message",
+                        defaultMessage: error.message || "Something went wrong",
+                      }),
                       true
                     );
                   }
@@ -98,11 +112,18 @@ function Main() {
                 },
                 (error) => {
                   setDialogContent(
-                    "Error",
-                    error.message || "Something went wrong",
+                    intl.formatMessage({
+                      id: "generics.error",
+                      defaultMessage: "Error",
+                    }),
+                    intl.formatMessage({
+                      id: "generics.error.message",
+                      defaultMessage: error.message || "Something went wrong",
+                    }),
                     true
                   );
-                }
+                },
+                intl
               );
             }}
             style={{ display: "none" }}
@@ -127,7 +148,10 @@ function Main() {
               }}
             >
               <Icon name="download" size={16} />
-              Export Data
+              <FormattedMessage
+                id="app.button.exportData"
+                defaultMessage="Export Data"
+              />
             </div>
           </Button>
           <Button
@@ -139,16 +163,28 @@ function Main() {
             onClick={async () => {
               setIsLoading(true);
               try {
-                await createTables();
+                await createTables(intl);
                 setDialogContent(
-                  "Success",
-                  "Tables created successfully",
+                  intl.formatMessage({
+                    id: "generics.success",
+                    defaultMessage: "Success",
+                  }),
+                  intl.formatMessage({
+                    id: "createTables.messages.success",
+                    defaultMessage: "Tables created successfully",
+                  }),
                   true
                 );
               } catch (error) {
                 setDialogContent(
-                  "Error",
-                  error.message || "Something went wrong",
+                  intl.formatMessage({
+                    id: "generics.error",
+                    defaultMessage: "Error",
+                  }),
+                  intl.formatMessage({
+                    id: "generics.error.message",
+                    defaultMessage: error.message || "Something went wrong",
+                  }),
                   true
                 );
               }
@@ -165,7 +201,10 @@ function Main() {
               }}
             >
               <Icon name="plus" size={16} />
-              Create Tables
+              <FormattedMessage
+                id="app.button.createTables"
+                defaultMessage="Create Tables"
+              />
             </div>
           </Button>
           <Button
@@ -190,7 +229,10 @@ function Main() {
               }}
             >
               <Icon name="book" size={16} />
-              User Guide
+              <FormattedMessage
+                id="app.button.userGuide"
+                defaultMessage="User Guide"
+              />
             </div>
           </Button>
         </div>
@@ -209,10 +251,18 @@ function Main() {
             width={200}
           />
           <Text variant="paragraph" style={{ margin: 10 }}>
-            Compliant with Common Impact Data Standard Version 2.1
+            <FormattedMessage
+              id="app.description"
+              defaultMessage="Compliant with Common Impact Data Standard Version 2.1"
+            />
           </Text>
           <Text variant="paragraph">
-            <strong>Basic Tier</strong>
+            <strong>
+              <FormattedMessage
+                id="app.standardTier"
+                defaultMessage="Basic Tier"
+              />
+            </strong>
           </Text>
         </div>
       </div>
@@ -220,8 +270,23 @@ function Main() {
   );
 }
 
-initializeBlock(() => (
-  <DialogContextProvider>
-    <Main />
-  </DialogContextProvider>
-));
+initializeBlock(() => {
+  const browserLanguage = navigator.language;
+  let language = "English";
+
+  if (browserLanguage === "fr") {
+    language = "French";
+  }
+
+  return (
+    <IntlProvider
+      locale={language}
+      defaultLocale="en"
+      messages={language === "French" ? French : English}
+    >
+      <DialogContextProvider>
+        <Main />
+      </DialogContextProvider>
+    </IntlProvider>
+  );
+});

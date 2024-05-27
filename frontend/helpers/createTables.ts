@@ -1,9 +1,10 @@
 import { base } from "@airtable/blocks";
 import { FieldType } from "@airtable/blocks/models";
+import { IntlShape } from "react-intl";
 import { map } from "../domain/models";
 import { FieldType as LocalFiledType } from "../domain/models/Base";
 
-export async function createTables() {
+export async function createTables(intl: IntlShape) {
   const tablesOnBase = base.tables;
   const tableNamesOnBase = tablesOnBase.map((table) => table.name);
   const tablesToCreate = Object.keys(map);
@@ -14,7 +15,13 @@ export async function createTables() {
       if (currentTable.toLowerCase() === tableToCreate.toLowerCase()) {
         if (currentTable !== tableToCreate) {
           throw new Error(
-            `Please rename the table "${currentTable}" to "${tableToCreate}"`
+            intl.formatMessage(
+              {
+                id: "createTables.messages.error.tableNameConflict",
+                defaultMessage: `Please rename the table "{tableName}" to "{newTableName}"`,
+              },
+              { tableName: currentTable, newTableName: tableToCreate }
+            )
           );
         }
         shouldCreateTable = false;
@@ -32,14 +39,16 @@ export async function createTables() {
     ]);
   }
 
+  // Create all regular fields
   for (const tableToCreate of tablesToCreate) {
     const tableClass = new map[tableToCreate]();
     const fields = tableClass
       .getFields()
       .filter((field: LocalFiledType) => field.type !== "link");
-    await createFields(tableToCreate, fields);
+    await createFields(tableToCreate, fields, intl);
   }
 
+  // Create all linked fields
   for (const tableToCreate of tablesToCreate) {
     const tableClass = new map[tableToCreate]();
     const linkedFields = tableClass
@@ -52,7 +61,8 @@ export async function createTables() {
         linkedField.link.className,
         linkedField.name.startsWith("has")
           ? `for${tableToCreate}`
-          : `has${tableToCreate}`
+          : `has${tableToCreate}`,
+        intl
       );
     }
   }
@@ -60,12 +70,20 @@ export async function createTables() {
 
 async function createFields(
   tableName: string,
-  fields: { name: string; type: string }[]
+  fields: { name: string; type: string }[],
+  intl: IntlShape
 ) {
   const table = base.getTableByNameIfExists(tableName);
   if (!table) {
-    throw new Error(`Please, create table "${tableName}"`);
-    return;
+    throw new Error(
+      intl.formatMessage(
+        {
+          id: "createTables.messages.error.createTable",
+          defaultMessage: `Please, create table "{tableName}"`,
+        },
+        { tableName }
+      )
+    );
   }
 
   const fieldsOnTable = table.fields;
@@ -87,6 +105,7 @@ async function createFields(
           return FieldType.SINGLE_LINE_TEXT;
       }
     };
+
     const fieldType = getFieldType();
     if (fieldNamesOnTable.includes(fieldName)) {
       const currentFieldType = fieldsOnTable.find(
@@ -94,24 +113,38 @@ async function createFields(
       ).type;
       if (currentFieldType !== fieldType) {
         throw new Error(
-          `Please update the field "${fieldName}" on table ${table.name} to be of type ${fieldType}`
+          intl.formatMessage(
+            {
+              id: "createTables.messages.error.updateFieldType",
+              defaultMessage: `Please update the field "{fieldName}" on table {tableName} to be of type {fieldType}`,
+            },
+            { fieldName, tableName: table.name, fieldType }
+          )
         );
-        return;
       }
       continue;
     }
-    // need improvement
+
     const normalizedFieldName = normalizeFieldName(fieldName);
     const normalizedFieldNamesOnTable = fieldNamesOnTable.map((name) =>
       normalizeFieldName(name)
     );
     if (normalizedFieldNamesOnTable.includes(normalizedFieldName)) {
       throw new Error(
-        `Please delete or rename the field "${fieldNamesOnTable.find(
-          (name) => normalizeFieldName(name) === normalizedFieldName
-        )}" to "${fieldName}" on table ${table.name}`
+        intl.formatMessage(
+          {
+            id: "createTables.messages.error.renameField",
+            defaultMessage: `Please delete or rename the field "{fieldName}" to "{newFieldName}" on table {tableName}`,
+          },
+          {
+            fieldName: fieldNamesOnTable.find(
+              (name) => normalizeFieldName(name) === normalizedFieldName
+            ),
+            newFieldName: fieldName,
+            tableName: table.name,
+          }
+        )
       );
-      return;
     }
     await table.createFieldAsync(fieldName, fieldType);
   }
@@ -121,20 +154,35 @@ async function createLinkedFields(
   targetTableName: string,
   linkedFieldNameOnTargetTable: string,
   linkedTableName: string,
-  linkedFieldNameOnLInkedTable: string
+  linkedFieldNameOnLInkedTable: string,
+  intl: IntlShape
 ) {
   // Create linked field
   const table1 = base.getTableByNameIfExists(targetTableName);
   const table2 = base.getTableByNameIfExists(linkedTableName);
 
   if (!table1) {
-    throw new Error(`Please, create table "${targetTableName}"`);
-    return;
+    throw new Error(
+      intl.formatMessage(
+        {
+          id: "createTables.messages.error.createTable",
+          defaultMessage: `Please, create table "{tableName}"`,
+        },
+        { tableName: targetTableName }
+      )
+    );
   }
 
   if (!table2) {
-    throw new Error(`Please, create table "${linkedTableName}"`);
-    return;
+    throw new Error(
+      intl.formatMessage(
+        {
+          id: "createTables.messages.error.createTable",
+          defaultMessage: `Please, create table "{tableName}"`,
+        },
+        { tableName: linkedTableName }
+      )
+    );
   }
 
   // check if linked field already exists
@@ -171,20 +219,32 @@ async function createLinkedFields(
 
   if (linkedFieldTable1Id && !linkedFieldTable2Id) {
     throw new Error(
-      `Please delete or rename the field "${
-        table1.getFieldById(linkedFieldTable1Id).name
-      }" on table ${table1.name}`
+      intl.formatMessage(
+        {
+          id: "createTables.messages.error.wrongFieldType",
+          defaultMessage: `Please delete or rename the field "{fieldName}" on table {tableName}`,
+        },
+        {
+          fieldName: table1.getFieldById(linkedFieldTable1Id).name,
+          tableName: table1.name,
+        }
+      )
     );
-    return;
   }
 
   if (!linkedFieldTable1Id && linkedFieldTable2Id) {
     throw new Error(
-      `Please delete or rename the field "${
-        table2.getFieldById(linkedFieldTable2Id).name
-      }" on table ${table2.name}`
+      intl.formatMessage(
+        {
+          id: "createTables.messages.error.wrongFieldType",
+          defaultMessage: `Please delete or rename the field "{fieldName}" on table {tableName}`,
+        },
+        {
+          fieldName: table2.getFieldById(linkedFieldTable2Id).name,
+          tableName: table2.name,
+        }
+      )
     );
-    return;
   }
 
   if (linkedFieldTable1Id && linkedFieldTable2Id) {
@@ -204,11 +264,17 @@ async function createLinkedFields(
       linkedFieldTable1.options.linkedTableId !== table2.id
     ) {
       throw new Error(
-        `Please delete or rename the field "${
-          table1.getFieldById(linkedFieldTable1Id).name
-        }" on table ${table1.name}`
+        intl.formatMessage(
+          {
+            id: "createTables.messages.error.wrongFieldType",
+            defaultMessage: `Please delete or rename the field "{fieldName}" on table {tableName}`,
+          },
+          {
+            fieldName: table1.getFieldById(linkedFieldTable1Id).name,
+            tableName: table1.name,
+          }
+        )
       );
-      return;
     }
     if (
       linkedFieldTable1 &&
@@ -216,16 +282,22 @@ async function createLinkedFields(
       linkedFieldTable2.options.linkedTableId !== table1.id
     ) {
       throw new Error(
-        `Please delete or rename the field "${
-          table2.getFieldById(linkedFieldTable2Id).name
-        }" on table ${table2.name}`
+        intl.formatMessage(
+          {
+            id: "createTables.messages.error.wrongFieldType",
+            defaultMessage: `Please delete or rename the field "{fieldName}" on table {tableName}`,
+          },
+          {
+            fieldName: table2.getFieldById(linkedFieldTable2Id).name,
+            tableName: table2.name,
+          }
+        )
       );
-      return;
     }
   }
 }
 
-// Function to normalize field names
+// Function to normalize field names, to handle possible variations of the standard field names
 function normalizeFieldName(name: string): string {
   const lowerCaseName = name.toLowerCase();
   const prefixes = ["has", "for"];

@@ -3,6 +3,7 @@
 import Base from "@airtable/blocks/dist/types/src/models/base";
 import Record from "@airtable/blocks/dist/types/src/models/record";
 import Table from "@airtable/blocks/dist/types/src/models/table";
+import { IntlShape } from "react-intl";
 import { TableInterface } from "../domain/interfaces/table.interface";
 import { IndicatorReport, Organization, map } from "../domain/models";
 import { validate } from "../domain/validation/validator";
@@ -26,12 +27,16 @@ export async function importData(
     open: boolean,
     nextCallback?: () => void
   ) => void,
-  setIsImporting: (value: boolean) => void
+  setIsImporting: (value: boolean) => void,
+  intl: IntlShape
 ) {
   // Check if the user has CREATOR permission
   if (!base.hasPermissionToCreateTable()) {
     setDialogContent(
-      `Error!`,
+      `${intl.formatMessage({
+        id: "generics.error",
+        defaultMessage: "Error",
+      })}!`,
       "You don't have permission to create tables in this base, please contact the base owner to give you <b>CREATOR</b> permission.",
       true
     );
@@ -40,14 +45,24 @@ export async function importData(
   }
 
   if (validateIfEmptyFile(jsonData)) {
-    setDialogContent(`Error!`, "Table data is empty or not an array", true);
+    setDialogContent(
+      `${intl.formatMessage({
+        id: "generics.error",
+        defaultMessage: "Error",
+      })}!`,
+      "Table data is empty or not an array",
+      true
+    );
     setIsImporting(false);
     return;
   }
 
   if (!checkIfHasOneOrganization(jsonData)) {
     setDialogContent(
-      `Error!`,
+      `${intl.formatMessage({
+        id: "generics.error",
+        defaultMessage: "Error",
+      })}!`,
       "You can't import without at least one organization.",
       true
     );
@@ -57,7 +72,10 @@ export async function importData(
 
   if (!doAllRecordsHaveId(jsonData)) {
     setDialogContent(
-      `Error!`,
+      `${intl.formatMessage({
+        id: "generics.error",
+        defaultMessage: "Error",
+      })}!`,
       "All records must have an <b>@id</b> property.",
       true
     );
@@ -67,7 +85,11 @@ export async function importData(
 
   jsonData = removeDuplicatedLinks(jsonData);
 
-  const jsonDataByOrgs = await splitJsonDataByOrganization(base, jsonData);
+  const jsonDataByOrgs = await splitJsonDataByOrganization(
+    base,
+    jsonData,
+    intl
+  );
 
   let allErrors = "";
   let allWarnings = "";
@@ -76,7 +98,10 @@ export async function importData(
   Object.values(jsonDataByOrgs).forEach((item: any) => {
     if (!Array.isArray(item)) {
       setDialogContent(
-        `Error!`,
+        `${intl.formatMessage({
+          id: "generics.error",
+          defaultMessage: "Error",
+        })}!`,
         "Invalid JSON data, please check the data and try again.",
         true
       );
@@ -84,37 +109,68 @@ export async function importData(
     }
 
     // Validate JSON
-    let { errors, warnings } = validate(item, "import");
+    let { errors, warnings } = validate(item, "import", intl);
 
-    warnings = [...warnings, ...warnIfUnrecognizedFieldsWillBeIgnored(item)];
+    warnings = [
+      ...warnings,
+      ...warnIfUnrecognizedFieldsWillBeIgnored(item, intl),
+    ];
 
     allErrors = errors.join("<hr/>");
     allWarnings = warnings.join("<hr/>");
   });
 
   if (allErrors.length > 0) {
-    setDialogContent(`Error!`, allErrors, true);
+    setDialogContent(
+      `${intl.formatMessage({
+        id: "generics.error",
+        defaultMessage: "Error",
+      })}!`,
+      allErrors,
+      true
+    );
     return;
   }
 
   if (allWarnings.length > 0) {
-    setDialogContent(`Warning!`, allWarnings, true, () => {
-      setDialogContent(
-        `Warning!`,
-        "<p>Do you want to import anyway?</p>",
-        true,
-        async () => {
-          importFileData(
-            base,
-            jsonDataByOrgs,
-            setDialogContent,
-            setIsImporting
-          );
-        }
-      );
-    });
+    setDialogContent(
+      `${intl.formatMessage({
+        id: "generics.warning",
+        defaultMessage: "Warning",
+      })}!`,
+      allWarnings,
+      true,
+      () => {
+        setDialogContent(
+          `${intl.formatMessage({
+            id: "generics.warning",
+            defaultMessage: "Warning",
+          })}!`,
+          intl.formatMessage({
+            id: "import.messages.warning.continue",
+            defaultMessage: "<p>Do you want to import anyway?</p>",
+          }),
+          true,
+          async () => {
+            importFileData(
+              base,
+              jsonDataByOrgs,
+              setDialogContent,
+              setIsImporting,
+              intl
+            );
+          }
+        );
+      }
+    );
   } else {
-    importFileData(base, jsonDataByOrgs, setDialogContent, setIsImporting);
+    importFileData(
+      base,
+      jsonDataByOrgs,
+      setDialogContent,
+      setIsImporting,
+      intl
+    );
   }
 }
 
@@ -122,9 +178,20 @@ async function importFileData(
   base: Base,
   jsonDataByOrgs: any,
   setDialogContent: any,
-  setIsImporting
+  setIsImporting: (v: boolean) => void,
+  intl: IntlShape
 ) {
-  setDialogContent("Wait a moment...", "Importing data...", true);
+  setDialogContent(
+    intl.formatMessage({
+      id: "import.messages.wait",
+      defaultMessage: "Wait a moment...",
+    }),
+    intl.formatMessage({
+      id: "import.messages.importing",
+      defaultMessage: "Importing data...",
+    }),
+    true
+  );
   setIsImporting(true);
   for (const [orgId, item] of Object.entries(jsonDataByOrgs)) {
     try {
@@ -134,28 +201,50 @@ async function importFileData(
             Object.keys(map).includes(data["@type"].split(":")[1])
           )
         : item;
-      await importByData(base, filteredItems, orgId);
+      await importByData(base, filteredItems, orgId, intl);
       CREATED_FIELDS_DATA = [];
       CREATED_FIELDS_IDS = {};
       CURRENT_IMPORTING_ORG = "";
     } catch (error) {
       setIsImporting(false);
-      setDialogContent("Error", error.message || "Something went wrong", true);
+      setDialogContent(
+        intl.formatMessage({
+          id: "generics.error",
+          defaultMessage: "Error",
+        }),
+        error.message ||
+          `${intl.formatMessage({
+            id: "generics.error.message",
+            defaultMessage: "Something went wrong",
+          })}`,
+        true
+      );
       return;
     }
   }
   setDialogContent(
-    `Success!`,
-    "Your data has been successfully imported.",
+    `${intl.formatMessage({
+      id: "generics.success",
+      defaultMessage: "Success",
+    })}!`,
+    `${intl.formatMessage({
+      id: "import.messages.success",
+      defaultMessage: "Your data has been successfully imported.",
+    })}`,
     true
   );
   setIsImporting(false);
 }
 
-async function importByData(base: Base, jsonData: any, orgId: string) {
+async function importByData(
+  base: Base,
+  jsonData: any,
+  orgId: string,
+  intl: IntlShape
+) {
   CURRENT_IMPORTING_ORG = orgId;
   // Create Tables if they don't exist
-  await createTables();
+  await createTables(intl);
 
   // Write Simple Records to Tables
   await writeTable(base, jsonData);
@@ -489,7 +578,11 @@ async function moveFieldsReference(
   }
 }
 
-async function splitJsonDataByOrganization(base: Base, jsonData: any) {
+async function splitJsonDataByOrganization(
+  base: Base,
+  jsonData: any,
+  intl: IntlShape
+) {
   const tableOrganizations = new Set();
   const fileOrganizations = new Set();
 
@@ -502,7 +595,7 @@ async function splitJsonDataByOrganization(base: Base, jsonData: any) {
 
   let organizationTable = base.getTableByNameIfExists("Organization");
   if (!organizationTable) {
-    await createTables();
+    await createTables(intl);
     await writeTable(base, orgs);
   }
 
@@ -642,7 +735,10 @@ function doAllRecordsHaveId(tableData: TableInterface[]) {
   return true;
 }
 
-function warnIfUnrecognizedFieldsWillBeIgnored(tableData: TableInterface[]) {
+function warnIfUnrecognizedFieldsWillBeIgnored(
+  tableData: TableInterface[],
+  intl: IntlShape
+) {
   const warnings = [];
   const classesSet = new Set();
   for (const data of tableData) {
@@ -664,7 +760,13 @@ function warnIfUnrecognizedFieldsWillBeIgnored(tableData: TableInterface[]) {
         key !== "hasLegalName"
       ) {
         warnings.push(
-          `Table <b>${tableName}</b> has unrecognized field <b>${key}</b>. This field will be ignored.`
+          `${intl.formatMessage(
+            {
+              id: "import.messages.warning.unrecognizedField",
+              defaultMessage: `Table <b>{tableName}</b> has unrecognized field <b>{filedName}</b>. This field will be ignored.`,
+            },
+            { tableName, filedName: key, b: (str) => `<b>${str}</b>` }
+          )}`
         );
       }
     }

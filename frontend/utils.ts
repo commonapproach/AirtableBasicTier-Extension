@@ -1,3 +1,5 @@
+import { IntlShape } from "react-intl";
+
 /**
  * Handles the change event of a file input element.
  * Reads the selected file, checks if it has a ".jsonld" extension,
@@ -11,7 +13,8 @@
 export const handleFileChange = async (
   event: any,
   onSuccess: (data: any) => void,
-  onError: (error: any) => void
+  onError: (error: any) => void,
+  intl: IntlShape
 ): Promise<void> => {
   const file = event.target.files[0];
   if (file && (file.name.endsWith(".jsonld") || file.name.endsWith(".json"))) {
@@ -21,12 +24,26 @@ export const handleFileChange = async (
         const data = JSON.parse(e.target.result as any);
         onSuccess(data);
       } catch (error) {
-        onError(new Error("File is not a valid JSON/JSON-LD file."));
+        onError(
+          new Error(
+            intl.formatMessage({
+              id: "import.messages.error.notValidJson",
+              defaultMessage: "File is not a valid JSON/JSON-LD file.",
+            })
+          )
+        );
       }
     };
     reader.readAsText(file);
   } else {
-    onError(new Error("File is not a JSON/JSON-LD file."));
+    onError(
+      new Error(
+        intl.formatMessage({
+          id: "import.messages.error.notJson",
+          defaultMessage: "File is not a JSON/JSON-LD file.",
+        })
+      )
+    );
   }
 };
 
@@ -71,6 +88,11 @@ export async function executeInBatches<T>(
   }
 }
 
+/**
+ * Returns the actual field type based on the given type.
+ * @param type - The type of the field.
+ * @returns The actual field type.
+ */
 export function getActualFieldType(type: string): string {
   switch (type) {
     case "string":

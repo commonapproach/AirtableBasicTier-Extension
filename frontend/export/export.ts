@@ -1,4 +1,5 @@
 import Base from "@airtable/blocks/dist/types/src/models/base";
+import { IntlShape } from "react-intl";
 import { LinkedCellInterface } from "../domain/interfaces/cell.interface";
 import { ignoredFields, map } from "../domain/models";
 import { Base as BaseModel } from "../domain/models/Base";
@@ -12,7 +13,8 @@ export async function exportData(
     open: boolean,
     nextCallback?: () => void
   ) => void,
-  orgName: string
+  orgName: string,
+  intl: IntlShape
 ): Promise<void> {
   const tables = base.tables;
   let data = [];
@@ -21,8 +23,17 @@ export async function exportData(
   for (const [key] of Object.entries(map)) {
     if (!tableNames.includes(key)) {
       setDialogContent(
-        "Error!",
-        `Table <b>${key}</b> is missing. Please import the schema first.`,
+        `${intl.formatMessage({
+          id: "generics.error",
+          defaultMessage: "Error",
+        })}!`,
+        intl.formatMessage(
+          {
+            id: "export.messages.error.missingTable",
+            defaultMessage: `Table <b>{tableName}</b> is missing. Please create the tables first.`,
+          },
+          { tableName: key, b: (str) => `<b>${str}</b>` }
+        ),
         true
       );
       return;
@@ -94,17 +105,20 @@ export async function exportData(
     }
   }
 
-  const { errors, warnings } = validate(data);
+  const { errors, warnings } = validate(data, "export", intl);
 
-  const emptyTableWarning = await checkForEmptyTables(base);
+  const emptyTableWarning = await checkForEmptyTables(base, intl);
   const allWarnings =
-    checkForNotExportedFields(base) +
+    checkForNotExportedFields(base, intl) +
     warnings.join("<hr/>") +
     emptyTableWarning;
 
   if (errors.length > 0) {
     setDialogContent(
-      `Error!`,
+      `${intl.formatMessage({
+        id: "generics.error",
+        defaultMessage: "Error",
+      })}!`,
       errors.map((item) => `<p>${item}</p>`).join(""),
       true
     );
@@ -112,17 +126,31 @@ export async function exportData(
   }
 
   if (allWarnings.length > 0) {
-    setDialogContent(`Warning!`, allWarnings, true, () => {
-      setDialogContent(
-        `Warning!`,
-        "<p>Do you want to export anyway?</p>",
-        true,
-        () => {
-          downloadJSONLD(data, `${getFileName(orgName)}.json`);
-          setDialogContent("", "", false);
-        }
-      );
-    });
+    setDialogContent(
+      `${intl.formatMessage({
+        id: "generics.warning",
+        defaultMessage: "Warning",
+      })}!`,
+      allWarnings,
+      true,
+      () => {
+        setDialogContent(
+          `${intl.formatMessage({
+            id: "generics.warning",
+            defaultMessage: "Warning",
+          })}!`,
+          intl.formatMessage({
+            id: "export.messages.warning.continue",
+            defaultMessage: "<p>Do you want to export anyway?</p>",
+          }),
+          true,
+          () => {
+            downloadJSONLD(data, `${getFileName(orgName)}.json`);
+            setDialogContent("", "", false);
+          }
+        );
+      }
+    );
     return;
   }
   downloadJSONLD(data, `${getFileName(orgName)}.json`);
@@ -146,7 +174,7 @@ function getFileName(orgName: string): string {
   return `CIDSBasic${orgName}${timestamp}`;
 }
 
-function checkForNotExportedFields(base: Base) {
+function checkForNotExportedFields(base: Base, intl: IntlShape) {
   let warnings = "";
   for (const table of base.tables) {
     if (!Object.keys(map).includes(table.name)) {
@@ -164,14 +192,24 @@ function checkForNotExportedFields(base: Base) {
         continue;
       }
       if (!internalFields.includes(field)) {
-        warnings += `Field <b>${field}</b> on table <b>${table.name}</b> will not be exported<hr/>`;
+        warnings += intl.formatMessage(
+          {
+            id: "export.messages.warning.fieldWillNotBeExported",
+            defaultMessage: `Field <b>{fieldName}</b> on table <b>{tableName}</b> will not be exported<hr/>`,
+          },
+          {
+            fieldName: field,
+            tableName: table.name,
+            b: (str) => `<b>${str}</b>`,
+          }
+        );
       }
     }
   }
   return warnings;
 }
 
-async function checkForEmptyTables(base: Base) {
+async function checkForEmptyTables(base: Base, intl: IntlShape) {
   let warnings = "";
   for (const table of base.tables) {
     if (!Object.keys(map).includes(table.name)) {
@@ -179,7 +217,16 @@ async function checkForEmptyTables(base: Base) {
     }
     const records = await table.selectRecordsAsync();
     if (records.records.length === 0) {
-      warnings += `<hr/>Table <b>${table.name}</b> is empty<hr/>`;
+      warnings += intl.formatMessage(
+        {
+          id: "export.messages.warning.emptyTable",
+          defaultMessage: `<hr/>Table <b>{tableName}</b> is empty<hr/>`,
+        },
+        {
+          tableName: table.name,
+          b: (str) => `<b>${str}</b>`,
+        }
+      );
     }
   }
   return warnings;
