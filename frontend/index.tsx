@@ -256,13 +256,30 @@ function Main() {
               defaultMessage="Compliant with Common Impact Data Standard Version 2.1"
             />
           </Text>
-          <Text variant="paragraph">
+          <Text>
             <strong>
               <FormattedMessage
                 id="app.standardTier"
                 defaultMessage="Basic Tier"
               />
             </strong>
+          </Text>
+          <Text fontSize={"0.75rem"} fontWeight={600} style={{ marginTop: 5 }}>
+            <FormattedMessage
+              id="app.getSampleData"
+              defaultMessage="New user? Try importing this"
+            />
+            &nbsp;
+            <a
+              href="https://ontology.commonapproach.org/examples/CIDSBasicZerokitsTestData-SHARED.json"
+              rel="noreferrer"
+              download
+            >
+              <FormattedMessage
+                id="app.link.sampleData"
+                defaultMessage="sample data file"
+              />
+            </a>
           </Text>
         </div>
       </div>

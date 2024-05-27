@@ -1,6 +1,8 @@
 {
   "app.description": "Compliant with Common Impact Data Standard Version 2.1",
   "app.standardTier": "Basic Tier",
+  "app.getSampleData": "New user? Try importing this",
+  "app.link.sampleData": "sample data file",
   "app.button.importData": "Import Data",
   "app.button.exportData": "Export Data",
   "app.button.createTables": "Create Tables",
