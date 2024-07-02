@@ -353,7 +353,6 @@ async function writeTableLinked(
   for (const data of tableData) {
     const tableName = data["@type"].split(":")[1];
     const recordId = data["@id"];
-    const table = base.getTableByNameIfExists(tableName);
 
     let record: { [key: string]: unknown } = {};
     let oldRecord: { [key: string]: unknown } = {};
@@ -368,7 +367,7 @@ async function writeTableLinked(
       ) {
         // Using the function to create the new array
         id = CREATED_FIELDS_IDS[recordId];
-        if (!value) return;
+        if (!value) continue; // Skip if the value is empty
 
         // @ts-ignore
         if (!Array.isArray(value)) value = [value];
@@ -377,15 +376,11 @@ async function writeTableLinked(
         value = [...new Set(value as string[])];
 
         const tbl = base.getTableByNameIfExists(tableName);
-        const linkedFields = tbl.fields.filter(
-          (field) => field.type === "multipleRecordLinks"
-        );
         const records = (await tbl.selectRecordsAsync()).records;
         const filteredRecords = records.filter(
           (rcd) => rcd.getCellValueAsString("@id") === recordId
         );
         const oldRecordData = filteredRecords.filter((rcd) => rcd.id !== id)[0];
-        const newRecordData = filteredRecords.filter((rcd) => rcd.id === id)[0];
 
         const mappedValues = value
           // @ts-ignore
