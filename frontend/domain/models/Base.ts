@@ -1,23 +1,50 @@
 export class Base {
-  protected _fields: FieldType[];
-  public getFieldByName(name: string): FieldType {
-    return this._fields.find((field) => field.name === name);
-  }
+	protected _fields: FieldType[];
+	public getFieldByName(name: string): FieldType {
+		return this.getAllFields().find((field) => field.name === name);
+	}
 
-  public getFields(): FieldType[] {
-    return this._fields;
-  }
+	public getTopLevelFields(): FieldType[] {
+		return this._fields;
+	}
+
+	public getAllFields(): FieldType[] {
+		const fields = [];
+		for (const field of this._fields) {
+			fields.push(field);
+			if (field.type === "object") {
+				fields.push(...this.getFieldsRecursive(field.properties));
+			}
+		}
+		return fields;
+	}
+
+	private getFieldsRecursive(fields: FieldType[]): FieldType[] {
+		const result = [];
+		for (const field of fields) {
+			result.push(field);
+			if (field.type === "object") {
+				result.push(...this.getFieldsRecursive(field.properties));
+			}
+		}
+		return result;
+	}
 }
 
 export type FieldType = {
-  name: string;
-  type: string;
-  defaultValue?: any;
-  representedType: string;
-  primary?: boolean;
-  unique?: boolean;
-  notNull?: boolean;
-  link?: any;
-  required: boolean;
-  semiRequired: boolean;
+	name: string;
+	type: FieldTypes;
+	objectType?: string;
+	defaultValue?: any;
+	representedType: string;
+	displayName?: string;
+	properties?: FieldType[];
+	primary?: boolean;
+	unique?: boolean;
+	notNull?: boolean;
+	link?: any;
+	required: boolean;
+	semiRequired: boolean;
 };
+
+export type FieldTypes = "string" | "text" | "link" | "object";

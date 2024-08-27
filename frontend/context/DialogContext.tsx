@@ -4,74 +4,77 @@ import { FormattedMessage } from "react-intl";
 const DialogContext = createContext({} as any);
 
 function DialogContextProvider({ children }) {
-  const [openDialog, setOpenDialog] = useState(false);
-  const [text, setText] = useState<string>();
-  const [header, setHeader] = useState<string>();
-  const [callback, setCallback] = useState<() => void>(null);
+	const [openDialog, setOpenDialog] = useState(false);
+	const [text, setText] = useState<string>();
+	const [header, setHeader] = useState<string>();
+	const [callback, setCallback] = useState<() => void>(null);
 
-  function setDialogContent(
-    header: string,
-    text: string,
-    isOpen: boolean = false,
-    nextCallback: () => any = null
-  ) {
-    setText(text);
-    setHeader(header);
-    setOpenDialog(isOpen);
-    setCallback(() => nextCallback);
-  }
+	function setDialogContent(
+		header: string,
+		text: string,
+		isOpen: boolean = false,
+		nextCallback: () => any = null
+	) {
+		setText(text);
+		setHeader(header);
+		setOpenDialog(isOpen);
+		setCallback(() => nextCallback);
+	}
 
-  useEffect(() => {
-    if (!openDialog) {
-      setText(null);
-      setHeader(null);
-      setCallback(null);
-    }
-  }, [openDialog]);
+	useEffect(() => {
+		if (!openDialog) {
+			setText(null);
+			setHeader(null);
+			setCallback(null);
+		}
+	}, [openDialog]);
 
-  return (
-    <DialogContext.Provider
-      value={{
-        openDialog,
-        setOpenDialog,
-        setText,
-        setHeader,
-        setDialogContent,
-      }}
-    >
-      <React.Fragment>
-        {openDialog && (
-          <Dialog onClose={() => setOpenDialog(false)} width="320px">
-            <Dialog.CloseButton />
-            <Heading>{header}</Heading>
-            <p dangerouslySetInnerHTML={{ __html: text }} />
+	return (
+		<DialogContext.Provider
+			value={{
+				openDialog,
+				setOpenDialog,
+				setText,
+				setHeader,
+				setDialogContent,
+			}}
+		>
+			<React.Fragment>
+				{openDialog && (
+					<Dialog
+						onClose={() => setOpenDialog(false)}
+						width="320px"
+					>
+						<Dialog.CloseButton />
+						<Heading>{header}</Heading>
+						<p dangerouslySetInnerHTML={{ __html: text }} />
 
-            <div style={{ display: "flex", gap: 4 }}>
-              <Button onClick={() => setOpenDialog(false)}>
-                <FormattedMessage
-                  id="generics.button.close"
-                  defaultMessage="Close"
-                />
-              </Button>
-              {callback && (
-                <Button onClick={() => callback()}>
-                  <FormattedMessage
-                    id="generics.button.next"
-                    defaultMessage="Next"
-                  />
-                </Button>
-              )}
-            </div>
-          </Dialog>
-        )}
-      </React.Fragment>
-      {children}
-    </DialogContext.Provider>
-  );
+						<div style={{ display: "flex", gap: 4 }}>
+							<Button onClick={() => setOpenDialog(false)}>
+								<FormattedMessage
+									id="generics.button.close"
+									defaultMessage="Close"
+								/>
+							</Button>
+							{callback && (
+								<Button onClick={() => callback()}>
+									<FormattedMessage
+										id="generics.button.next"
+										defaultMessage="Next"
+									/>
+								</Button>
+							)}
+						</div>
+					</Dialog>
+				)}
+			</React.Fragment>
+			{children}
+		</DialogContext.Provider>
+	);
 }
 
 export function useDialog() {
-  return useContext(DialogContext);
+	return useContext(DialogContext);
 }
 
 export default DialogContextProvider;

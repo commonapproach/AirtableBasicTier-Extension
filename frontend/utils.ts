@@ -1,3 +1,4 @@
+import { FieldType } from "@airtable/blocks/models";
 import { IntlShape } from "react-intl";
 
 /**
@@ -11,40 +12,40 @@ import { IntlShape } from "react-intl";
  * @returns Promise<void>
  */
 export const handleFileChange = async (
-  event: any,
-  onSuccess: (data: any) => void,
-  onError: (error: any) => void,
-  intl: IntlShape
+	event: any,
+	onSuccess: (data: any) => void,
+	onError: (error: any) => void,
+	intl: IntlShape
 ): Promise<void> => {
-  const file = event.target.files[0];
-  if (file && (file.name.endsWith(".jsonld") || file.name.endsWith(".json"))) {
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        const data = JSON.parse(e.target.result as any);
-        onSuccess(data);
-      } catch (error) {
-        onError(
-          new Error(
-            intl.formatMessage({
-              id: "import.messages.error.notValidJson",
-              defaultMessage: "File is not a valid JSON/JSON-LD file.",
-            })
-          )
-        );
-      }
-    };
-    reader.readAsText(file);
-  } else {
-    onError(
-      new Error(
-        intl.formatMessage({
-          id: "import.messages.error.notJson",
-          defaultMessage: "File is not a JSON/JSON-LD file.",
-        })
-      )
-    );
-  }
+	const file = event.target.files[0];
+	if (file && (file.name.endsWith(".jsonld") || file.name.endsWith(".json"))) {
+		const reader = new FileReader();
+		reader.onload = async (e) => {
+			try {
+				const data = JSON.parse(e.target.result as any);
+				onSuccess(data);
+			} catch (error) {
+				onError(
+					new Error(
+						intl.formatMessage({
+							id: "import.messages.error.notValidJson",
+							defaultMessage: "File is not a valid JSON/JSON-LD file.",
+						})
+					)
+				);
+			}
+		};
+		reader.readAsText(file);
+	} else {
+		onError(
+			new Error(
+				intl.formatMessage({
+					id: "import.messages.error.notJson",
+					defaultMessage: "File is not a JSON/JSON-LD file.",
+				})
+			)
+		);
+	}
 };
 
 /**
@@ -57,18 +58,18 @@ export const handleFileChange = async (
  * @returns void
  */
 export function downloadJSONLD(data: any, filename: string): void {
-  const jsonldString = JSON.stringify(data, null, 2);
-  const blob = new Blob([jsonldString], { type: "application/ld+json" });
-  const url = URL.createObjectURL(blob);
+	const jsonldString = JSON.stringify(data, null, 2);
+	const blob = new Blob([jsonldString], { type: "application/ld+json" });
+	const url = URL.createObjectURL(blob);
 
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+	const link = document.createElement("a");
+	link.href = url;
+	link.download = filename;
+	document.body.appendChild(link);
+	link.click();
+	document.body.removeChild(link);
 
-  URL.revokeObjectURL(url);
+	URL.revokeObjectURL(url);
 }
 
 /**
@@ -78,14 +79,14 @@ export function downloadJSONLD(data: any, filename: string): void {
  * @param batchSize - The number of items to process in each batch. (default: 50)
  */
 export async function executeInBatches<T>(
-  items: T[],
-  task: (batch: T[]) => Promise<void>,
-  batchSize: number = 50
+	items: T[],
+	task: (batch: T[]) => Promise<void>,
+	batchSize: number = 50
 ): Promise<void> {
-  for (let i = 0; i < items.length; i += batchSize) {
-    const batch = items.slice(i, i + batchSize);
-    await task(batch);
-  }
+	for (let i = 0; i < items.length; i += batchSize) {
+		const batch = items.slice(i, i + batchSize);
+		await task(batch);
+	}
 }
 
 /**
@@ -93,17 +94,15 @@ export async function executeInBatches<T>(
  * @param type - The type of the field.
  * @returns The actual field type.
  */
-export function getActualFieldType(type: string): string {
-  switch (type) {
-    case "string":
-      return "singleLineText";
-    case "text":
-      return "multilineText";
-    case "i72":
-      return "singleLineText";
-    case "link":
-      return "multipleRecordLinks";
-    default:
-      return type;
-  }
+export function getActualFieldType(type: string): FieldType {
+	switch (type) {
+		case "string":
+			return FieldType.SINGLE_LINE_TEXT;
+		case "text":
+			return FieldType.MULTILINE_TEXT;
+		case "link":
+			return FieldType.MULTIPLE_RECORD_LINKS;
+		default:
+			return FieldType.SINGLE_LINE_TEXT;
+	}
 }
