@@ -300,10 +300,10 @@ function Main() {
 }
 
 initializeBlock(() => {
-	const browserLanguage = navigator.language;
+	const browserLanguage = navigator.language.toLowerCase();
 	let language = "en";
 
-	if (browserLanguage === "fr") {
+	if (browserLanguage === "fr" || browserLanguage === "fr-fr" || browserLanguage === "fr-ca") {
 		language = "fr";
 	}
 
