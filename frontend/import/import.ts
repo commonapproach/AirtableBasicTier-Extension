@@ -523,7 +523,11 @@ function transformObjectFieldIfWrongFormat(jsonData: TableInterface[]) {
 				continue;
 			}
 
-			const cid = new map[data["@type"].split(":")[1]]();
+			if (key === "@type" || key === "@context" || key === "@id") {
+				continue;
+			}
+
+			const cid = new map[data["@type"].split(":")[1] as ModelType]();
 			const field = cid.getFieldByName(key);
 			if (field?.type === "object") {
 				const fieldValue = handleNestedObjectFieldType(jsonData, field, value);
@@ -539,9 +543,9 @@ function transformObjectFieldIfWrongFormat(jsonData: TableInterface[]) {
 function handleNestedObjectFieldType(data: TableInterface[], field: FieldType, value: any) {
 	let fieldValue = null;
 	if (field?.type === "object" && typeof value === "string") {
-		fieldValue = { [field.name]: data.find((d) => d["@id"] === value) };
+		fieldValue = data.find((d) => d["@id"] === value);
 	} else if (field?.type === "object" && Array.isArray(value)) {
-		fieldValue = { [field.name]: value.map((val) => data.find((d) => d["@id"] === val)) };
+		fieldValue = data.find((d) => d["@id"] === value[0]);
 	} else if (field?.type === "object" && typeof value === "object") {
 		for (const prop of field.properties) {
 			const newValue = handleNestedObjectFieldType(data, prop, value[prop.name]);

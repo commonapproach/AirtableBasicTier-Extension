@@ -1,7 +1,13 @@
 export class Base {
 	protected _fields: FieldType[];
 	public getFieldByName(name: string): FieldType {
-		return this.getAllFields().find((field) => field.name === name);
+		return this.getAllFields().find((field) => {
+			if (field.name === name) return true;
+			if (field.name.includes(":")) {
+				return field.name.split(":")[1] === name;
+			}
+			return false;
+		});
 	}
 
 	public getTopLevelFields(): FieldType[] {
