@@ -79,7 +79,7 @@ export class IndicatorReport extends Base {
 				type: "link",
 				representedType: "string",
 				defaultValue: "",
-				link: Indicator,
+				link: { table: Indicator, field: "hasIndicatorReport" },
 				unique: false,
 				notNull: false,
 				required: false,

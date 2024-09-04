@@ -102,6 +102,10 @@ export function getActualFieldType(type: string): FieldType {
 			return FieldType.MULTILINE_TEXT;
 		case "link":
 			return FieldType.MULTIPLE_RECORD_LINKS;
+		case "number":
+			return FieldType.NUMBER;
+		case "datetime":
+			return FieldType.DATE_TIME;
 		default:
 			return FieldType.SINGLE_LINE_TEXT;
 	}

@@ -60,8 +60,8 @@ export async function createTables(intl: IntlShape) {
 			await createLinkedFields(
 				tableToCreate,
 				fieldName,
-				linkedField.link.className,
-				fieldName.startsWith("has") ? `for${tableToCreate}` : `has${tableToCreate}`,
+				linkedField.link.table.className,
+				linkedField.link.field,
 				intl
 			);
 		}

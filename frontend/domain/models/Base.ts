@@ -48,9 +48,9 @@ export type FieldType = {
 	primary?: boolean;
 	unique?: boolean;
 	notNull?: boolean;
-	link?: any;
+	link?: { table: any; field: string };
 	required: boolean;
 	semiRequired: boolean;
 };
 
-export type FieldTypes = "string" | "text" | "link" | "object";
+export type FieldTypes = "string" | "text" | "link" | "object" | "number" | "datetime";

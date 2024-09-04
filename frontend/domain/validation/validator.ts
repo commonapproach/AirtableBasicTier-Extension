@@ -471,7 +471,7 @@ function validateLinkedFields(tableData: TableInterface[], operation: Operation,
 				data[fieldName] = [data[fieldName][0]];
 			}
 
-			const linkedTable = field.link.className;
+			const linkedTable = field.link.table.className;
 			const linkedIds: string[] = [];
 
 			for (const linkedData of tableData) {

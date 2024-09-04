@@ -297,7 +297,7 @@ async function writeTableLinked(base: Base, tableData: TableInterface[]): Promis
 		value = [...new Set(value as string[])];
 
 		// get ids from linked table
-		const linkedTable = base.getTableByNameIfExists(cid.getFieldByName(key)?.link.className);
+		const linkedTable = base.getTableByNameIfExists(cid.getFieldByName(key)?.link.table.className);
 		if (!linkedTable) return;
 		const linkedRecords = (await linkedTable.selectRecordsAsync()).records;
 

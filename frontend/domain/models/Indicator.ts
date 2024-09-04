@@ -41,7 +41,7 @@ export class Indicator extends Base {
 				type: "link",
 				representedType: "array",
 				defaultValue: [],
-				link: IndicatorReport,
+				link: { table: IndicatorReport, field: "forIndicator" },
 				unique: false,
 				notNull: false,
 				required: false,
