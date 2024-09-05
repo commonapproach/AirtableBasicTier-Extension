@@ -534,6 +534,17 @@ function transformObjectFieldIfWrongFormat(jsonData: TableInterface[]) {
 				if (fieldValue) {
 					data[key] = fieldValue;
 				}
+			} else if (field?.type === "link" && typeof value === "object" && !Array.isArray(value)) {
+				let id = value["@id"];
+				if (!id) {
+					id =
+						data["@id"] +
+						"/" +
+						(value["@type"].includes(":") ? value["@type"].split(":")[1] : value["@type"]);
+				}
+				value["@id"] = id;
+				jsonData.push(value);
+				data[key] = id;
 			}
 		}
 	}
