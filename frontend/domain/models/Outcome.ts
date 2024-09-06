@@ -1,5 +1,6 @@
 import { Base } from "./Base";
 import { Indicator } from "./Indicator";
+import { Organization } from "./Organization";
 import { Theme } from "./Theme";
 
 export class Outcome extends Base {
@@ -38,22 +39,33 @@ export class Outcome extends Base {
 				semiRequired: false,
 			},
 			{
-				name: "hasIndicator",
+				name: "forTheme",
 				type: "link",
 				representedType: "array",
 				defaultValue: [],
-				link: { table: Indicator, field: "forOutcome" },
+				link: { table: Theme, field: "hasOutcome" },
 				unique: false,
 				notNull: false,
 				required: false,
 				semiRequired: true,
 			},
 			{
-				name: "forTheme",
+				name: "forOrganization",
+				type: "link",
+				representedType: "string",
+				defaultValue: "",
+				link: { table: Organization, field: "hasOutcome" },
+				unique: false,
+				notNull: false,
+				required: false,
+				semiRequired: true,
+			},
+			{
+				name: "hasIndicator",
 				type: "link",
 				representedType: "array",
 				defaultValue: [],
-				link: { table: Theme, field: "hasOutcome" },
+				link: { table: Indicator, field: "forOutcome" },
 				unique: false,
 				notNull: false,
 				required: false,

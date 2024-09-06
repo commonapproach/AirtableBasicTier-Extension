@@ -49,8 +49,17 @@ export type FieldType = {
 	unique?: boolean;
 	notNull?: boolean;
 	link?: { table: any; field: string };
+	selectOptions?: string[];
 	required: boolean;
 	semiRequired: boolean;
 };
 
-export type FieldTypes = "string" | "text" | "link" | "object" | "number" | "datetime";
+export type FieldTypes =
+	| "string"
+	| "text"
+	| "link"
+	| "object"
+	| "date"
+	| "datetime"
+	| "select"
+	| "boolean";

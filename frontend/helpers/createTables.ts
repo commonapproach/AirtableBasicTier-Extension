@@ -129,7 +129,31 @@ async function createFields(tableName: string, fields: LocalFiledType[], intl: I
 				)
 			);
 		}
-		await table.createFieldAsync(fieldName, fieldType);
+
+		let options = null;
+		switch (fieldType) {
+			case FieldType.SINGLE_SELECT:
+				options = { choices: field.selectOptions.map((v) => ({ name: v })) || [] };
+				break;
+			case FieldType.DATE_TIME:
+				options = {
+					dateFormat: { name: "iso", format: "YYYY-MM-DD" },
+					timeFormat: { name: "24hour", format: "HH:mm" },
+					timeZone: "client",
+				};
+				break;
+			case FieldType.DATE:
+				options = { dateFormat: { name: "iso", format: "YYYY-MM-DD" } };
+				break;
+			default:
+				break;
+		}
+
+		if (options) {
+			await table.createFieldAsync(fieldName, fieldType, options);
+		} else {
+			await table.createFieldAsync(fieldName, fieldType);
+		}
 	}
 }
 

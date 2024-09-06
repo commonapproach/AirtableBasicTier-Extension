@@ -1,3 +1,4 @@
+import { Address } from "./Address";
 import { Indicator } from "./Indicator";
 import { IndicatorReport } from "./IndicatorReport";
 import { Organization } from "./Organization";
@@ -10,16 +11,17 @@ export const map = {
 	Outcome: Outcome,
 	Indicator: Indicator,
 	IndicatorReport: IndicatorReport,
+	Address: Address,
 };
 
 export type ModelType = keyof typeof map;
 
 export const ignoredFields = {
 	Theme: ["hasOutcome"],
-	Outcome: ["forOrganization"],
-	Indicator: ["forOrganization", "forOutcome"],
+	Address: ["forOrganization"],
 };
 
+export * from "./Address";
 export * from "./Indicator";
 export * from "./IndicatorReport";
 export * from "./Organization";

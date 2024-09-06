@@ -1,3 +1,4 @@
+import { Address } from "./Address";
 import { Base } from "./Base";
 import { Indicator } from "./Indicator";
 import { Outcome } from "./Outcome";
@@ -27,6 +28,18 @@ export class Organization extends Base {
 				notNull: true,
 				required: true,
 				semiRequired: false,
+			},
+			{
+				name: "ic:hasAddress",
+				displayName: "hasAddress",
+				type: "link",
+				representedType: "array",
+				defaultValue: [],
+				link: { table: Address, field: "forOrganization" },
+				unique: false,
+				notNull: false,
+				required: false,
+				semiRequired: true,
 			},
 			{
 				name: "hasIndicator",

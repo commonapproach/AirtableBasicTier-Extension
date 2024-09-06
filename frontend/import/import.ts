@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable no-prototype-builtins */
 import Base from "@airtable/blocks/dist/types/src/models/base";
+import moment from "moment-timezone";
 import { IntlShape } from "react-intl";
 import { TableInterface } from "../domain/interfaces/table.interface";
 import { map, ModelType } from "../domain/models";
@@ -242,7 +243,18 @@ async function writeTable(base: Base, tableData: TableInterface[]): Promise<void
 				} else {
 					const field = cid.getFieldByName(key);
 					const fieldName = field.displayName || field.name;
-					record[fieldName] = value ? value.toString() : value;
+					let newValue: any = value;
+					if (newValue) {
+						newValue = value.toString();
+					}
+					if (newValue && field.type === "select") {
+						if (field.selectOptions.includes(newValue)) {
+							newValue = { name: newValue };
+						} else {
+							newValue = null;
+						}
+					}
+					record[fieldName] = newValue;
 				}
 			}
 		});
@@ -297,7 +309,7 @@ async function writeTableLinked(base: Base, tableData: TableInterface[]): Promis
 		value = [...new Set(value as string[])];
 
 		// get ids from linked table
-		const linkedTable = base.getTableByNameIfExists(cid.getFieldByName(key)?.link.table.className);
+		const linkedTable = base.getTableByNameIfExists(field.link.table.className);
 		if (!linkedTable) return;
 		const linkedRecords = (await linkedTable.selectRecordsAsync()).records;
 
@@ -320,7 +332,7 @@ async function writeTableLinked(base: Base, tableData: TableInterface[]): Promis
 		}
 
 		// if the field exists in the table merge the new data with the existing data
-		const record = existingRecord.getCellValue(key);
+		const record = existingRecord.getCellValue(field.displayName || field.name);
 		if (record && Array.isArray(record)) {
 			value = [...record.map((r) => r.id), ...value];
 		}
@@ -501,6 +513,13 @@ function findLastFieldValueForNestedFields(data: any, field: FieldType, record: 
 			}
 			findLastFieldValueForNestedFields(recordData, prop, record);
 		}
+	} else if (
+		field?.type === "datetime" &&
+		field?.properties.length > 0 &&
+		data &&
+		typeof data === "object"
+	) {
+		record = handleDateTimeField(data, field, record);
 	} else if (data && typeof data === "object" && !Array.isArray(data)) {
 		let recordData;
 		if (field.name.includes(":") && Object.keys(data).includes(field.name.split(":")[1])) {
@@ -510,8 +529,43 @@ function findLastFieldValueForNestedFields(data: any, field: FieldType, record: 
 		}
 		record[field.displayName || field.name] = recordData;
 	} else {
-		record[field.displayName || field.name] = data ? data.toString() : data;
+		let value = data;
+		if (value) {
+			value = data.toString();
+		}
+		record[field.displayName || field.name] = value;
 	}
+
+	return record;
+}
+
+function handleDateTimeField(data: any, field: FieldType, record: any) {
+	if (
+		!data ||
+		data === "" ||
+		data["@type"] !== "time:DateTimeDescription" ||
+		Object.entries(data).every(
+			([key, value]) => key.startsWith("@") || value === "" || value === null
+		)
+	) {
+		record[field.displayName || field.name] = null;
+		return record;
+	}
+
+	const dataKeys = Object.keys(data);
+	const timezone = dataKeys.includes("timezone") ? data["timezone"] : data["time:timezone"];
+	const year = dataKeys.includes("year") ? data["year"] : data["time:year"];
+	const month = dataKeys.includes("month") ? data["month"] : data["time:month"];
+	const dayOfMonth = dataKeys.includes("dayOfMonth") ? data["dayOfMonth"] : data["time:dayOfMonth"];
+	const hour = dataKeys.includes("hour") ? data["hour"] : data["time:hour"];
+	const minute = dataKeys.includes("minute") ? data["minute"] : data["time:minute"];
+	const second = dataKeys.includes("second") ? data["second"] : data["time:second"];
+
+	const date = moment
+		.tz(`${year}-${month}-${dayOfMonth}T${hour}:${minute}:${second}`, timezone)
+		.toISOString();
+
+	record[field.displayName || field.name] = date;
 
 	return record;
 }

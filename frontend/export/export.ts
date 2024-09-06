@@ -1,11 +1,13 @@
 import Base from "@airtable/blocks/dist/types/src/models/base";
 import { Record } from "@airtable/blocks/models";
+import moment from "moment-timezone";
 import { IntlShape } from "react-intl";
 import { LinkedCellInterface } from "../domain/interfaces/cell.interface";
 import { ignoredFields, map, ModelType } from "../domain/models";
 import { FieldType } from "../domain/models/Base";
 import { validate } from "../domain/validation/validator";
 import { downloadJSONLD } from "../utils";
+
 export async function exportData(
 	base: Base,
 	setDialogContent: (
@@ -53,7 +55,7 @@ export async function exportData(
 		for (const record of records) {
 			let row = {
 				"@context": "http://ontology.commonapproach.org/contexts/cidsContext.json",
-				"@type": `cids:${table.name}`,
+				"@type": table.name === "Address" ? `ic:${table.name}` : `cids:${table.name}`,
 			};
 			let isEmpty = true; // Flag to check if the row is empty
 			for (const field of cid.getTopLevelFields()) {
@@ -71,18 +73,24 @@ export async function exportData(
 						if (fieldValue) {
 							isEmpty = false;
 						}
-						row[field.name] = fieldValue;
+						row[field.name] = fieldValue.toString();
 					}
 				} else if (field.type === "object") {
 					const [newRow, newIsEmpty] = getObjectFieldsRecursively(record, field, row, isEmpty);
 					row = { ...row, ...newRow };
 					isEmpty = newIsEmpty;
-				} else {
+				} else if (field.type === "select") {
 					const fieldValue = record.getCellValue(field.displayName || field.name) ?? "";
+					if (fieldValue && fieldValue["name"]) {
+						isEmpty = false;
+					}
+					row[field.name] = fieldValue["name"];
+				} else {
+					const fieldValue = record.getCellValueAsString(field.displayName || field.name) ?? "";
 					if (fieldValue) {
 						isEmpty = false;
 					}
-					row[field.name] = fieldValue;
+					row[field.name] = fieldValue.toString();
 				}
 			}
 			if (!isEmpty) {
@@ -230,13 +238,45 @@ function getObjectFieldsRecursively(record: Record, field: FieldType, row: any, 
 				if (fieldValue) {
 					isEmpty = false;
 				}
-				row[field.name] = fieldValue;
+				row[field.name] = fieldValue.toString();
+			}
+		} else if (field.type === "datetime") {
+			if (value && typeof value === "string") {
+				isEmpty = false;
+
+				// break down the datetime object
+				const date = moment.tz(value, "YYYY-MM-DDTHH:mm:ss", "UTC");
+				const timezone = date.tz();
+
+				row[field.name] = {
+					"@context": "http://ontology.commonapproach.org/contexts/cidsContext.json",
+					"@type": field.objectType,
+					"time:timezone": timezone,
+					"time:year": date.format("YYYY"),
+					"time:month": date.format("MM"),
+					"time:dayOfMonth": date.format("DD"),
+					"time:hour": date.format("HH"),
+					"time:minute": date.format("mm"),
+					"time:second": date.format("ss"),
+				};
+			} else {
+				row[field.name] = {
+					"@context": "http://ontology.commonapproach.org/contexts/cidsContext.json",
+					"@type": field.objectType,
+					"time:timezone": "",
+					"time:year": "",
+					"time:month": "",
+					"time:dayOfMonth": "",
+					"time:hour": "",
+					"time:minute": "",
+					"time:second": "",
+				};
 			}
 		} else {
 			if (value) {
 				isEmpty = false;
 			}
-			row[field.name] = value;
+			row[field.name] = value.toString();
 		}
 		return [row, isEmpty];
 	}

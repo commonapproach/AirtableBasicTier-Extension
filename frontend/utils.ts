@@ -102,10 +102,14 @@ export function getActualFieldType(type: string): FieldType {
 			return FieldType.MULTILINE_TEXT;
 		case "link":
 			return FieldType.MULTIPLE_RECORD_LINKS;
-		case "number":
-			return FieldType.NUMBER;
+		case "date":
+			return FieldType.DATE;
 		case "datetime":
 			return FieldType.DATE_TIME;
+		case "boolean":
+			return FieldType.CHECKBOX;
+		case "select":
+			return FieldType.SINGLE_SELECT;
 		default:
 			return FieldType.SINGLE_LINE_TEXT;
 	}

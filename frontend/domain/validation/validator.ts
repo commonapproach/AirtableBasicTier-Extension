@@ -271,6 +271,25 @@ function validateRecords(tableData: TableInterface[], operation: Operation, intl
 						);
 					}
 				}
+
+				if (fieldProps?.type === "select") {
+					if (fieldProps.selectOptions && !fieldProps.selectOptions.includes(fieldValue)) {
+						validatorWarnings.add(
+							intl.formatMessage(
+								{
+									id: "validation.messages.warning.invalidSelectField",
+									defaultMessage:
+										"Field <b>{fieldName}</b> on table <b>{tableName}</b> has an invalid value.",
+								},
+								{
+									fieldName: fieldDisplayName,
+									tableName,
+									b: (str) => `<b>${str}</b>`,
+								}
+							)
+						);
+					}
+				}
 			}
 		}
 	}

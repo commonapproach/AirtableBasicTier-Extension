@@ -1,5 +1,5 @@
 {
-	"app.description": "Conforme à la version 2.1 de la Norme commune des données d'impact",
+	"app.description": "Conforme à la version 3.0 de la Norme commune des données d'impact",
 	"app.standardTier": "Niveau basique",
 	"app.getSampleData": "Nouvel utilisateur ? Essayez d'importer ceci",
 	"app.link.sampleData": "fichier de données échantillon",
@@ -46,6 +46,7 @@
 	"validation.messages.duplicateUniqueFieldValue": "Valeur dupliquée pour le champ unique <b>{fieldName}</b> : <b>{fieldValue}</b> dans la table <b>{tableName}</b>",
 	"validation.messages.warning.nullOrEmptyField": "Le champ <b>{fieldName}</b> de la table <b>{tableName}</b> est nul ou vide.",
 	"validation.messages.warning.missingRequiredField": "Le champ <b>{fieldName}</b> de la table <b>{tableName}</b> est requis.",
+	"validation.messages.warning.invalidSelectField": "Le champ <b>{fieldName}</b> de la table <b>{tableName}</b> a une valeur invalide.",
 	"validation.messages.invalidIdFormat": "Format d'URL invalide : <b>{id}</b> pour <b>@id</b> dans la table <b>{tableName}</b>",
 	"validation.messages.missingTypeProperty": "<b>@type</b> doit être présent dans les données",
 	"validation.messages.emptyTypeProperty": "<b>@type</b> ne peut pas être vide",
