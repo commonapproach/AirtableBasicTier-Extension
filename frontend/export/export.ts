@@ -244,33 +244,13 @@ function getObjectFieldsRecursively(record: Record, field: FieldType, row: any, 
 			if (value && typeof value === "string") {
 				isEmpty = false;
 
-				// break down the datetime object
-				const date = moment.tz(value, "YYYY-MM-DDTHH:mm:ss", "UTC");
-				const timezone = date.tz();
+				// get local timezone
+				const localTimezone = moment.tz.guess();
+				const date = moment(value).tz(localTimezone).format("YYYY-MM-DDTHH:mm:ssZ");
 
-				row[field.name] = {
-					"@context": "http://ontology.commonapproach.org/contexts/cidsContext.json",
-					"@type": field.objectType,
-					"time:timezone": timezone,
-					"time:year": date.format("YYYY"),
-					"time:month": date.format("MM"),
-					"time:dayOfMonth": date.format("DD"),
-					"time:hour": date.format("HH"),
-					"time:minute": date.format("mm"),
-					"time:second": date.format("ss"),
-				};
+				row[field.name] = date;
 			} else {
-				row[field.name] = {
-					"@context": "http://ontology.commonapproach.org/contexts/cidsContext.json",
-					"@type": field.objectType,
-					"time:timezone": "",
-					"time:year": "",
-					"time:month": "",
-					"time:dayOfMonth": "",
-					"time:hour": "",
-					"time:minute": "",
-					"time:second": "",
-				};
+				row[field.name] = "";
 			}
 		} else {
 			if (value) {

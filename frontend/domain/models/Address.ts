@@ -93,8 +93,8 @@ export class Address extends Base {
 				semiRequired: false,
 			},
 			{
-				name: "ic:hasProvince",
-				displayName: "hasProvince",
+				name: "ic:hasState",
+				displayName: "hasState",
 				type: "text",
 				representedType: "string",
 				defaultValue: "",

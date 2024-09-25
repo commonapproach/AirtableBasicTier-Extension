@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable no-prototype-builtins */
 import Base from "@airtable/blocks/dist/types/src/models/base";
-import moment from "moment-timezone";
 import { IntlShape } from "react-intl";
 import { TableInterface } from "../domain/interfaces/table.interface";
 import { map, ModelType } from "../domain/models";
@@ -513,13 +512,6 @@ function findLastFieldValueForNestedFields(data: any, field: FieldType, record: 
 			}
 			findLastFieldValueForNestedFields(recordData, prop, record);
 		}
-	} else if (
-		field?.type === "datetime" &&
-		field?.properties.length > 0 &&
-		data &&
-		typeof data === "object"
-	) {
-		record = handleDateTimeField(data, field, record);
 	} else if (data && typeof data === "object" && !Array.isArray(data)) {
 		let recordData;
 		if (field.name.includes(":") && Object.keys(data).includes(field.name.split(":")[1])) {
@@ -535,37 +527,6 @@ function findLastFieldValueForNestedFields(data: any, field: FieldType, record: 
 		}
 		record[field.displayName || field.name] = value;
 	}
-
-	return record;
-}
-
-function handleDateTimeField(data: any, field: FieldType, record: any) {
-	if (
-		!data ||
-		data === "" ||
-		data["@type"] !== "time:DateTimeDescription" ||
-		Object.entries(data).every(
-			([key, value]) => key.startsWith("@") || value === "" || value === null
-		)
-	) {
-		record[field.displayName || field.name] = null;
-		return record;
-	}
-
-	const dataKeys = Object.keys(data);
-	const timezone = dataKeys.includes("timezone") ? data["timezone"] : data["time:timezone"];
-	const year = dataKeys.includes("year") ? data["year"] : data["time:year"];
-	const month = dataKeys.includes("month") ? data["month"] : data["time:month"];
-	const dayOfMonth = dataKeys.includes("dayOfMonth") ? data["dayOfMonth"] : data["time:dayOfMonth"];
-	const hour = dataKeys.includes("hour") ? data["hour"] : data["time:hour"];
-	const minute = dataKeys.includes("minute") ? data["minute"] : data["time:minute"];
-	const second = dataKeys.includes("second") ? data["second"] : data["time:second"];
-
-	const date = moment
-		.tz(`${year}-${month}-${dayOfMonth}T${hour}:${minute}:${second}`, timezone)
-		.toISOString();
-
-	record[field.displayName || field.name] = date;
 
 	return record;
 }
