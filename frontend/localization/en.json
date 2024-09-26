@@ -6,6 +6,7 @@
 	"app.button.importData": "Import Data",
 	"app.button.exportData": "Export Data",
 	"app.button.createTables": "Create Tables",
+	"app.button.createSFFTables": "SFF Tables",
 	"app.button.userGuide": "User Guide",
 	"generics.button.close": "Close",
 	"generics.button.next": "Next",

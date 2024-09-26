@@ -3,7 +3,7 @@ import { Record } from "@airtable/blocks/models";
 import moment from "moment-timezone";
 import { IntlShape } from "react-intl";
 import { LinkedCellInterface } from "../domain/interfaces/cell.interface";
-import { ignoredFields, map, ModelType } from "../domain/models";
+import { ignoredFields, map, mapSFFModel } from "../domain/models";
 import { FieldType } from "../domain/models/Base";
 import { validate } from "../domain/validation/validator";
 import { downloadJSONLD } from "../utils";
@@ -22,8 +22,17 @@ export async function exportData(
 	const tables = base.tables;
 	let data = [];
 
+	let fullMap = map;
+
+	// Check if any table of the SFF module is created
+	const tableNamesOnBase = tables.map((table) => table.name);
+	const sffModuleTables = Object.keys(mapSFFModel);
+	if (sffModuleTables.some((table) => tableNamesOnBase.includes(table))) {
+		fullMap = { ...map, ...mapSFFModel };
+	}
+
 	const tableNames = tables.map((item) => item.name);
-	for (const [key] of Object.entries(map)) {
+	for (const [key] of Object.entries(fullMap)) {
 		if (!tableNames.includes(key)) {
 			setDialogContent(
 				`${intl.formatMessage({
@@ -45,13 +54,13 @@ export async function exportData(
 
 	for (const table of tables) {
 		// If the table is not in the map, skip it
-		if (!Object.keys(map).includes(table.name)) {
+		if (!Object.keys(fullMap).includes(table.name)) {
 			continue;
 		}
 
 		const records = (await table.selectRecordsAsync()).records;
 
-		const cid = new map[table.name as ModelType]();
+		const cid = new fullMap[table.name]();
 		for (const record of records) {
 			let row = {
 				"@context": "http://ontology.commonapproach.org/contexts/cidsContext.json",
@@ -85,6 +94,22 @@ export async function exportData(
 						isEmpty = false;
 					}
 					row[field.name] = fieldValue["name"];
+				} else if (field.type === "date") {
+					const fieldValue = record.getCellValueAsString(field.displayName || field.name) ?? "";
+					if (fieldValue && typeof fieldValue === "string") {
+						isEmpty = false;
+
+						// get local timezone
+						const localTimezone = moment.tz.guess();
+						const date = moment(fieldValue).tz(localTimezone).format("YYYY-MM-DD");
+
+						row[field.name] = date;
+					} else {
+						row[field.name] = "";
+					}
+				} else if (field.type === "boolean") {
+					const fieldValue = record.getCellValue(field.displayName || field.name) ?? false;
+					row[field.name] = fieldValue ? true : false;
 				} else {
 					const fieldValue = record.getCellValueAsString(field.displayName || field.name) ?? "";
 					if (fieldValue) {
@@ -168,16 +193,17 @@ function getFileName(orgName: string): string {
 
 function checkForNotExportedFields(base: Base, intl: IntlShape) {
 	let warnings = "";
+	const fullMap = { ...map, ...mapSFFModel };
 	for (const table of base.tables) {
-		if (!Object.keys(map).includes(table.name)) {
+		if (!Object.keys(fullMap).includes(table.name)) {
 			continue;
 		}
-		const cid = new map[table.name as ModelType]();
+		const cid = new fullMap[table.name]();
 		const internalFields = cid.getAllFields().map((item) => item.displayName || item.name);
 		const externalFields = table.fields.map((item) => item.name);
 
 		for (const field of externalFields) {
-			if (Object.keys(map).includes(field) || ignoredFields[table.name]?.includes(field)) {
+			if (Object.keys(fullMap).includes(field) || ignoredFields[table.name]?.includes(field)) {
 				continue;
 			}
 			if (!internalFields.includes(field)) {
@@ -200,8 +226,9 @@ function checkForNotExportedFields(base: Base, intl: IntlShape) {
 
 async function checkForEmptyTables(base: Base, intl: IntlShape) {
 	let warnings = "";
+	const fullMap = { ...map, ...mapSFFModel };
 	for (const table of base.tables) {
-		if (!Object.keys(map).includes(table.name)) {
+		if (!Object.keys(fullMap).includes(table.name)) {
 			continue;
 		}
 		const records = await table.selectRecordsAsync();
@@ -252,6 +279,20 @@ function getObjectFieldsRecursively(record: Record, field: FieldType, row: any, 
 			} else {
 				row[field.name] = "";
 			}
+		} else if (field.type === "date") {
+			if (value && typeof value === "string") {
+				isEmpty = false;
+
+				// get local timezone
+				const localTimezone = moment.tz.guess();
+				const date = moment(value).tz(localTimezone).format("YYYY-MM-DD");
+
+				row[field.name] = date;
+			} else {
+				row[field.name] = "";
+			}
+		} else if (field.type === "boolean") {
+			row[field.name] = value ? true : false;
 		} else {
 			if (value) {
 				isEmpty = false;

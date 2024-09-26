@@ -1,9 +1,10 @@
-import { Button, Icon, Text, initializeBlock, useBase } from "@airtable/blocks/ui";
-import React, { useRef, useState } from "react";
+import { Button, Icon, Text, TextButton, initializeBlock, useBase } from "@airtable/blocks/ui";
+import React, { useEffect, useRef, useState } from "react";
 import { FormattedMessage, IntlProvider, useIntl } from "react-intl";
 import ExportDialog from "./components/ExportDialog";
 import Loading from "./components/Loading";
 import DialogContextProvider, { useDialog } from "./context/DialogContext";
+import { createSFFModuleTables } from "./helpers/createSFFModuleTables";
 import { createTables } from "./helpers/createTables";
 import { importData } from "./import/import";
 import English from "./localization/en.json";
@@ -13,6 +14,7 @@ import { handleFileChange } from "./utils";
 function Main() {
 	const base = useBase();
 	const fileInputRef = useRef(null);
+	const menuRef = useRef<HTMLMenuElement>(null);
 	const { setDialogContent } = useDialog();
 	const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
@@ -27,6 +29,29 @@ function Main() {
 		fileInputRef.current.click();
 	};
 
+	const handleMenuClick = () => {
+		if (menuRef.current) {
+			if (menuRef.current.style.display === "none") {
+				menuRef.current.style.display = "flex";
+			} else {
+				menuRef.current.style.display = "none";
+			}
+		}
+	};
+
+	const handleDismissMenuClick = (e) => {
+		if (menuRef.current && !menuRef.current.contains(e.target)) {
+			menuRef.current.style.display = "none";
+		}
+	};
+
+	useEffect(() => {
+		document.addEventListener("mousedown", handleDismissMenuClick);
+		return () => {
+			document.removeEventListener("mousedown", handleDismissMenuClick);
+		};
+	}, []);
+
 	return (
 		<>
 			<Loading isLoading={isLoading} />
@@ -38,6 +63,7 @@ function Main() {
 			<div style={{ padding: 12 }}>
 				<div
 					style={{
+						width: "100%",
 						display: "flex",
 						flexDirection: "row",
 						justifyContent: "space-evenly",
@@ -209,37 +235,133 @@ function Main() {
 							/>
 						</div>
 					</Button>
-					<Button
+					<section
 						style={{
-							border: "1px solid #FF8B3C",
-							backgroundColor: "rgba(0,0,0,0)",
-						}}
-						disabled={isImporting}
-						onClick={async () => {
-							window.open(
-								"https://www.commonapproach.org/wp-content/uploads/2024/02/Common-Approach_Guide-for-Basic-Tier-Template-for-Airtable-version-2024-01-16.pdf"
-							);
+							position: "relative",
 						}}
 					>
-						<div
+						<Button
 							style={{
-								alignItems: "center",
-								textAlign: "center",
-								display: "flex",
-								gap: 2,
-								color: "#FF8B3C",
+								border: "1px solid #1B4B9D",
+								backgroundColor: "rgba(0,0,0,0)",
 							}}
+							onClick={handleMenuClick}
 						>
 							<Icon
-								name="book"
+								fillColor="#1B4B9D"
+								name="menu"
 								size={16}
 							/>
-							<FormattedMessage
-								id="app.button.userGuide"
-								defaultMessage="User Guide"
-							/>
-						</div>
-					</Button>
+						</Button>
+						<menu
+							ref={menuRef}
+							style={{
+								position: "absolute",
+								top: 20,
+								right: 0,
+								display: "none",
+								backgroundColor: "#fff",
+								border: "1px solid #1B4B9D",
+								borderRadius: 5,
+								padding: 5,
+								zIndex: 1,
+								width: 120,
+								flexDirection: "column",
+								justifyContent: "center",
+								alignItems: "center",
+								gap: 5,
+							}}
+						>
+							<TextButton
+								style={{
+									marginTop: 5,
+									marginBottom: 5,
+								}}
+								disabled={isImporting}
+								onClick={async () => {
+									setIsLoading(true);
+									try {
+										await createSFFModuleTables(intl);
+										setDialogContent(
+											intl.formatMessage({
+												id: "generics.success",
+												defaultMessage: "Success",
+											}),
+											intl.formatMessage({
+												id: "createTables.messages.success",
+												defaultMessage: "Tables created successfully",
+											}),
+											true
+										);
+									} catch (error) {
+										setDialogContent(
+											intl.formatMessage({
+												id: "generics.error",
+												defaultMessage: "Error",
+											}),
+											error.message ||
+												intl.formatMessage({
+													id: "generics.error.message",
+													defaultMessage: "Something went wrong",
+												}),
+											true
+										);
+									}
+									setIsLoading(false);
+								}}
+							>
+								<div
+									style={{
+										alignItems: "center",
+										textAlign: "center",
+										display: "flex",
+										gap: 2,
+										color: "#A6A6A6",
+									}}
+								>
+									<Icon
+										name="plus"
+										size={16}
+									/>
+									<FormattedMessage
+										id="app.button.createSFFTables"
+										defaultMessage="SFF Tables"
+									/>
+								</div>
+							</TextButton>
+							<TextButton
+								style={{
+									marginTop: 5,
+									marginBottom: 5,
+								}}
+								disabled={isImporting}
+								onClick={async () => {
+									window.open(
+										"https://www.commonapproach.org/wp-content/uploads/2024/02/Common-Approach_Guide-for-Basic-Tier-Template-for-Airtable-version-2024-01-16.pdf"
+									);
+								}}
+							>
+								<div
+									style={{
+										alignItems: "center",
+										textAlign: "center",
+										display: "flex",
+										gap: 2,
+										color: "#FF8B3C",
+									}}
+								>
+									<Icon
+										name="book"
+										size={16}
+									/>
+									<FormattedMessage
+										id="app.button.userGuide"
+										defaultMessage="User Guide"
+									/>
+								</div>
+							</TextButton>
+						</menu>
+					</section>
 				</div>
 				<div
 					style={{

@@ -1,0 +1,62 @@
+[
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/ProvinceTerritory/AB",
+		"instance": "AB",
+		"hasName": "Alberta"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/ProvinceTerritory/BC",
+		"instance": "BC",
+		"hasName": "British Columbia"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/ProvinceTerritory/NL",
+		"instance": "NL",
+		"hasName": "New Brunswick"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/ProvinceTerritory/NS",
+		"instance": "NS",
+		"hasName": "Newfoundland and Labrador"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/ProvinceTerritory/NT",
+		"instance": "NT",
+		"hasName": "Nova Scotia"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/ProvinceTerritory/NU",
+		"instance": "NU",
+		"hasName": "Northwest Territories"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/ProvinceTerritory/ON",
+		"instance": "ON",
+		"hasName": "Nunavut"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/ProvinceTerritory/PE",
+		"instance": "PE",
+		"hasName": "Ontario"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/ProvinceTerritory/QC",
+		"instance": "QC",
+		"hasName": "Quebec"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/ProvinceTerritory/YT",
+		"instance": "YT",
+		"hasName": "Saskatchewan"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/ProvinceTerritory/MB",
+		"instance": "MB",
+		"hasName": "Manitoba"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/ProvinceTerritory/CAN",
+		"instance": "CAN",
+		"hasName": "All of Canada"
+	}
+]

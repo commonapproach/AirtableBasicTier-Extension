@@ -1,6 +1,6 @@
 import { IntlShape } from "react-intl";
 import { TableInterface } from "../interfaces/table.interface";
-import { map, ModelType } from "../models";
+import { map, mapSFFModel, ModelType, SFFModelType } from "../models";
 
 type Operation = "import" | "export";
 
@@ -47,7 +47,15 @@ function validateRecords(tableData: TableInterface[], operation: Operation, intl
 		if (validateTypeProp(data, intl)) return;
 		const tableName = data["@type"].split(":")[1];
 		const id = data["@id"];
-		const cid = new map[tableName as ModelType](); // Initialize the schema for the table
+
+		// Initialize the schema for the table
+		let cid;
+		// Check if type is part of the SFF module
+		if (mapSFFModel[tableName as SFFModelType]) {
+			cid = new mapSFFModel[tableName as SFFModelType]();
+		} else {
+			cid = new map[tableName as ModelType]();
+		}
 
 		// Initialize a record for this table if not already present
 		if (!uniqueRecords[tableName]) {
@@ -386,7 +394,7 @@ function validateTypeProp(data: any, intl: IntlShape): boolean {
 		return true;
 	}
 	const tableName = (data["@type"] as string)?.split(":")[1];
-	if (!map[tableName as ModelType]) {
+	if (!map[tableName as ModelType] && !mapSFFModel[tableName as SFFModelType]) {
 		validatorWarnings.add(
 			intl.formatMessage(
 				{
@@ -409,7 +417,16 @@ function validateLinkedFields(tableData: TableInterface[], operation: Operation,
 	for (const data of tableData) {
 		if (validateTypeProp(data, intl)) return;
 		const tableName = data["@type"].split(":")[1];
-		const cid = new map[tableName as ModelType](); // Initialize the schema for the table
+
+		// Initialize the schema for the table
+		let cid;
+		// Check if type is part of the SFF module
+		if (mapSFFModel[tableName as SFFModelType]) {
+			cid = new mapSFFModel[tableName as SFFModelType]();
+		} else {
+			cid = new map[tableName as ModelType]();
+		}
+
 		// for each field that has type link, check if all linked ids exists
 		const fields = cid.getAllFields();
 		const linkedFields = fields.filter((field) => field.type === "link");

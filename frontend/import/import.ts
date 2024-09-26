@@ -3,9 +3,10 @@
 import Base from "@airtable/blocks/dist/types/src/models/base";
 import { IntlShape } from "react-intl";
 import { TableInterface } from "../domain/interfaces/table.interface";
-import { map, ModelType } from "../domain/models";
+import { map, mapSFFModel, ModelType, SFFModelType } from "../domain/models";
 import { FieldType } from "../domain/models/Base";
 import { validate } from "../domain/validation/validator";
+import { createSFFModuleTables } from "../helpers/createSFFModuleTables";
 import { createTables } from "../helpers/createTables";
 import { executeInBatches } from "../utils";
 
@@ -166,8 +167,9 @@ async function importFileData(
 	setIsImporting(true);
 	try {
 		// Ignore types/classes that are not recognized
+		const fullMap = { ...map, ...mapSFFModel };
 		const filteredItems = Array.isArray(jsonData)
-			? jsonData.filter((data) => Object.keys(map).includes(data["@type"].split(":")[1]))
+			? jsonData.filter((data) => Object.keys(fullMap).includes(data["@type"].split(":")[1]))
 			: jsonData;
 		await importByData(base, filteredItems, intl);
 	} catch (error) {
@@ -205,6 +207,20 @@ async function importByData(base: Base, jsonData: any, intl: IntlShape) {
 	// Create Tables if they don't exist
 	await createTables(intl);
 
+	// Check if data has any class from SFF module
+	for (const data of jsonData) {
+		if (
+			!data["@type"] ||
+			(!Object.keys(map).includes(data["@type"].split(":")[1]) &&
+				!Object.keys(mapSFFModel).includes(data["@type"].split(":")[1]))
+		) {
+			continue;
+		} else if (Object.keys(mapSFFModel).includes(data["@type"].split(":")[1])) {
+			await createSFFModuleTables(intl);
+			break;
+		}
+	}
+
 	// Write Simple Records to Tables
 	await writeTable(base, jsonData);
 
@@ -227,7 +243,12 @@ async function writeTable(base: Base, tableData: TableInterface[]): Promise<void
 				return;
 			}
 
-			const cid = new map[tableName as ModelType]();
+			let cid;
+			if (Object.keys(map).includes(tableName)) {
+				cid = new map[tableName as ModelType]();
+			} else {
+				cid = new mapSFFModel[tableName as SFFModelType]();
+			}
 
 			for (const field of cid.getAllFields()) {
 				if (field.name.includes(":") && field.name.split(":")[1] === key) {
@@ -251,6 +272,13 @@ async function writeTable(base: Base, tableData: TableInterface[]): Promise<void
 							newValue = { name: newValue };
 						} else {
 							newValue = null;
+						}
+					}
+					if (field.type === "boolean") {
+						if (newValue && (newValue === true || (newValue as string).toLowerCase() === "true")) {
+							newValue = true;
+						} else {
+							newValue = false;
 						}
 					}
 					record[fieldName] = newValue;
@@ -296,7 +324,13 @@ async function writeTable(base: Base, tableData: TableInterface[]): Promise<void
 
 async function writeTableLinked(base: Base, tableData: TableInterface[]): Promise<void> {
 	async function handleLinkFields(tableName: string, key: string, value: any, recordId: string) {
-		const cid = new map[tableName as ModelType]();
+		let cid;
+		if (Object.keys(map).includes(tableName)) {
+			cid = new map[tableName as ModelType]();
+		} else {
+			cid = new mapSFFModel[tableName as SFFModelType]();
+		}
+
 		const field = cid.getFieldByName(key);
 
 		if (!value) return; // Skip if the value is empty
@@ -389,7 +423,13 @@ async function writeTableLinked(base: Base, tableData: TableInterface[]): Promis
 		const tableName = data["@type"].split(":")[1];
 
 		for (let [key, value] of Object.entries(data)) {
-			const cid = new map[tableName as ModelType]();
+			let cid;
+			if (Object.keys(map).includes(tableName)) {
+				cid = new map[tableName as ModelType]();
+			} else {
+				cid = new mapSFFModel[tableName as SFFModelType]();
+			}
+
 			if (key !== "@type" && key !== "@context") {
 				const field = cid.getFieldByName(key);
 				if (field) {
@@ -450,16 +490,19 @@ function warnIfUnrecognizedFieldsWillBeIgnored(tableData: TableInterface[], intl
 	const warnings = [];
 	const classesSet = new Set();
 	for (const data of tableData) {
-		if (!data["@type"] || !Object.keys(map).includes(data["@type"].split(":")[1])) {
+		if (
+			!data["@type"] ||
+			(!Object.keys(map).includes(data["@type"].split(":")[1]) &&
+				!Object.keys(mapSFFModel).includes(data["@type"].split(":")[1]))
+		) {
 			continue;
 		}
+
 		const tableName = data["@type"].split(":")[1];
-		if (!Object.keys(map).includes(tableName)) {
-			continue;
-		}
 		if (classesSet.has(tableName)) {
 			continue;
 		}
+
 		classesSet.add(tableName);
 		for (const key in data) {
 			if (!checkIfFieldIsRecognized(tableName, key) && key !== "@type" && key !== "@context") {
@@ -479,7 +522,12 @@ function warnIfUnrecognizedFieldsWillBeIgnored(tableData: TableInterface[], intl
 }
 
 function checkIfFieldIsRecognized(tableName: string, fieldName: string) {
-	const cid = new map[tableName as ModelType]();
+	let cid;
+	if (Object.keys(map).includes(tableName)) {
+		cid = new map[tableName as ModelType]();
+	} else {
+		cid = new mapSFFModel[tableName as SFFModelType]();
+	}
 	return cid
 		.getAllFields()
 		.reduce((acc, field) => {
@@ -496,20 +544,12 @@ function findLastFieldValueForNestedFields(data: any, field: FieldType, record: 
 	if (field?.type === "object") {
 		for (const prop of field.properties) {
 			let dataPropName;
-			let recordData;
 			if (field.name.includes(":") && Object.keys(data).includes(field.name.split(":")[1])) {
 				dataPropName = field.name.split(":")[1];
 			} else {
 				dataPropName = field.name;
 			}
-			if (
-				prop.name.includes(":") &&
-				Object.keys(data[dataPropName]).includes(prop.name.split(":")[1])
-			) {
-				recordData = data[dataPropName][prop.name.split(":")[1]];
-			} else {
-				recordData = data[dataPropName][prop.name];
-			}
+			const recordData = data[dataPropName];
 			findLastFieldValueForNestedFields(recordData, prop, record);
 		}
 	} else if (data && typeof data === "object" && !Array.isArray(data)) {
@@ -534,7 +574,11 @@ function findLastFieldValueForNestedFields(data: any, field: FieldType, record: 
 function transformObjectFieldIfWrongFormat(jsonData: TableInterface[]) {
 	for (const data of jsonData) {
 		for (const [key, value] of Object.entries(data)) {
-			if (!data["@type"] || !Object.keys(map).includes(data["@type"].split(":")[1])) {
+			if (
+				!data["@type"] ||
+				(!Object.keys(map).includes(data["@type"].split(":")[1]) &&
+					!Object.keys(mapSFFModel).includes(data["@type"].split(":")[1]))
+			) {
 				continue;
 			}
 
@@ -542,7 +586,13 @@ function transformObjectFieldIfWrongFormat(jsonData: TableInterface[]) {
 				continue;
 			}
 
-			const cid = new map[data["@type"].split(":")[1] as ModelType]();
+			let cid;
+			if (Object.keys(map).includes(data["@type"].split(":")[1])) {
+				cid = new map[data["@type"].split(":")[1] as ModelType]();
+			} else {
+				cid = new mapSFFModel[data["@type"].split(":")[1] as SFFModelType]();
+			}
+
 			const field = cid.getFieldByName(key);
 			if (field?.type === "object") {
 				const fieldValue = handleNestedObjectFieldType(jsonData, field, value);

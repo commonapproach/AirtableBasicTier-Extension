@@ -1,0 +1,22 @@
+[
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/OrganizationType/nonProfit",
+		"instance": "nonProfit",
+		"hasName": "Non-profit"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/OrganizationType/Charitable",
+		"instance": "Charitable",
+		"hasName": "Charitable"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/OrganizationType/forProfit",
+		"instance": "forProfit",
+		"hasName": "For-Profit"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/OrganizationType/Cooperative",
+		"instance": "Cooperative",
+		"hasName": "Cooperative"
+	}
+]

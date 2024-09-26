@@ -1,0 +1,37 @@
+[
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/Locality/1",
+		"instance": "loc1",
+		"hasName": "Large Urban Population Centre"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/Locality/2",
+		"instance": "loc2",
+		"hasName": "Medium Population Centre"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/Locality/3",
+		"instance": "loc3",
+		"hasName": "Small Population Centre"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/Locality/4",
+		"instance": "loc4",
+		"hasName": "Rural Areas"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/Locality/5",
+		"instance": "loc5",
+		"hasName": "Indigenous Communities and Lands"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/Locality/6",
+		"instance": "loc6",
+		"hasName": "Northern Canada"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/Locality/7",
+		"instance": "loc7",
+		"hasName": "All of Canada"
+	}
+]

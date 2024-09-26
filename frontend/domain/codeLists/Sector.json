@@ -1,0 +1,62 @@
+[
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/Sector/1",
+		"instance": "sec1",
+		"hasName": "Culture and Recreation"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/Sector/2",
+		"instance": "sec2",
+		"hasName": "Education and Research"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/Sector/3",
+		"instance": "sec3",
+		"hasName": "Health"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/Sector/4",
+		"instance": "sec4",
+		"hasName": "Social Sciences"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/Sector/5",
+		"instance": "sec5",
+		"hasName": "Enviroment"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/Sector/6",
+		"instance": "sec6",
+		"hasName": "Development and Housing"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/Sector/7",
+		"instance": "sec7",
+		"hasName": "Law, Advocacy, and Politics"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/Sector/8",
+		"instance": "sec8",
+		"hasName": "Philanthropic Intermediaries and Voluntarism Promotion"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/Sector/9",
+		"instance": "sec9",
+		"hasName": "International"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/Sector/10",
+		"instance": "sec10",
+		"hasName": "Religion"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/Sector/11",
+		"instance": "sec11",
+		"hasName": "Business and Professional Associations, Unions"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/Sector/12",
+		"instance": "sec12",
+		"hasName": "Not Elsewhere Classified"
+	}
+]

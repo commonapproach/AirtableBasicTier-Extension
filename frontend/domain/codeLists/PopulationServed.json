@@ -1,0 +1,127 @@
+[
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/PopulationServed/ps1",
+		"instance": "ps1",
+		"hasName": "2SLGBTQIA+"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/PopulationServed/ps4",
+		"instance": "ps4",
+		"hasName": "Gender Diverse People: Agender+"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/PopulationServed/ps5",
+		"instance": "ps5",
+		"hasName": "Gender Diverse People: Intersex"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/PopulationServed/ps6",
+		"instance": "ps6",
+		"hasName": "Gender Diverse People: Other"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/PopulationServed/ps7",
+		"instance": "ps7",
+		"hasName": "Black Peoples"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/PopulationServed/ps8",
+		"instance": "ps8",
+		"hasName": "Indigenous Peoples: First Nations"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/PopulationServed/ps9",
+		"instance": "ps9",
+		"hasName": "Indigenous Peoples: Inuit"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/PopulationServed/ps10",
+		"instance": "ps10",
+		"hasName": "Indigenous Peoples: Métis"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/PopulationServed/ps11",
+		"instance": "ps11",
+		"hasName": "Other Racialized Peoples"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/PopulationServed/ps12",
+		"instance": "ps12",
+		"hasName": "First Generation Immigrants, Refugees & Newcomers"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/PopulationServed/ps13",
+		"instance": "ps13",
+		"hasName": "Lone Parent Families"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/PopulationServed/ps14",
+		"instance": "ps14",
+		"hasName": "Northern Canadian Communities"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/PopulationServed/ps15",
+		"instance": "ps15",
+		"hasName": "Official Languages Minority Communities"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/PopulationServed/ps16",
+		"instance": "ps16",
+		"hasName": "People Experiencing Homelessness or Housing Insecurities"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/PopulationServed/ps17",
+		"instance": "ps17",
+		"hasName": "People Living on Low Income"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/PopulationServed/ps18",
+		"instance": "ps18",
+		"hasName": "People Living with Cognitive or Mental Health Related Issues"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/PopulationServed/ps19",
+		"instance": "ps19",
+		"hasName": "People Living with Physical Sensory or Pain Related Disabilities"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/PopulationServed/ps20",
+		"instance": "ps20",
+		"hasName": "People Living with Terminal or Chronic Illness/Diseases"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/PopulationServed/ps21",
+		"instance": "ps21",
+		"hasName": "People of Advanced Age (65+)"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/PopulationServed/ps22",
+		"instance": "ps22",
+		"hasName": "People without Advanced Educational Qualification"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/PopulationServed/ps23",
+		"instance": "ps23",
+		"hasName": "Survivors of Domestic Violence, Sexual assault, Abuse or Stalking"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/PopulationServed/ps24",
+		"instance": "ps24",
+		"hasName": "Women (Cisgender and Transgender)"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/PopulationServed/ps25",
+		"instance": "ps25",
+		"hasName": "Children (Ages 0-15)"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/PopulationServed/ps26",
+		"instance": "ps26",
+		"hasName": "Youth (Ages 15-24)"
+	},
+	{
+		"@id": "https://ontology.commonapproach.org/codeLists/PopulationServed/ps27",
+		"instance": "ps27",
+		"hasName": "General Population"
+	}
+]

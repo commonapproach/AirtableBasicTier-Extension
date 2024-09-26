@@ -99,6 +99,8 @@ export class IndicatorReport extends Base {
 							},
 						],
 						defaultValue: {
+							"@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
+							"@type": "time:Instant",
 							"time:inXSDDateTimeStamp": "",
 						},
 						unique: false,
@@ -125,6 +127,8 @@ export class IndicatorReport extends Base {
 							},
 						],
 						defaultValue: {
+							"@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
+							"@type": "time:Instant",
 							"time:inXSDDateTimeStamp": "",
 						},
 						unique: false,
