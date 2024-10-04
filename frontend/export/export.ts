@@ -93,7 +93,25 @@ export async function exportData(
 					if (fieldValue && fieldValue["name"]) {
 						isEmpty = false;
 					}
-					row[field.name] = fieldValue["name"];
+					const optionField = field.selectOptions.find((opt) => opt.name === fieldValue["name"]);
+					if (optionField) {
+						row[field.name] = field.representedType === "array" ? [optionField.id] : optionField.id;
+					} else {
+						row[field.name] = field.defaultValue;
+					}
+				} else if (field.type === "datetime") {
+					const fieldValue = record.getCellValueAsString(field.displayName || field.name) ?? "";
+					if (fieldValue && typeof fieldValue === "string") {
+						isEmpty = false;
+
+						// get local timezone
+						const localTimezone = moment.tz.guess();
+						const date = moment(fieldValue).tz(localTimezone).format("YYYY-MM-DDTHH:mm:ssZ");
+
+						row[field.name] = date;
+					} else {
+						row[field.name] = "";
+					}
 				} else if (field.type === "date") {
 					const fieldValue = record.getCellValueAsString(field.displayName || field.name) ?? "";
 					if (fieldValue && typeof fieldValue === "string") {

@@ -133,7 +133,7 @@ async function createFields(tableName: string, fields: LocalFiledType[], intl: I
 		let options = null;
 		switch (fieldType) {
 			case FieldType.SINGLE_SELECT:
-				options = { choices: field.selectOptions.map((v) => ({ name: v })) || [] };
+				options = { choices: field.selectOptions.map((v) => ({ name: v.name })) || [] };
 				break;
 			case FieldType.DATE_TIME:
 				options = {
@@ -210,6 +210,12 @@ async function createLinkedFields(
 		await table1.createFieldAsync(linkedFieldNameOnTargetTable, FieldType.MULTIPLE_RECORD_LINKS, {
 			linkedTableId: table2.id,
 		});
+
+		// If the linked filed is self-linked we don't need to check for the linked field on the other table
+		if (linkedFieldNameOnTable1 === linkedFieldNameOnTable2 && table1.id === table2.id) {
+			return;
+		}
+
 		const linkedFieldTable2 = table2.getFieldByName(table1.name);
 		await linkedFieldTable2.updateNameAsync(linkedFieldNameOnLInkedTable);
 	}

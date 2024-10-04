@@ -1,22 +1,22 @@
 [
 	{
-		"@id": "https://ontology.commonapproach.org/codeLists/OrganizationType/nonProfit",
-		"instance": "nonProfit",
+		"@id": "https://codelist.commonapproach.org/codeLists/ICNPOorganizationType#nonProfit",
+		"hasIdentifier": "nonProfit",
 		"hasName": "Non-profit"
 	},
 	{
-		"@id": "https://ontology.commonapproach.org/codeLists/OrganizationType/Charitable",
-		"instance": "Charitable",
+		"@id": "https://codelist.commonapproach.org/codeLists/ICNPOorganizationType#Charitable",
+		"hasIdentifier": "Charitable",
 		"hasName": "Charitable"
 	},
 	{
-		"@id": "https://ontology.commonapproach.org/codeLists/OrganizationType/forProfit",
-		"instance": "forProfit",
+		"@id": "https://codelist.commonapproach.org/codeLists/ICNPOorganizationType#forProfit",
+		"hasIdentifier": "forProfit",
 		"hasName": "For-Profit"
 	},
 	{
-		"@id": "https://ontology.commonapproach.org/codeLists/OrganizationType/Cooperative",
-		"instance": "Cooperative",
+		"@id": "https://codelist.commonapproach.org/codeLists/ICNPOorganizationType#Cooperative",
+		"hasIdentifier": "Cooperative",
 		"hasName": "Cooperative"
 	}
 ]

@@ -35,6 +35,27 @@ export class Theme extends Base {
 				required: false,
 				semiRequired: false,
 			},
+			{
+				name: "hasCode",
+				type: "string",
+				representedType: "array",
+				defaultValue: [],
+				unique: false,
+				notNull: false,
+				required: false,
+				semiRequired: false,
+			},
+			{
+				name: "relatesTo",
+				type: "link",
+				representedType: "array",
+				defaultValue: [],
+				link: { table: Theme, field: "relatesTo" },
+				unique: false,
+				notNull: false,
+				required: false,
+				semiRequired: false,
+			},
 		];
 	}
 }

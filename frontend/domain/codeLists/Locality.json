@@ -1,37 +1,37 @@
 [
 	{
-		"@id": "https://ontology.commonapproach.org/codeLists/Locality/1",
-		"instance": "loc1",
+		"@id": "https://codelist.commonapproach.org/codeLists/ICNPOlocality#loc1",
+		"hasIdentifier": "1",
 		"hasName": "Large Urban Population Centre"
 	},
 	{
-		"@id": "https://ontology.commonapproach.org/codeLists/Locality/2",
-		"instance": "loc2",
+		"@id": "https://codelist.commonapproach.org/codeLists/ICNPOlocality#loc2",
+		"hasIdentifier": "2",
 		"hasName": "Medium Population Centre"
 	},
 	{
-		"@id": "https://ontology.commonapproach.org/codeLists/Locality/3",
-		"instance": "loc3",
+		"@id": "https://codelist.commonapproach.org/codeLists/ICNPOlocality#loc3",
+		"hasIdentifier": "3",
 		"hasName": "Small Population Centre"
 	},
 	{
-		"@id": "https://ontology.commonapproach.org/codeLists/Locality/4",
-		"instance": "loc4",
+		"@id": "https://codelist.commonapproach.org/codeLists/ICNPOlocality#loc4",
+		"hasIdentifier": "4",
 		"hasName": "Rural Areas"
 	},
 	{
-		"@id": "https://ontology.commonapproach.org/codeLists/Locality/5",
-		"instance": "loc5",
+		"@id": "https://codelist.commonapproach.org/codeLists/ICNPOlocality#loc5",
+		"hasIdentifier": "5",
 		"hasName": "Indigenous Communities and Lands"
 	},
 	{
-		"@id": "https://ontology.commonapproach.org/codeLists/Locality/6",
-		"instance": "loc6",
+		"@id": "https://codelist.commonapproach.org/codeLists/ICNPOlocality#loc6",
+		"hasIdentifier": "6",
 		"hasName": "Northern Canada"
 	},
 	{
-		"@id": "https://ontology.commonapproach.org/codeLists/Locality/7",
-		"instance": "loc7",
+		"@id": "https://codelist.commonapproach.org/codeLists/ICNPOlocality#loc7",
+		"hasIdentifier": "7",
 		"hasName": "All of Canada"
 	}
 ]

@@ -17,7 +17,7 @@ export class Sector extends Base {
 				semiRequired: true,
 			},
 			{
-				name: "instance",
+				name: "hasIdentifier",
 				type: "string",
 				representedType: "string",
 				defaultValue: "",

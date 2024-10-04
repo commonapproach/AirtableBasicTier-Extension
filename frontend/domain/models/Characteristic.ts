@@ -1,4 +1,5 @@
 import { Base } from "./Base";
+import { PopulationServed } from "./PopulationServed";
 
 export class Characteristic extends Base {
 	static className = "Characteristic";
@@ -38,9 +39,10 @@ export class Characteristic extends Base {
 			},
 			{
 				name: "hasCode",
-				type: "string",
-				representedType: "string",
-				defaultValue: "",
+				type: "link",
+				representedType: "array",
+				defaultValue: [],
+				link: { table: PopulationServed, field: "forCharacteristic" },
 				unique: false,
 				notNull: false,
 				required: false,

@@ -4,16 +4,14 @@ import { EDGProfile } from "./EDGProfile";
 import { EquityDeservingGroup } from "./EquityDeservingGroup";
 import { FundingState } from "./FundingState";
 import { FundingStatus } from "./FundingStatus";
+import { ImpactReport } from "./ImpactReport";
 import { Indicator } from "./Indicator";
 import { IndicatorReport } from "./IndicatorReport";
-import { Locality } from "./Locality";
 import { Organization } from "./Organization";
 import { OrganizationProfile } from "./OrganizationProfile";
-import { OrganizationType } from "./OrganizationType";
 import { Outcome } from "./Outcome";
 import { Person } from "./Person";
 import { PopulationServed } from "./PopulationServed";
-import { ProvinceTerritory } from "./ProvinceTerritory";
 import { Sector } from "./Sector";
 import { TeamProfile } from "./TeamProfile";
 import { Theme } from "./Theme";
@@ -37,10 +35,8 @@ export const mapSFFModel = {
 	Characteristic: Characteristic,
 	FundingState: FundingState,
 	Sector: Sector,
-	Locality: Locality,
-	ProvinceTerritory: ProvinceTerritory,
-	OrganizationType: OrganizationType,
 	PopulationServed: PopulationServed,
+	ImpactReport: ImpactReport,
 };
 
 export type ModelType = keyof typeof map;
@@ -48,7 +44,7 @@ export type ModelType = keyof typeof map;
 export type SFFModelType = keyof typeof mapSFFModel;
 
 export const ignoredFields = {
-	Organization: ["hasOrganizationProfile", "hasFundingStatus"],
+	Organization: ["hasOrganizationProfile", "hasFundingStatus", "hasImpactReport"],
 	Theme: ["hasOutcome"],
 	Address: ["forOrganization"],
 	Person: ["forOrganizationProfile"],
@@ -59,19 +55,10 @@ export const ignoredFields = {
 	EDGProfile: ["forTeamProfile"],
 	FundingState: ["forFundingStatus"],
 	Sector: ["forOrganizationProfile"],
-	Locality: ["forOrganizationProfile"],
-	ProvinceTerritory: ["forOrganizationProfile"],
-	OrganizationType: ["forOrganizationProfile"],
-	PopulationServed: ["forOrganizationProfile"],
+	PopulationServed: ["forOrganizationProfile", "forCharacteristic"],
 };
 
-export const predefinedCodeLists = [
-	"Sector",
-	"Locality",
-	"PopulationServed",
-	"ProvinceTerritory",
-	"OrganizationType",
-];
+export const predefinedCodeLists = ["Sector", "PopulationServed"];
 
 export * from "./Address";
 export * from "./Indicator";
@@ -86,11 +73,9 @@ export * from "./EDGProfile";
 export * from "./EquityDeservingGroup";
 export * from "./FundingState";
 export * from "./FundingStatus";
-export * from "./Locality";
+export * from "./ImpactReport";
 export * from "./OrganizationProfile";
-export * from "./OrganizationType";
 export * from "./Person";
 export * from "./PopulationServed";
-export * from "./ProvinceTerritory";
 export * from "./Sector";
 export * from "./TeamProfile";

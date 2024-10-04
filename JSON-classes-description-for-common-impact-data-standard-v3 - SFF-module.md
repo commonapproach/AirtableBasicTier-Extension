@@ -10,57 +10,57 @@ The following classes are part of the SFF module.
 
 ```json
 {
-  "@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
-  "@type": "cids:OrganizationProfile",
-  "@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/OrganizationProfile/<ORGANIZATION_NAME_URI_FORMAT>",
-  "forOrganization": "<ORGANIZATION_ID>",
-  "hasPrimaryContact": [
-    "<PERSON_ID>",
-    "http://<ORGANIZATION_NAME_URL_FORMAT>.org/Person/<PERSON_NAME>",
-    "..."
-  ],
-  "hasManagementTeamProfile": [
-    "<TEAM_PROFILE_ID>",
-    "http://<ORGANIZATION_NAME_URL_FORMAT>.org/TeamProfile/<TEAM_PROFILE_NAME>",
-    "..."
-  ],
-  "hasBoardProfile": [
-    "<BOARD_PROFILE_ID>",
-    "http://<ORGANIZATION_NAME_URL_FORMAT>.org/TeamProfile/<BOARD_PROFILE_NAME>",
-    "..."
-  ],
-  "sectorServed": [
-    "<SECTOR_ID>",
-    "http://<ORGANIZATION_NAME_URL_FORMAT>.org/Sector/<SECTOR_NAME>",
-    "..."
-  ],
-  "localityServed": [
-    "<LOCALITY_ID>",
-    "http://<ORGANIZATION_NAME_URL_FORMAT>.org/Locality/<LOCALITY_NAME>",
-    "..."
-  ],
-  "provinceTerritoryServed": [
-    "<PROVINCE_TERRITORY_ID>",
-    "http://<ORGANIZATION_NAME_URL_FORMAT>.org/ProvinceTerritory/<PROVINCE_TERRITORY_NAME>",
-    "..."
-  ],
-  "primaryPopulationServed": [
-    "<STAKEHOLDER_ID>",
-    "http://<ORGANIZATION_NAME_URL_FORMAT>.org/PolulationServed/<STAKEHOLDER_NAME>",
-    "..."
-  ],
-  "organizationType": "<ORGANIZATION_TYPE_ID>",
-  "servesEDG": [
-    "<EDG_ID>",
-    "http://<ORGANIZATION_NAME_URL_FORMAT>.org/EquityDeservingGroup/<EDG_NAME>",
-    "..."
-  ],
-  "hasFundingStatus": [
-    "<FUNDING_STATUS_ID>",
-    "http://<ORGANIZATION_NAME_URL_FORMAT>.org/FundingStatus/<FUNDING_STATUS_NAME>",
-    "..."
-  ],
-  "reportedDate": "<DATE>"
+	"@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
+	"@type": "cids:OrganizationProfile",
+	"@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/OrganizationProfile/<ORGANIZATION_NAME_URI_FORMAT>",
+	"forOrganization": "<ORGANIZATION_ID>",
+	"hasPrimaryContact": [
+		"<PERSON_ID>",
+		"http://<ORGANIZATION_NAME_URL_FORMAT>.org/Person/<PERSON_NAME>",
+		"..."
+	],
+	"hasManagementTeamProfile": [
+		"<TEAM_PROFILE_ID>",
+		"http://<ORGANIZATION_NAME_URL_FORMAT>.org/TeamProfile/<TEAM_PROFILE_NAME>",
+		"..."
+	],
+	"hasBoardProfile": [
+		"<BOARD_PROFILE_ID>",
+		"http://<ORGANIZATION_NAME_URL_FORMAT>.org/TeamProfile/<BOARD_PROFILE_NAME>",
+		"..."
+	],
+	"sectorServed": [
+		"<SECTOR_ID>",
+		"http://<ORGANIZATION_NAME_URL_FORMAT>.org/Sector/<SECTOR_NAME>",
+		"..."
+	],
+	"localityServed": [
+		"<LOCALITY_ID>",
+		"http://<ORGANIZATION_NAME_URL_FORMAT>.org/Locality/<LOCALITY_NAME>",
+		"..."
+	],
+	"provinceTerritoryServed": [
+		"<PROVINCE_TERRITORY_ID>",
+		"http://<ORGANIZATION_NAME_URL_FORMAT>.org/ProvinceTerritory/<PROVINCE_TERRITORY_NAME>",
+		"..."
+	],
+	"primaryPopulationServed": [
+		"<STAKEHOLDER_ID>",
+		"http://<ORGANIZATION_NAME_URL_FORMAT>.org/PolulationServed/<STAKEHOLDER_NAME>",
+		"..."
+	],
+	"organizationType": "<ORGANIZATION_TYPE_ID>",
+	"servesEDG": [
+		"<EDG_ID>",
+		"http://<ORGANIZATION_NAME_URL_FORMAT>.org/EquityDeservingGroup/<EDG_NAME>",
+		"..."
+	],
+	"hasFundingStatus": [
+		"<FUNDING_STATUS_ID>",
+		"http://<ORGANIZATION_NAME_URL_FORMAT>.org/FundingStatus/<FUNDING_STATUS_NAME>",
+		"..."
+	],
+	"reportedDate": "<DATE>"
 }
 ```
 
@@ -82,18 +82,47 @@ The following classes are part of the SFF module.
 - hasFundingStatus - strings array, warning, default value [];
 - reportedDate - string, required on export / warning on import, default value "";
 
+### cids:ImpactReport
+
+```json
+{
+	"@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
+	"@type": "cids:ImpactReport",
+	"@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/ImpactReport/<IMPACT_REPORT_NAME_URI_FORMAT>",
+	"hasName": "<IMPACT_REPORT_NAME>",
+	"forOrganization": "<ORGANIZATION_ID>",
+	"prov:startedAtTime": "<DATE_TIME_IN_XSD_DATE_TIME_FORMAT>", //“YYYY-MM-DDThh:mm:ss[Z| (+|-)hh:mm]”
+	"prov:endedAtTime": "<DATE_TIME_IN_XSD_DATE_TIME_FORMAT>"
+}
+```
+
+#### Data Types:
+
+- @context - constant, string, required;
+- @type - string, required;
+- @id - string, unique, URI, required;
+- hasName - string, required on export / warning on import, default value "";
+- forOrganization - string, required on export / warning on import, default value "";
+- prov:startedAtTime - string, required on export / warning on import, default value "";
+- prov:endedAtTime - string, required on export / warning on import, default value "";
+
+#### Accepted field names on import:
+
+- prov:startedAtTime - prov:startedAtTime or startedAtTime
+- prov:endedAtTime - prov:endedAtTime or endedAtTime
+
 ### cids:FundingStatus
 
 ```json
 {
-  "@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
-  "@type": "cids:FundingStatus",
-  "@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/FundingStatus/<FUNDING_STATUS_NAME_URI_FORMAT>",
-  "forFunderId": "<ORGANIZATION_ID>",
-  "forFunder": "<ORGANIZATION_NAME>",
-  "hasFundingState": "<FUNDING_STATE_CODE>",
-  "hasDescription": "<FUNDING_STATUS_DESCRIPTION>",
-  "reportedDate": "<DATE>"
+	"@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
+	"@type": "cids:FundingStatus",
+	"@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/FundingStatus/<FUNDING_STATUS_NAME_URI_FORMAT>",
+	"forFunderId": "<ORGANIZATION_ID>",
+	"forFunder": "<ORGANIZATION_NAME>",
+	"hasFundingState": "<FUNDING_STATE_CODE>",
+	"hasDescription": "<FUNDING_STATUS_DESCRIPTION>",
+	"reportedDate": "<DATE>"
 }
 ```
 
@@ -112,18 +141,18 @@ The following classes are part of the SFF module.
 
 ```json
 {
-  "@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
-  "@type": "cids:TeamProfile",
-  "@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/TeamProfile/<TEAM_PROFILE_NAME_URI_FORMAT>",
-  "hasTeamSize": "<NUMBER_OF_MEMBERS>",
-  "hasEDGSize": "<NUMBER_OF_EDG_MEMBERS>",
-  "hasEDGProfile": [
-    "<EDG_PROFILE_ID>",
-    "http://<ORGANIZATION_NAME_URL_FORMAT>.org/EquityDeservingGroupProfile/<EDG_PROFILE_NAME>",
-    "..."
-  ],
-  "hasComment": "<TEAM_PROFILE_COMMENTS>",
-  "reportedDate": "<DATE>"
+	"@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
+	"@type": "cids:TeamProfile",
+	"@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/TeamProfile/<TEAM_PROFILE_NAME_URI_FORMAT>",
+	"hasTeamSize": "<NUMBER_OF_MEMBERS>",
+	"hasEDGSize": "<NUMBER_OF_EDG_MEMBERS>",
+	"hasEDGProfile": [
+		"<EDG_PROFILE_ID>",
+		"http://<ORGANIZATION_NAME_URL_FORMAT>.org/EquityDeservingGroupProfile/<EDG_PROFILE_NAME>",
+		"..."
+	],
+	"hasComment": "<TEAM_PROFILE_COMMENTS>",
+	"reportedDate": "<DATE>"
 }
 ```
 
@@ -142,12 +171,12 @@ The following classes are part of the SFF module.
 
 ```json
 {
-  "@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
-  "@type": "cids:EDGProfile",
-  "@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/EquityDeservingGroupProfile/<EDG_PROFILE_NAME_URI_FORMAT>",
-  "forEDG": "<EQUITY_DESERVING_GROUP_ID>",
-  "hasSize": "<NUMBER_OF_MEMBERS>",
-  "reportedDate": "<DATE>"
+	"@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
+	"@type": "cids:EDGProfile",
+	"@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/EquityDeservingGroupProfile/<EDG_PROFILE_NAME_URI_FORMAT>",
+	"forEDG": "<EQUITY_DESERVING_GROUP_ID>",
+	"hasSize": "<NUMBER_OF_MEMBERS>",
+	"reportedDate": "<DATE>"
 }
 ```
 
@@ -164,16 +193,16 @@ The following classes are part of the SFF module.
 
 ```json
 {
-  "@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
-  "@type": "cids:EquityDeservingGroup",
-  "@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/EquityDeservingGroup/<EDG_NAME_URI_FORMAT>",
-  "hasDescription": "<EDG_DESCRIPTION>",
-  "hasCharacteristic": [
-    "<CHARACTERISTIC_ID>",
-    "http://<ORGANIZATION_NAME_URL_FORMAT>.org/Characteristic/<CHARACTERISTIC_NAME>",
-    "..."
-  ],
-  "isDefined": "boolean"
+	"@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
+	"@type": "cids:EquityDeservingGroup",
+	"@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/EquityDeservingGroup/<EDG_NAME_URI_FORMAT>",
+	"hasDescription": "<EDG_DESCRIPTION>",
+	"hasCharacteristic": [
+		"<CHARACTERISTIC_ID>",
+		"http://<ORGANIZATION_NAME_URL_FORMAT>.org/Characteristic/<CHARACTERISTIC_NAME>",
+		"..."
+	],
+	"isDefined": "boolean"
 }
 ```
 
@@ -190,12 +219,12 @@ The following classes are part of the SFF module.
 
 ```json
 {
-  "@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
-  "@type": "cids:Person",
-  "@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/Person/<PERSON_NAME_URI_FORMAT>",
-  "foaf:givenName": "<FIRST_NAME>",
-  "foaf:familyName": "<LAST_NAME>",
-  "ic:hasEmail": "<EMAIL>"
+	"@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
+	"@type": "cids:Person",
+	"@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/Person/<PERSON_NAME_URI_FORMAT>",
+	"foaf:givenName": "<FIRST_NAME>",
+	"foaf:familyName": "<LAST_NAME>",
+	"ic:hasEmail": "<EMAIL>"
 }
 ```
 
@@ -215,16 +244,16 @@ The following classes are part of the SFF module.
 
 ```json
 {
-  "@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
-  "@type": "cids:Characteristic",
-  "@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/Characteristic/<CHARACTERISTIC_NAME_URI_FORMAT>",
-  "hasName": "<CHARACTERISTIC_NAME>",
-  "hasValue": "<CHARACTERISTIC_VALUE>",
-  "hasCode": [
-    "<CHARACTERISTIC_CODE>",
-    "http://<ORGANIZATION_NAME_URL_FORMAT>.org/Code/<CHARACTERISTIC_CODE_NAME>",
-    "..."
-  ]
+	"@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
+	"@type": "cids:Characteristic",
+	"@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/Characteristic/<CHARACTERISTIC_NAME_URI_FORMAT>",
+	"hasName": "<CHARACTERISTIC_NAME>",
+	"hasValue": "<CHARACTERISTIC_VALUE>",
+	"hasCode": [
+		"<CHARACTERISTIC_CODE>",
+		"http://<ORGANIZATION_NAME_URL_FORMAT>.org/Code/<CHARACTERISTIC_CODE_NAME>",
+		"..."
+	]
 }
 ```
 
@@ -241,11 +270,11 @@ The following classes are part of the SFF module.
 
 ```json
 {
-  "@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
-  "@type": "cids:<CODE_LIST_NAME>",
-  "@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/CodeList/<CODE_NAME_URI_FORMAT>",
-  "instance": "<CODE_REFERENCE>",
-  "hasName": "<CODE_NAME>"
+	"@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
+	"@type": "cids:<CODE_LIST_NAME>",
+	"@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/CodeList/<CODE_NAME_URI_FORMAT>",
+	"instance": "<CODE_REFERENCE>",
+	"hasName": "<CODE_NAME>"
 }
 ```
 
@@ -261,21 +290,21 @@ The following classes are part of the SFF module.
 
 ```json
 {
-  "@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
-  "@type": "cids:Code",
-  "@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/Code/<CODE_NAME_URI_FORMAT>",
-  "definedBy": "<ORGANIZATION_ID>",
-  "hasSpecification": "<URL_FOR_SPECIFICATION>",
-  "org:hasIdentifier": "<CODE_IDENTIFIER>",
-  "hasName": "<CODE_NAME>",
-  "hasDescription": "<CODE_DESCRIPTION>",
-  "schema:codeValue": "<CODE_VALUE>",
-  "i72:value": {
-    "@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
-    "@type": "i72:Measure",
-    "i72:numerical_value": "<NUMERICAL_VALUE_AS_STRING>",
-    "i72:unit_of_measure": "<STRING>"
-  }
+	"@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
+	"@type": "cids:Code",
+	"@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/Code/<CODE_NAME_URI_FORMAT>",
+	"definedBy": "<ORGANIZATION_ID>",
+	"hasSpecification": "<URL_FOR_SPECIFICATION>",
+	"org:hasIdentifier": "<CODE_IDENTIFIER>",
+	"hasName": "<CODE_NAME>",
+	"hasDescription": "<CODE_DESCRIPTION>",
+	"schema:codeValue": "<CODE_VALUE>",
+	"i72:value": {
+		"@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
+		"@type": "i72:Measure",
+		"i72:numerical_value": "<NUMERICAL_VALUE_AS_STRING>",
+		"i72:unit_of_measure": "<STRING>"
+	}
 }
 ```
 

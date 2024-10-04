@@ -17,7 +17,7 @@ export class PopulationServed extends Base {
 				semiRequired: true,
 			},
 			{
-				name: "instance",
+				name: "hasIdentifier",
 				type: "string",
 				representedType: "string",
 				defaultValue: "",
@@ -35,6 +35,16 @@ export class PopulationServed extends Base {
 				notNull: true,
 				required: false,
 				semiRequired: true,
+			},
+			{
+				name: "hasDescription",
+				type: "text",
+				representedType: "string",
+				defaultValue: "",
+				unique: false,
+				notNull: false,
+				required: false,
+				semiRequired: false,
 			},
 		];
 	}

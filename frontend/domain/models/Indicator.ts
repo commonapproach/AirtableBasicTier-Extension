@@ -39,6 +39,17 @@ export class Indicator extends Base {
 				semiRequired: false,
 			},
 			{
+				name: "i72:unit_of_measure",
+				displayName: "unit_of_measure",
+				type: "string",
+				representedType: "string",
+				defaultValue: "",
+				unique: false,
+				notNull: true,
+				required: false,
+				semiRequired: true,
+			},
+			{
 				name: "forOrganization",
 				type: "link",
 				representedType: "string",

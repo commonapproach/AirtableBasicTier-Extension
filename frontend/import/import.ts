@@ -264,12 +264,22 @@ async function writeTable(base: Base, tableData: TableInterface[]): Promise<void
 					const field = cid.getFieldByName(key);
 					const fieldName = field.displayName || field.name;
 					let newValue: any = value;
-					if (newValue) {
-						newValue = value.toString();
-					}
 					if (newValue && field.type === "select") {
-						if (field.selectOptions.includes(newValue)) {
-							newValue = { name: newValue };
+						if (
+							field.selectOptions.find(
+								(opt) => opt.id === (Array.isArray(newValue) ? newValue[0] : newValue)
+							)
+						) {
+							const optionField = field.selectOptions.find(
+								(opt) => opt.id === (Array.isArray(newValue) ? newValue[0] : newValue)
+							);
+							if (optionField) {
+								newValue = {
+									name: optionField.name,
+								};
+							} else {
+								newValue = null;
+							}
 						} else {
 							newValue = null;
 						}
@@ -280,6 +290,9 @@ async function writeTable(base: Base, tableData: TableInterface[]): Promise<void
 						} else {
 							newValue = false;
 						}
+					}
+					if (field.type !== "boolean" && field.type !== "select" && newValue) {
+						newValue = newValue.toString();
 					}
 					record[fieldName] = newValue;
 				}

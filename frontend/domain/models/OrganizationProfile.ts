@@ -1,12 +1,12 @@
+import Locality from "../codeLists/Locality.json";
+import OrganizationType from "../codeLists/OrganizationType.json";
+import ProvinceTerritory from "../codeLists/ProvinceTerritory.json";
 import { Base } from "./Base";
 import { EquityDeservingGroup } from "./EquityDeservingGroup";
 import { FundingStatus } from "./FundingStatus";
-import { Locality } from "./Locality";
 import { Organization } from "./Organization";
-import { OrganizationType } from "./OrganizationType";
 import { Person } from "./Person";
 import { PopulationServed } from "./PopulationServed";
-import { ProvinceTerritory } from "./ProvinceTerritory";
 import { Sector } from "./Sector";
 import { TeamProfile } from "./TeamProfile";
 
@@ -83,10 +83,13 @@ export class OrganizationProfile extends Base {
 			},
 			{
 				name: "localityServed",
-				type: "link",
+				type: "select",
 				representedType: "array",
 				defaultValue: [],
-				link: { table: Locality, field: "forOrganizationProfile" },
+				selectOptions: Locality.map((item) => ({
+					id: item["@id"],
+					name: item["hasName"],
+				})),
 				unique: false,
 				notNull: false,
 				required: false,
@@ -94,10 +97,13 @@ export class OrganizationProfile extends Base {
 			},
 			{
 				name: "provinceTerritoryServed",
-				type: "link",
+				type: "select",
 				representedType: "array",
 				defaultValue: [],
-				link: { table: ProvinceTerritory, field: "forOrganizationProfile" },
+				selectOptions: ProvinceTerritory.map((item) => ({
+					id: item["@id"],
+					name: item["hasName"],
+				})),
 				unique: false,
 				notNull: false,
 				required: false,
@@ -116,10 +122,10 @@ export class OrganizationProfile extends Base {
 			},
 			{
 				name: "organizationType",
-				type: "link",
+				type: "select",
 				representedType: "array",
 				defaultValue: [],
-				link: { table: OrganizationType, field: "forOrganizationProfile" },
+				selectOptions: OrganizationType.map((item) => ({ id: item["@id"], name: item["hasName"] })),
 				unique: false,
 				notNull: false,
 				required: false,

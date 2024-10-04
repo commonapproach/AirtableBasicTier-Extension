@@ -49,7 +49,7 @@ export type FieldType = {
 	unique?: boolean;
 	notNull?: boolean;
 	link?: { table: any; field: string };
-	selectOptions?: string[];
+	selectOptions?: { id: string; name: string }[];
 	required: boolean;
 	semiRequired: boolean;
 };

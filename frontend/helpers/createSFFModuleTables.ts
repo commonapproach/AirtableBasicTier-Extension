@@ -1,6 +1,7 @@
 import { base } from "@airtable/blocks";
 import { FieldType } from "@airtable/blocks/models";
 import { IntlShape } from "react-intl";
+import { getAllSectors } from "../domain/codeLists/getSectorsCodeLists";
 import { mapSFFModel, predefinedCodeLists, SFFModelType } from "../domain/models";
 import { FieldType as LocalFiledType } from "../domain/models/Base";
 import { getActualFieldType } from "../utils";
@@ -77,8 +78,13 @@ export async function createSFFModuleTables(intl: IntlShape) {
 	if (createdTables.length) {
 		for (const tableToCreate of createdTables) {
 			if (predefinedCodeLists.includes(tableToCreate)) {
-				// eslint-disable-next-line no-undef
-				const data = require(`../domain/codeLists/${tableToCreate}.json`);
+				let data = [];
+				if (tableToCreate === "Sector") {
+					data = await getAllSectors();
+				} else {
+					// eslint-disable-next-line no-undef
+					data = require(`../domain/codeLists/${tableToCreate}.json`);
+				}
 				const table = base.getTableByName(tableToCreate);
 				await table.createRecordsAsync(
 					data.map((record) => {
@@ -162,7 +168,7 @@ async function createFields(tableName: string, fields: LocalFiledType[], intl: I
 		let options = null;
 		switch (fieldType) {
 			case FieldType.SINGLE_SELECT:
-				options = { choices: field.selectOptions.map((v) => ({ name: v })) || [] };
+				options = { choices: field.selectOptions.map((v) => ({ name: v.name })) || [] };
 				break;
 			case FieldType.DATE_TIME:
 				options = {
@@ -242,6 +248,12 @@ async function createLinkedFields(
 		await table1.createFieldAsync(linkedFieldNameOnTargetTable, FieldType.MULTIPLE_RECORD_LINKS, {
 			linkedTableId: table2.id,
 		});
+
+		// If the linked filed is self-linked we don't need to check for the linked field on the other table
+		if (linkedFieldNameOnTable1 === linkedFieldNameOnTable2 && table1.id === table2.id) {
+			return;
+		}
+
 		const linkedFieldTable2 = table2.getFieldByName(table1.name);
 		await linkedFieldTable2.updateNameAsync(linkedFieldNameOnLInkedTable);
 	}

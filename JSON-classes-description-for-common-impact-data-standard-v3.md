@@ -10,25 +10,25 @@ The following classes are part of the CIDS ontology and are part of the basic ti
 
 ```json
 {
-  "@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
-  "@type": "cids:Organization",
-  "@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/",
-  "org:hasLegalName": "<ORGANIZATION_NAME>",
-  "ic:hasAddress": [
-    "<ADDRESS_ID>",
-    "http://<ORGANIZATION_NAME_URL_FORMAT>.org/Address/<ADDRESS_ID>",
-    "..."
-  ],
-  "hasOutcome": [
-    "<OUTCOME_ID>",
-    "http://<ORGANIZATION_NAME_URL_FORMAT>.org/Outcome/<NAME_OF_OUTCOME>",
-    "..."
-  ],
-  "hasIndicator": [
-    "<INDICATOR_ID>",
-    "http://<ORGANIZATION_NAME_URL_FORMAT>.org/Indicator/<INDICATOR_NAME>",
-    "..."
-  ]
+	"@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
+	"@type": "cids:Organization",
+	"@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/",
+	"org:hasLegalName": "<ORGANIZATION_NAME>",
+	"ic:hasAddress": [
+		"<ADDRESS_ID>",
+		"http://<ORGANIZATION_NAME_URL_FORMAT>.org/Address/<ADDRESS_ID>",
+		"..."
+	],
+	"hasOutcome": [
+		"<OUTCOME_ID>",
+		"http://<ORGANIZATION_NAME_URL_FORMAT>.org/Outcome/<NAME_OF_OUTCOME>",
+		"..."
+	],
+	"hasIndicator": [
+		"<INDICATOR_ID>",
+		"http://<ORGANIZATION_NAME_URL_FORMAT>.org/Indicator/<INDICATOR_NAME>",
+		"..."
+	]
 }
 ```
 
@@ -51,11 +51,13 @@ The following classes are part of the CIDS ontology and are part of the basic ti
 
 ```json
 {
-  "@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
-  "@type": "cids:Theme",
-  "@id": "<URI_FORMAT_ID>",
-  "hasName": "<THEME_NAME>",
-  "hasDescription": "<THEME_DESCRIPTION>"
+	"@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
+	"@type": "cids:Theme",
+	"@id": "<URI_FORMAT_ID>",
+	"hasName": "<THEME_NAME>",
+	"hasDescription": "<THEME_DESCRIPTION>",
+	"hasCode": "<REFERENCE_FOR_A_CODE_INSTANCE>",
+	"relatesTo": ["<THEME_ID>", "http://<ORGANIZATION_NAME_URL_FORMAT>.org/Theme/<THEME_NAME>", "..."]
 }
 ```
 
@@ -66,6 +68,8 @@ The following classes are part of the CIDS ontology and are part of the basic ti
 - @id - string, unique, URI, required;
 - hasName - string, required on export / warning on import, default value "";
 - hasDescription - string, default value "";
+- hasCode - string array, default value [];
+- relatesTo - strings array, default value [];
 
 ### cids:Outcome
 
@@ -96,17 +100,19 @@ The following classes are part of the CIDS ontology and are part of the basic ti
 
 ```json
 {
-  "@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
-  "@type": "cids:Indicator",
-  "@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/Indicator/<INDICATOR_NAME_URI_FORMAT>",
-  "hasName": "<INDICATOR_NAME>",
-  "hasDescription": "<INDICATOR_DESCRIPTION>",
-  "forOrganization": "<ORGANIZATION_ID>",
-  "hasIndicatorReport": [
-    "<INDICATOR_REPORT_ID>",
-    "http://<ORGANIZATION_NAME_URL_FORMAT>.org/IndicatorReport/<INDICATOR_NAME_URI_FORMAT>/<INDICATOR_REPORT_REFERENCE>",
-    "..."
-  ]
+   "@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
+   "@type": "cids:Indicator",
+   "@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/Indicator/<INDICATOR_NAME_URI_FORMAT>",
+   "hasName": "<INDICATOR_NAME>",
+   "hasDescription": "<INDICATOR_DESCRIPTION>",
+   "forOrganization": "<ORGANIZATION_ID>",
+   "forOutcome": [ "<OUTCOME_ID>", ... ],
+   "hasIndicatorReport": [
+	   "<INDICATOR_REPORT_ID>",
+	   "http://<ORGANIZATION_NAME_URL_FORMAT>.org/IndicatorReport/<INDICATOR_NAME_URI_FORMAT>/<INDICATOR_REPORT_REFERENCE>",
+	   "..."
+   ],
+   "i72:unit_of_measure": "<STRING>"
 }
 ```
 
@@ -118,38 +124,28 @@ The following classes are part of the CIDS ontology and are part of the basic ti
 - hasName - string, required on export / warning on import, default value "";
 - hasDescription - string, default value "";
 - forOrganization - string, required on export / warning on import, default value "";
+- forOutcome - strings array, warning, default value [];
 - hasIndicatorReport - strings array, warning, default value [];
+- i72:unit_of_measure - string, required on export / warning on import, default value "";
 
 ### cids:IndicatorReport
 
 ```json
 {
-  "@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
-  "@type": "cids:IndicatorReport",
-  "@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/IndicatorReport/<INDICATOR_NAME_URI_FORMAT>/<IDICATOR_REPORT_REFERENCE>",
-  "hasName": "<INDICATOR_REPORT_NAME>",
-  "hasComment": "<INDICATOR_REPORT_COMMENTS>",
-  "i72:value": {
-    "@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
-    "@type": "i72:Measure",
-    "i72:numerical_value": "<NUMERICAL_VALUE_AS_STRING>",
-    "i72:unit_of_measure": "<STRING>"
-  },
-  "time:hasTime": {
-    "@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
-    "@type": "time:DateTimeInterval",
-    "time:hasBeginning": {
-      "@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
-      "@type": "time:Instant",
-      "time:inXSDDateTimeStamp": "<xsd:dateTimeStamp>"
-    },
-    "time:hasEnd": {
-      "@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
-      "@type": "time:Instant",
-      "time:inXSDDateTimeStamp": "<xsd:dateTimeStamp>"
-    }
-  },
-  "forIndicator": "<INDICATOR_ID>"
+	"@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
+	"@type": "cids:IndicatorReport",
+	"@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/IndicatorReport/<INDICATOR_NAME_URI_FORMAT>/<IDICATOR_REPORT_REFERENCE>",
+	"hasName": "<INDICATOR_REPORT_NAME>",
+	"hasComment": "<INDICATOR_REPORT_COMMENTS>",
+	"i72:unit_of_measure": "<STRING>",
+	"i72:value": {
+		"@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
+		"@type": "i72:Measure",
+		"i72:numerical_value": "<NUMERICAL_VALUE_AS_STRING>"
+	},
+	"prov:startedAtTime": "<DATE_TIME_IN_XSD_DATE_TIME_FORMAT>", //“YYYY-MM-DDThh:mm:ss[Z| (+|-)hh:mm]”
+	"prov:endedAtTime": "<DATE_TIME_IN_XSD_DATE_TIME_FORMAT>",
+	"forIndicator": "<INDICATOR_ID>"
 }
 ```
 
@@ -160,40 +156,37 @@ The following classes are part of the CIDS ontology and are part of the basic ti
 - @id - string, unique, URI, required;
 - hasName - string, required on export / warning on import, default value "";
 - hasComment - string, default value "";
+- i72:unit_of_measure - string, required on export / warning on import, default value "";
 - i72:value - object, default value class with all fields empty;
 - i72:value.i72:numerical_value - string, default value "";
-- i72:value.i72:unit_of_measure - string, default value "";
-- time:hasTime - object, default value class with all fields empty;
-- time:hasTime.time:hasBeginning - object, default value class with all fields empty;
-- time:hasTime.time:hasBeginning.time:inXSDDateTimeStamp - string, default value "";
-- time:hasTime.time:hasEnd - object, default value class with all fields empty; // Same fields as time:hasBeginning
+- prov:startedAtTime - string, required on export / warning on import, default value "";
+- prov:endedAtTime - string, required on export / warning on import, default value "";
 - forIndicator - string, required on export / warning on import, default value "";
 
 #### Accepted field names on import:
 
 - i72:value - i72:value or value
-- all fields on i72:Measure object will be accept with or without the i72: prefix
-- time:hasTime - time:hasTime or hasTime
-- time:hasTime.time:hasBeginning - time:hasTime.time:hasBeginning or hasTime.time:hasBeginning
-- time:hasTime.time:hasEnd - time:hasTime.time:hasEnd or hasTime.time:hasEnd
-- all fields on time:DateTimeDescription object will be accept with or without the time: prefix
+- i72:numerical_value - i72:numerical_value or numerical_value
+- i72:unit_of_measure - i72:unit_of_measure or unit_of_measure
+- prov:startedAtTime - prov:startedAtTime or startedAtTime
+- prov:endedAtTime - prov:endedAtTime or endedAtTime
 
 ### ic:Address
 
 ```json
 {
-  "@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
-  "@type": "ic:Address",
-  "@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/Address/<ADDRESS_ID>",
-  "ic:hasStreet": "<STREET_NAME>",
-  "ic:hasStreetType": "<ONE_OF_{ic:avenue, ic:boulevard, ic:circle, ic:crescent, ic:drive, ic:road, ic:street}>",
-  "ic:hasStreetNumber": "<STREET_NUMBER>",
-  "ic:hasStreetDirection": "<ONE_OF_{ic:east, ic:north, ic:south, ic:west}>",
-  "ic:hasUnitNumber": "<UNIT_NUMBER>",
-  "ic:hasCity": "<CITY_NAME>",
-  "ic:hasState": "<STATE_2_LETTER_CODE>",
-  "ic:hasPostalCode": "<POSTAL_CODE>",
-  "ic:hasCountry": "<COUNTRY_2_LETTER_CODE>"
+	"@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
+	"@type": "ic:Address",
+	"@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/Address/<ADDRESS_ID>",
+	"ic:hasStreet": "<STREET_NAME>",
+	"ic:hasStreetType": "<ONE_OF_{ic:avenue, ic:boulevard, ic:circle, ic:crescent, ic:drive, ic:road, ic:street}>",
+	"ic:hasStreetNumber": "<STREET_NUMBER>",
+	"ic:hasStreetDirection": "<ONE_OF_{ic:east, ic:north, ic:south, ic:west}>",
+	"ic:hasUnitNumber": "<UNIT_NUMBER>",
+	"ic:hasCity": "<CITY_NAME>",
+	"ic:hasState": "<STATE_2_LETTER_CODE>",
+	"ic:hasPostalCode": "<POSTAL_CODE>",
+	"ic:hasCountry": "<COUNTRY_2_LETTER_CODE>"
 }
 ```
 

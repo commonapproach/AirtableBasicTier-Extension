@@ -281,7 +281,12 @@ function validateRecords(tableData: TableInterface[], operation: Operation, intl
 				}
 
 				if (fieldProps?.type === "select") {
-					if (fieldProps.selectOptions && !fieldProps.selectOptions.includes(fieldValue)) {
+					if (
+						fieldProps.selectOptions &&
+						!fieldProps.selectOptions.find(
+							(op) => op.id === (Array.isArray(fieldValue) ? fieldValue[0] : fieldValue)
+						)
+					) {
 						validatorWarnings.add(
 							intl.formatMessage(
 								{
