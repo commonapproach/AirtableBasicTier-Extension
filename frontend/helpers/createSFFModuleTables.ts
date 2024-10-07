@@ -1,11 +1,11 @@
 import { base } from "@airtable/blocks";
 import { FieldType } from "@airtable/blocks/models";
 import { IntlShape } from "react-intl";
-import { getAllSectors } from "../domain/codeLists/getSectorsCodeLists";
 import { mapSFFModel, predefinedCodeLists, SFFModelType } from "../domain/models";
 import { FieldType as LocalFiledType } from "../domain/models/Base";
 import { getActualFieldType } from "../utils";
 import { createTables } from "./createTables";
+import { populateCodeList } from "./populateCodeList";
 
 export async function createSFFModuleTables(intl: IntlShape) {
 	// Create tables
@@ -78,26 +78,19 @@ export async function createSFFModuleTables(intl: IntlShape) {
 	if (createdTables.length) {
 		for (const tableToCreate of createdTables) {
 			if (predefinedCodeLists.includes(tableToCreate)) {
-				let data = [];
-				if (tableToCreate === "Sector") {
-					data = await getAllSectors();
-				} else {
-					// eslint-disable-next-line no-undef
-					data = require(`../domain/codeLists/${tableToCreate}.json`);
+				try {
+					await populateCodeList(base, tableToCreate);
+				} catch (error) {
+					throw new Error(
+						intl.formatMessage(
+							{
+								id: "createTables.messages.error.populateCodeList",
+								defaultMessage: `Error populating code list for table "{tableName}"`,
+							},
+							{ tableName: tableToCreate }
+						)
+					);
 				}
-				const table = base.getTableByName(tableToCreate);
-				await table.createRecordsAsync(
-					data.map((record) => {
-						const recordData = {};
-						for (const key in record) {
-							const field = table.getFieldByNameIfExists(key);
-							if (field) {
-								recordData[field.id] = record[key];
-							}
-						}
-						return { fields: recordData };
-					})
-				);
 			}
 		}
 	}

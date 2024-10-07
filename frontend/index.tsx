@@ -4,8 +4,10 @@ import { FormattedMessage, IntlProvider, useIntl } from "react-intl";
 import ExportDialog from "./components/ExportDialog";
 import Loading from "./components/Loading";
 import DialogContextProvider, { useDialog } from "./context/DialogContext";
+import { predefinedCodeLists } from "./domain/models";
 import { createSFFModuleTables } from "./helpers/createSFFModuleTables";
 import { createTables } from "./helpers/createTables";
+import { populateCodeList } from "./helpers/populateCodeList";
 import { importData } from "./import/import";
 import English from "./localization/en.json";
 import French from "./localization/fr.json";
@@ -326,6 +328,74 @@ function Main() {
 									<FormattedMessage
 										id="app.button.createSFFTables"
 										defaultMessage="SFF Tables"
+									/>
+								</div>
+							</TextButton>
+							<TextButton
+								style={{
+									marginTop: 5,
+									marginBottom: 5,
+								}}
+								disabled={isImporting}
+								onClick={async () => {
+									setIsLoading(true);
+									const allErrors = [];
+									for (const codeList of predefinedCodeLists) {
+										try {
+											await populateCodeList(base, codeList);
+										} catch (error) {
+											allErrors.push(
+												intl.formatMessage(
+													{
+														id: "createTables.messages.error.populateCodeList",
+														defaultMessage: `Error populating code list for table "{tableName}"`,
+													},
+													{ tableName: codeList }
+												)
+											);
+										}
+									}
+									if (allErrors.length > 0) {
+										setDialogContent(
+											intl.formatMessage({
+												id: "generics.error",
+												defaultMessage: "Error",
+											}),
+											allErrors.join("<hr/>"),
+											true
+										);
+									} else {
+										setDialogContent(
+											intl.formatMessage({
+												id: "generics.success",
+												defaultMessage: "Success",
+											}),
+											intl.formatMessage({
+												id: "syncCodeLists.messages.success",
+												defaultMessage: "Code lists synchronized successfully",
+											}),
+											true
+										);
+									}
+									setIsLoading(false);
+								}}
+							>
+								<div
+									style={{
+										alignItems: "center",
+										textAlign: "center",
+										display: "flex",
+										gap: 2,
+										color: "#1B4B9D",
+									}}
+								>
+									<Icon
+										name="link"
+										size={16}
+									/>
+									<FormattedMessage
+										id="app.button.syncCodeLists"
+										defaultMessage="Code Lists"
 									/>
 								</div>
 							</TextButton>

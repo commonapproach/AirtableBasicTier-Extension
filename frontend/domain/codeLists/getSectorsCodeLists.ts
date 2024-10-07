@@ -11,11 +11,10 @@ async function fetchAndParseSectorList(url: string): Promise<Sector[]> {
 	try {
 		// Fetch the OWL file via AllOrigins
 		// Temporarily disabled due to CORS issues while testing
-		const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
-		const data = await response.json();
+		const response = await fetch(url);
 
-		// Extract the contents field from the response
-		const xmlData = data.contents;
+		// Extract the XML data from the response
+		const xmlData = await response.text();
 
 		const options = {
 			ignoreAttributes: false,
