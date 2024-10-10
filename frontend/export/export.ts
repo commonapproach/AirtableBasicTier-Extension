@@ -2,8 +2,9 @@ import Base from "@airtable/blocks/dist/types/src/models/base";
 import { Record } from "@airtable/blocks/models";
 import moment from "moment-timezone";
 import { IntlShape } from "react-intl";
+import { CodeList, getCodeListByTableName } from "../domain/codeLists/getCodeLists";
 import { LinkedCellInterface } from "../domain/interfaces/cell.interface";
-import { ignoredFields, map, mapSFFModel } from "../domain/models";
+import { ignoredFields, map, mapSFFModel, predefinedCodeLists } from "../domain/models";
 import { FieldType } from "../domain/models/Base";
 import { validate } from "../domain/validation/validator";
 import { downloadJSONLD } from "../utils";
@@ -60,13 +61,31 @@ export async function exportData(
 
 		const records = (await table.selectRecordsAsync()).records;
 
+		let codeList: CodeList[] | null = null;
+		if (predefinedCodeLists.includes(table.name)) {
+			codeList = await getCodeListByTableName(table.name);
+		}
+
 		const cid = new fullMap[table.name]();
 		for (const record of records) {
+			// Skip deleted records and records that are defined in the common approach code lists
+			if (
+				record.isDeleted ||
+				!table.fields.some((field) => record.getCellValue(field.name)) ||
+				(codeList &&
+					record.getCellValueAsString("@id") &&
+					codeList.find((item) => item["@id"] === record.getCellValueAsString("@id")))
+			) {
+				continue;
+			}
+
 			let row = {
 				"@context": "http://ontology.commonapproach.org/contexts/cidsContext.json",
 				"@type": table.name === "Address" ? `ic:${table.name}` : `cids:${table.name}`,
 			};
+
 			let isEmpty = true; // Flag to check if the row is empty
+
 			for (const field of cid.getTopLevelFields()) {
 				if (field.type === "link") {
 					const value: any = record.getCellValue(field.displayName || field.name);
@@ -93,7 +112,13 @@ export async function exportData(
 					if (fieldValue && fieldValue["name"]) {
 						isEmpty = false;
 					}
-					const optionField = field.selectOptions.find((opt) => opt.name === fieldValue["name"]);
+					let optionField;
+					if (field.getOptionsAsync) {
+						const options = await field.getOptionsAsync();
+						optionField = options.find((opt) => opt.name === fieldValue["name"]);
+					} else {
+						optionField = field.selectOptions.find((opt) => opt.name === fieldValue["name"]);
+					}
 					if (optionField) {
 						row[field.name] = field.representedType === "array" ? [optionField.id] : optionField.id;
 					} else {
@@ -142,7 +167,7 @@ export async function exportData(
 		}
 	}
 
-	const { errors, warnings } = validate(data, "export", intl);
+	const { errors, warnings } = await validate(data, "export", intl);
 
 	const emptyTableWarning = await checkForEmptyTables(base, intl);
 	const allWarnings =

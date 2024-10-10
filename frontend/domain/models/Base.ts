@@ -50,6 +50,7 @@ export type FieldType = {
 	notNull?: boolean;
 	link?: { table: any; field: string };
 	selectOptions?: { id: string; name: string }[];
+	getOptionsAsync?: () => Promise<{ id: string; name: string }[]>;
 	required: boolean;
 	semiRequired: boolean;
 };

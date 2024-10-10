@@ -1,6 +1,8 @@
-import Locality from "../codeLists/Locality.json";
-import OrganizationType from "../codeLists/OrganizationType.json";
-import ProvinceTerritory from "../codeLists/ProvinceTerritory.json";
+import {
+	getAllLocalities,
+	getAllOrganizationType,
+	getAllProvinceTerritory,
+} from "../codeLists/getCodeLists";
 import { Base } from "./Base";
 import { EquityDeservingGroup } from "./EquityDeservingGroup";
 import { FundingStatus } from "./FundingStatus";
@@ -86,10 +88,11 @@ export class OrganizationProfile extends Base {
 				type: "select",
 				representedType: "array",
 				defaultValue: [],
-				selectOptions: Locality.map((item) => ({
-					id: item["@id"],
-					name: item["hasName"],
-				})),
+				selectOptions: [],
+				getOptionsAsync: async () => {
+					const codeList = await getAllLocalities();
+					return codeList.map((item) => ({ id: item["@id"], name: item.hasName }));
+				},
 				unique: false,
 				notNull: false,
 				required: false,
@@ -100,10 +103,11 @@ export class OrganizationProfile extends Base {
 				type: "select",
 				representedType: "array",
 				defaultValue: [],
-				selectOptions: ProvinceTerritory.map((item) => ({
-					id: item["@id"],
-					name: item["hasName"],
-				})),
+				selectOptions: [],
+				getOptionsAsync: async () => {
+					const codeList = await getAllProvinceTerritory();
+					return codeList.map((item) => ({ id: item["@id"], name: item.hasName }));
+				},
 				unique: false,
 				notNull: false,
 				required: false,
@@ -125,7 +129,11 @@ export class OrganizationProfile extends Base {
 				type: "select",
 				representedType: "array",
 				defaultValue: [],
-				selectOptions: OrganizationType.map((item) => ({ id: item["@id"], name: item["hasName"] })),
+				selectOptions: [],
+				getOptionsAsync: async () => {
+					const codeList = await getAllOrganizationType();
+					return codeList.map((item) => ({ id: item["@id"], name: item.hasName }));
+				},
 				unique: false,
 				notNull: false,
 				required: false,

@@ -14,7 +14,7 @@ export async function createSFFModuleTables(intl: IntlShape) {
 	const tablesOnBase = base.tables;
 	const tableNamesOnBase = tablesOnBase.map((table) => table.name);
 	const tablesToCreate = Object.keys(mapSFFModel);
-	const createdTables = [];
+	const createdTables: string[] = [];
 
 	for (const tableToCreate of tablesToCreate) {
 		let shouldCreateTable = true;
@@ -76,7 +76,13 @@ export async function createSFFModuleTables(intl: IntlShape) {
 
 	// Populate predefined values if table was created
 	if (createdTables.length) {
-		for (const tableToCreate of createdTables) {
+		const mergedTables = [
+			...createdTables,
+			...(createdTables.includes("OrganizationProfile")
+				? ["Locality", "ProvinceTerritory", "OrganizationType"]
+				: []),
+		];
+		for (const tableToCreate of mergedTables) {
 			if (predefinedCodeLists.includes(tableToCreate)) {
 				try {
 					await populateCodeList(base, tableToCreate);

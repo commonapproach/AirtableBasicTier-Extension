@@ -34,8 +34,8 @@ export class Outcome extends Base {
 				representedType: "string",
 				defaultValue: "",
 				unique: false,
-				notNull: true,
-				required: true,
+				notNull: false,
+				required: false,
 				semiRequired: false,
 			},
 			{

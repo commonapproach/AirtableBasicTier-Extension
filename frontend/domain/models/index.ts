@@ -58,7 +58,13 @@ export const ignoredFields = {
 	PopulationServed: ["forOrganizationProfile", "forCharacteristic"],
 };
 
-export const predefinedCodeLists = ["Sector", "PopulationServed"];
+export const predefinedCodeLists = [
+	"Sector",
+	"PopulationServed",
+	"Locality",
+	"ProvinceTerritory",
+	"OrganizationType",
+];
 
 export * from "./Address";
 export * from "./Indicator";

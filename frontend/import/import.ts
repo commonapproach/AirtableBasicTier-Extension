@@ -97,7 +97,7 @@ export async function importData(
 	jsonData = transformObjectFieldIfWrongFormat(jsonData);
 
 	// Validate JSON
-	let { errors, warnings } = validate(jsonData, "import", intl);
+	let { errors, warnings } = await validate(jsonData, "import", intl);
 
 	warnings = [...warnings, ...warnIfUnrecognizedFieldsWillBeIgnored(jsonData, intl)];
 
@@ -238,7 +238,7 @@ async function writeTable(base: Base, tableData: TableInterface[]): Promise<void
 		const tableName = data["@type"].split(":")[1];
 
 		let record: { [key: string]: unknown } = {};
-		Object.entries(data).forEach(([key, value]) => {
+		Object.entries(data).forEach(async ([key, value]) => {
 			if (key !== "@type" && key !== "@context" && !checkIfFieldIsRecognized(tableName, key)) {
 				return;
 			}
@@ -265,12 +265,16 @@ async function writeTable(base: Base, tableData: TableInterface[]): Promise<void
 					const fieldName = field.displayName || field.name;
 					let newValue: any = value;
 					if (newValue && field.type === "select") {
+						let options;
+						if (field.getOptionsAsync) {
+							options = await field.getOptionsAsync();
+						} else {
+							options = field.selectOptions;
+						}
 						if (
-							field.selectOptions.find(
-								(opt) => opt.id === (Array.isArray(newValue) ? newValue[0] : newValue)
-							)
+							options.find((opt) => opt.id === (Array.isArray(newValue) ? newValue[0] : newValue))
 						) {
-							const optionField = field.selectOptions.find(
+							const optionField = options.find(
 								(opt) => opt.id === (Array.isArray(newValue) ? newValue[0] : newValue)
 							);
 							if (optionField) {

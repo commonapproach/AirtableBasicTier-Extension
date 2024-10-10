@@ -1,20 +1,22 @@
 import { IntlShape } from "react-intl";
+import { getCodeListByTableName } from "../codeLists/getCodeLists";
 import { TableInterface } from "../interfaces/table.interface";
-import { map, mapSFFModel, ModelType, SFFModelType } from "../models";
+import { map, mapSFFModel, ModelType, predefinedCodeLists, SFFModelType } from "../models";
+import { FieldType } from "../models/Base";
 
 type Operation = "import" | "export";
 
 const validatorErrors = new Set<string>();
 const validatorWarnings = new Set<string>();
 
-export function validate(
+export async function validate(
 	tableData: TableInterface[],
 	operation: Operation = "export",
 	intl: IntlShape
-): {
+): Promise<{
 	errors: string[];
 	warnings: string[];
-} {
+}> {
 	validatorWarnings.clear();
 	validatorErrors.clear();
 
@@ -29,7 +31,7 @@ export function validate(
 		validateTypeProp(item, intl);
 	});
 
-	validateRecords(tableData, operation, intl);
+	await validateRecords(tableData, operation, intl);
 
 	return {
 		errors: Array.from(validatorErrors),
@@ -37,11 +39,11 @@ export function validate(
 	};
 }
 
-function validateRecords(tableData: TableInterface[], operation: Operation, intl: IntlShape) {
+async function validateRecords(tableData: TableInterface[], operation: Operation, intl: IntlShape) {
 	// Records to keep track of unique values
 	const uniqueRecords: Record<string, Set<any>> = {};
 
-	validateLinkedFields(tableData, operation, intl);
+	await validateLinkedFields(tableData, operation, intl);
 
 	for (const data of tableData) {
 		if (validateTypeProp(data, intl)) return;
@@ -185,7 +187,7 @@ function validateRecords(tableData: TableInterface[], operation: Operation, intl
 				}
 			}
 
-			let fieldProps: any = null;
+			let fieldProps: FieldType = null;
 			try {
 				fieldProps = cid.getFieldByName(fieldName);
 			} catch (_) {
@@ -281,26 +283,40 @@ function validateRecords(tableData: TableInterface[], operation: Operation, intl
 				}
 
 				if (fieldProps?.type === "select") {
-					if (
-						fieldProps.selectOptions &&
-						!fieldProps.selectOptions.find(
-							(op) => op.id === (Array.isArray(fieldValue) ? fieldValue[0] : fieldValue)
-						)
-					) {
-						validatorWarnings.add(
-							intl.formatMessage(
-								{
-									id: "validation.messages.warning.invalidSelectField",
-									defaultMessage:
-										"Field <b>{fieldName}</b> on table <b>{tableName}</b> has an invalid value.",
-								},
-								{
-									fieldName: fieldDisplayName,
-									tableName,
-									b: (str) => `<b>${str}</b>`,
-								}
+					if (fieldProps.selectOptions || fieldProps.getOptionsAsync) {
+						let shouldWarn = false;
+						if (fieldProps.getOptionsAsync) {
+							const options = await fieldProps.getOptionsAsync();
+							if (
+								!options.find(
+									(op) => op.id === (Array.isArray(fieldValue) ? fieldValue[0] : fieldValue)
+								)
+							) {
+								shouldWarn = true;
+							}
+						} else if (
+							!fieldProps.selectOptions.find(
+								(op) => op.id === (Array.isArray(fieldValue) ? fieldValue[0] : fieldValue)
 							)
-						);
+						) {
+							shouldWarn = true;
+						}
+						if (shouldWarn) {
+							validatorWarnings.add(
+								intl.formatMessage(
+									{
+										id: "validation.messages.warning.invalidSelectField",
+										defaultMessage:
+											"Field <b>{fieldName}</b> on table <b>{tableName}</b> has an invalid value.",
+									},
+									{
+										fieldName: fieldDisplayName,
+										tableName,
+										b: (str) => `<b>${str}</b>`,
+									}
+								)
+							);
+						}
 					}
 				}
 			}
@@ -418,7 +434,11 @@ function validateTypeProp(data: any, intl: IntlShape): boolean {
 	return false;
 }
 
-function validateLinkedFields(tableData: TableInterface[], operation: Operation, intl: IntlShape) {
+async function validateLinkedFields(
+	tableData: TableInterface[],
+	operation: Operation,
+	intl: IntlShape
+) {
 	for (const data of tableData) {
 		if (validateTypeProp(data, intl)) return;
 		const tableName = data["@type"].split(":")[1];
@@ -435,7 +455,7 @@ function validateLinkedFields(tableData: TableInterface[], operation: Operation,
 		// for each field that has type link, check if all linked ids exists
 		const fields = cid.getAllFields();
 		const linkedFields = fields.filter((field) => field.type === "link");
-		linkedFields.forEach((field) => {
+		linkedFields.forEach(async (field) => {
 			const fieldName = field.name;
 			if (!data[fieldName]) {
 				data[fieldName] = [];
@@ -514,6 +534,15 @@ function validateLinkedFields(tableData: TableInterface[], operation: Operation,
 
 			const linkedTable = field.link.table.className;
 			const linkedIds: string[] = [];
+
+			if (predefinedCodeLists.includes(linkedTable)) {
+				const codeList = await getCodeListByTableName(linkedTable);
+				if (codeList) {
+					codeList.forEach((item) => {
+						linkedIds.push(item["@id"]);
+					});
+				}
+			}
 
 			for (const linkedData of tableData) {
 				if (validateTypeProp(linkedData, intl)) return;
