@@ -110,7 +110,6 @@ function Main() {
 									try {
 										await importData(jsonData, base, setDialogContent, setIsImporting, intl);
 									} catch (error) {
-										console.log("error", error);
 										setIsImporting(false);
 										setDialogContent(
 											intl.formatMessage({
@@ -132,7 +131,6 @@ function Main() {
 									setIsLoading(false);
 								},
 								(error) => {
-									console.log("error", error);
 									setDialogContent(
 										intl.formatMessage({
 											id: "generics.error",

@@ -173,7 +173,6 @@ async function importFileData(
 			: jsonData;
 		await importByData(base, filteredItems, intl);
 	} catch (error) {
-		console.log("error", error);
 		setIsImporting(false);
 		setDialogContent(
 			intl.formatMessage({

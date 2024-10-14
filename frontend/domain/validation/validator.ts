@@ -574,8 +574,8 @@ async function validateLinkedFields(
 				}
 			});
 
-			if (isString && operation === "export") {
-				data[fieldName] = data[fieldName][0];
+			if ((isString || field.representedType === "string") && operation === "export") {
+				data[fieldName] = data[fieldName].length > 0 ? data[fieldName][0] : "";
 			}
 		});
 	}
