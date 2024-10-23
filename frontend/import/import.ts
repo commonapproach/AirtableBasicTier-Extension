@@ -491,6 +491,7 @@ function validateIfEmptyFile(tableData: TableInterface[]) {
 	if (!Array.isArray(tableData) || tableData.length === 0) {
 		return true;
 	}
+	return false;
 }
 
 function doAllRecordsHaveId(tableData: TableInterface[]) {

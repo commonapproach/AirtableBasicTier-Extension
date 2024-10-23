@@ -154,11 +154,20 @@ export async function exportData(
 					const fieldValue = record.getCellValue(field.displayName || field.name) ?? false;
 					row[field.name] = fieldValue ? true : false;
 				} else {
-					const fieldValue = record.getCellValueAsString(field.displayName || field.name) ?? "";
+					const fieldValue =
+						record.getCellValue(field.displayName || field.name) ?? field.defaultValue;
 					if (fieldValue) {
 						isEmpty = false;
 					}
-					row[field.name] = fieldValue.toString();
+					let exportValue = fieldValue;
+					if (Array.isArray(fieldValue) && field.representedType === "array") {
+						exportValue = fieldValue;
+					} else if (!Array.isArray(fieldValue) && field.representedType === "array") {
+						exportValue = fieldValue ? [fieldValue] : field.defaultValue;
+					} else {
+						exportValue = fieldValue ? fieldValue.toString() : field.defaultValue;
+					}
+					row[field.name] = exportValue;
 				}
 			}
 			if (!isEmpty) {
@@ -340,7 +349,15 @@ function getObjectFieldsRecursively(record: Record, field: FieldType, row: any, 
 			if (value) {
 				isEmpty = false;
 			}
-			row[field.name] = value.toString();
+			let exportValue = value;
+			if (Array.isArray(value) && field.representedType === "array") {
+				exportValue = value;
+			} else if (!Array.isArray(value) && field.representedType === "array") {
+				exportValue = value ? [value] : field.defaultValue;
+			} else {
+				exportValue = value ? value.toString() : field.defaultValue;
+			}
+			row[field.name] = exportValue;
 		}
 		return [row, isEmpty];
 	}
