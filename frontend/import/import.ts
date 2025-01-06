@@ -263,7 +263,7 @@ async function writeTable(base: Base, tableData: TableInterface[]): Promise<void
 					const field = cid.getFieldByName(key);
 					const fieldName = field.displayName || field.name;
 					let newValue: any = value;
-					if (newValue && field.type === "select") {
+					if (newValue && (field.type === "select" || field.type === "multiselect")) {
 						let options;
 						if (field.getOptionsAsync) {
 							options = await field.getOptionsAsync();
@@ -271,6 +271,7 @@ async function writeTable(base: Base, tableData: TableInterface[]): Promise<void
 							options = field.selectOptions;
 						}
 						if (
+							field.type === "select" &&
 							options.find((opt) => opt.id === (Array.isArray(newValue) ? newValue[0] : newValue))
 						) {
 							const optionField = options.find(
@@ -281,6 +282,21 @@ async function writeTable(base: Base, tableData: TableInterface[]): Promise<void
 									name: optionField.name,
 								};
 							} else {
+								newValue = null;
+							}
+						} else if (field.type === "multiselect") {
+							newValue = (newValue as string[]).map((val) => {
+								const optionField = options.find((opt) => opt.id === val);
+								if (optionField) {
+									return {
+										name: optionField.name,
+									};
+								}
+								return null;
+							});
+							// Remove null values
+							newValue = newValue.filter((val) => val);
+							if (newValue.length === 0) {
 								newValue = null;
 							}
 						} else {
@@ -294,7 +310,12 @@ async function writeTable(base: Base, tableData: TableInterface[]): Promise<void
 							newValue = false;
 						}
 					}
-					if (field.type !== "boolean" && field.type !== "select" && newValue) {
+					if (
+						field.type !== "boolean" &&
+						field.type !== "select" &&
+						field.type !== "multiselect" &&
+						newValue
+					) {
 						newValue = newValue.toString();
 					}
 					record[fieldName] = newValue;

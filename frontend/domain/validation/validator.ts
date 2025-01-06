@@ -319,6 +319,43 @@ async function validateRecords(tableData: TableInterface[], operation: Operation
 						}
 					}
 				}
+
+				if (fieldProps?.type === "multiselect") {
+					if (fieldProps.selectOptions || fieldProps.getOptionsAsync) {
+						let shouldWarn = false;
+						const selectedValues = Array.isArray(fieldValue) ? fieldValue : [fieldValue];
+						if (fieldProps.getOptionsAsync) {
+							const options = await fieldProps.getOptionsAsync();
+							selectedValues.forEach((value) => {
+								if (!options.find((op) => op.id === value)) {
+									shouldWarn = true;
+								}
+							});
+						} else {
+							selectedValues.forEach((value) => {
+								if (!fieldProps.selectOptions.find((op) => op.id === value)) {
+									shouldWarn = true;
+								}
+							});
+						}
+						if (shouldWarn) {
+							validatorWarnings.add(
+								intl.formatMessage(
+									{
+										id: "validation.messages.warning.invalidSelectField",
+										defaultMessage:
+											"Field <b>{fieldName}</b> on table <b>{tableName}</b> has invalid values.",
+									},
+									{
+										fieldName: fieldDisplayName,
+										tableName,
+										b: (str) => `<b>${str}</b>`,
+									}
+								)
+							);
+						}
+					}
+				}
 			}
 		}
 	}
@@ -482,7 +519,7 @@ async function validateLinkedFields(
 						{
 							tableName,
 							name: data["org:hasLegalName"] || data["hasLegalName"] || data["hasName"],
-							fieldName: fieldName.substring(3),
+							fieldName,
 							b: (str) => `<b>${str}</b>`,
 						}
 					)

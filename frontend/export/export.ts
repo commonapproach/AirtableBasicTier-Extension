@@ -124,6 +124,30 @@ export async function exportData(
 					} else {
 						row[field.name] = field.defaultValue;
 					}
+				} else if (field.type === "multiselect") {
+					const fieldValue = record.getCellValue(field.displayName || field.name) ?? [];
+					if (fieldValue && (fieldValue as { name: string }[]).length > 0) {
+						isEmpty = false;
+					}
+					let optionField;
+					if (field.getOptionsAsync) {
+						const options = await field.getOptionsAsync();
+						optionField = options.filter((opt) =>
+							(fieldValue as { name: string }[]).map((item) => item.name).includes(opt.name)
+						);
+					} else {
+						optionField = field.selectOptions.filter((opt) =>
+							(fieldValue as { name: string }[]).map((item) => item.name).includes(opt.name)
+						);
+					}
+					if (optionField) {
+						row[field.name] =
+							field.representedType === "array"
+								? optionField.map((opt) => opt.id)
+								: optionField.map((opt) => opt.id);
+					} else {
+						row[field.name] = field.defaultValue;
+					}
 				} else if (field.type === "datetime") {
 					const fieldValue = record.getCellValueAsString(field.displayName || field.name) ?? "";
 					if (fieldValue && typeof fieldValue === "string") {

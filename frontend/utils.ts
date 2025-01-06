@@ -110,6 +110,8 @@ export function getActualFieldType(type: string): FieldType {
 			return FieldType.CHECKBOX;
 		case "select":
 			return FieldType.SINGLE_SELECT;
+		case "multiselect":
+			return FieldType.MULTIPLE_SELECTS;
 		default:
 			return FieldType.SINGLE_LINE_TEXT;
 	}
