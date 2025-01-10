@@ -74,29 +74,21 @@ export async function createSFFModuleTables(intl: IntlShape) {
 		}
 	}
 
-	// Populate predefined values if table was created
-	if (createdTables.length) {
-		const mergedTables = [
-			...createdTables,
-			...(createdTables.includes("OrganizationProfile")
-				? ["Locality", "ProvinceTerritory", "OrganizationType"]
-				: []),
-		];
-		for (const tableToCreate of mergedTables) {
-			if (predefinedCodeLists.includes(tableToCreate)) {
-				try {
-					await populateCodeList(base, tableToCreate);
-				} catch (error) {
-					throw new Error(
-						intl.formatMessage(
-							{
-								id: "createTables.messages.error.populateCodeList",
-								defaultMessage: `Error populating code list for table "{tableName}"`,
-							},
-							{ tableName: tableToCreate }
-						)
-					);
-				}
+	const mergedTables = [...createdTables, ...["Locality", "ProvinceTerritory", "OrganizationType"]];
+	for (const tableToCreate of mergedTables) {
+		if (predefinedCodeLists.includes(tableToCreate)) {
+			try {
+				await populateCodeList(base, tableToCreate);
+			} catch (error) {
+				throw new Error(
+					intl.formatMessage(
+						{
+							id: "createTables.messages.error.populateCodeList",
+							defaultMessage: `Error populating code list for table "{tableName}"`,
+						},
+						{ tableName: tableToCreate }
+					)
+				);
 			}
 		}
 	}
@@ -167,6 +159,9 @@ async function createFields(tableName: string, fields: LocalFiledType[], intl: I
 		let options = null;
 		switch (fieldType) {
 			case FieldType.SINGLE_SELECT:
+				options = { choices: field.selectOptions.map((v) => ({ name: v.name })) || [] };
+				break;
+			case FieldType.MULTIPLE_SELECTS:
 				options = { choices: field.selectOptions.map((v) => ({ name: v.name })) || [] };
 				break;
 			case FieldType.DATE_TIME:

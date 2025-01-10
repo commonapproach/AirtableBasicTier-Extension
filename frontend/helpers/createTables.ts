@@ -135,6 +135,9 @@ async function createFields(tableName: string, fields: LocalFiledType[], intl: I
 			case FieldType.SINGLE_SELECT:
 				options = { choices: field.selectOptions.map((v) => ({ name: v.name })) || [] };
 				break;
+			case FieldType.MULTIPLE_SELECTS:
+				options = { choices: field.selectOptions.map((v) => ({ name: v.name })) || [] };
+				break;
 			case FieldType.DATE_TIME:
 				options = {
 					dateFormat: { name: "iso", format: "YYYY-MM-DD" },

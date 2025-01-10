@@ -123,11 +123,11 @@ const updateSelectFieldOptionsOnOrganizationProfile = async (
 		throw new Error(`Field ${filedName} not found in table OrganizationProfile`);
 	}
 
-	const options = selectField.options.choices as FieldType.SINGLE_SELECT;
+	const options: any = selectField.options.choices as FieldType.SINGLE_SELECT;
 
 	const newOptions = data.map((d) => ({ name: d.hasName }));
 
 	await selectField.updateOptionsAsync({
-		choices: [...options, ...newOptions],
+		choices: [...options, ...newOptions.filter((o) => !options.some((op) => op.name === o.name))],
 	});
 };
