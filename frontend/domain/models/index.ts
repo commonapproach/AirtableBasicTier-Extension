@@ -43,6 +43,8 @@ export type ModelType = keyof typeof map;
 
 export type SFFModelType = keyof typeof mapSFFModel;
 
+export const contextUrl = "https://ontology.commonapproach.org/contexts/cidsContext.json";
+
 export const ignoredFields = {
 	Organization: ["hasOrganizationProfile", "hasFundingStatus", "hasImpactReport"],
 	Theme: ["hasOutcome"],

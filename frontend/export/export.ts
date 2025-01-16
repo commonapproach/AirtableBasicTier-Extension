@@ -4,7 +4,7 @@ import moment from "moment-timezone";
 import { IntlShape } from "react-intl";
 import { CodeList, getCodeListByTableName } from "../domain/codeLists/getCodeLists";
 import { LinkedCellInterface } from "../domain/interfaces/cell.interface";
-import { ignoredFields, map, mapSFFModel, predefinedCodeLists } from "../domain/models";
+import { contextUrl, ignoredFields, map, mapSFFModel, predefinedCodeLists } from "../domain/models";
 import { FieldType } from "../domain/models/Base";
 import { validate } from "../domain/validation/validator";
 import { downloadJSONLD } from "../utils";
@@ -80,7 +80,7 @@ export async function exportData(
 			}
 
 			let row = {
-				"@context": "http://ontology.commonapproach.org/contexts/cidsContext.json",
+				"@context": contextUrl,
 				"@type": table.name === "Address" ? `ic:${table.name}` : `cids:${table.name}`,
 			};
 
@@ -388,7 +388,7 @@ function getObjectFieldsRecursively(record: Record, field: FieldType, row: any, 
 
 	if (field.type === "object") {
 		row[field.name] = {
-			"@context": "http://ontology.commonapproach.org/contexts/cidsContext.json",
+			"@context": contextUrl,
 			"@type": field.objectType,
 		};
 

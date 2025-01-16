@@ -134,7 +134,7 @@ async function validateRecords(tableData: TableInterface[], operation: Operation
 						intl.formatMessage(
 							{
 								id: "validation.messages.emptyField",
-								defaultMessage: `Field <b>{fieldName}</b> is empty on table <b>{tableName}</b>`,
+								defaultMessage: "Field <b>{fieldName}</b> is empty on table <b>{tableName}</b>",
 							},
 							{
 								fieldName: field.displayName || field.name,
@@ -159,7 +159,8 @@ async function validateRecords(tableData: TableInterface[], operation: Operation
 					.formatMessage(
 						{
 							id: "validation.messages.nullOrEmptyField",
-							defaultMessage: `Field <b>{fieldName}</b> is null or empty on table <b>{tableName}</b>`,
+							defaultMessage:
+								"Field <b>{fieldName}</b> is null or empty on table <b>{tableName}</b>",
 						},
 						{
 							fieldName: field.displayName || field.name,
@@ -174,6 +175,17 @@ async function validateRecords(tableData: TableInterface[], operation: Operation
 
 		for (let [fieldName, fieldValue] of Object.entries(data)) {
 			if (fieldName === "@context" || fieldName === "@type") continue;
+			let fieldProps: FieldType | null = null;
+			try {
+				fieldProps = cid.getFieldByName(fieldName);
+			} catch (_) {
+				continue;
+			}
+
+			if (!fieldProps) {
+				continue;
+			}
+
 			const tableFields = cid.getAllFields().map((field) => field.name);
 			const fieldDisplayName = cid.getFieldByName(fieldName)?.displayName || fieldName;
 
@@ -187,17 +199,6 @@ async function validateRecords(tableData: TableInterface[], operation: Operation
 				}
 			}
 
-			let fieldProps: FieldType = null;
-			try {
-				fieldProps = cid.getFieldByName(fieldName);
-			} catch (_) {
-				continue;
-			}
-
-			if (!fieldProps) {
-				continue;
-			}
-
 			if (Array.isArray(fieldValue)) {
 				// check if fieldValue has duplicate values
 				const uniqueValues = new Set(fieldValue);
@@ -206,7 +207,8 @@ async function validateRecords(tableData: TableInterface[], operation: Operation
 						intl.formatMessage(
 							{
 								id: "validation.messages.duplicateFieldValues",
-								defaultMessage: `Duplicate values in field <b>{fieldName}</b> on table <b>{tableName}</b}`,
+								defaultMessage:
+									"Duplicate values in field <b>{fieldName}</b> on table <b>{tableName}</b}",
 							},
 							{
 								fieldName: fieldDisplayName,
@@ -226,11 +228,12 @@ async function validateRecords(tableData: TableInterface[], operation: Operation
 							.formatMessage(
 								{
 									id: "validation.messages.duplicateUniqueFieldValue",
-									defaultMessage: `Duplicate value for unique field <b>{fieldName}</b>: <b>{fieldValue}</b> in table <b>{tableName}</b}`,
+									defaultMessage:
+										"Duplicate value for unique field <b>{fieldName}</b>: <b>{fieldValue}</b> in table <b>{tableName}</b}",
 								},
 								{
 									fieldName: fieldDisplayName,
-									fieldValue,
+									fieldValue: fieldValue ? fieldValue.toString() : "null",
 									tableName,
 									b: (str) => `<b>${str}</b>`,
 								}
@@ -295,7 +298,7 @@ async function validateRecords(tableData: TableInterface[], operation: Operation
 								shouldWarn = true;
 							}
 						} else if (
-							!fieldProps.selectOptions.find(
+							!fieldProps.selectOptions?.find(
 								(op) => op.id === (Array.isArray(fieldValue) ? fieldValue[0] : fieldValue)
 							)
 						) {
@@ -333,7 +336,7 @@ async function validateRecords(tableData: TableInterface[], operation: Operation
 							});
 						} else {
 							selectedValues.forEach((value) => {
-								if (!fieldProps.selectOptions.find((op) => op.id === value)) {
+								if (!fieldProps.selectOptions?.find((op) => op.id === value)) {
 									shouldWarn = true;
 								}
 							});
@@ -380,7 +383,8 @@ function validateUnique(
 			intl.formatMessage(
 				{
 					id: "validation.messages.invalidIdFormat",
-					defaultMessage: `Invalid URL format: <b>{id}</b> for <b>@id</b> on table <b>{tableName}</b>`,
+					defaultMessage:
+						"Invalid URL format: <b>{id}</b> for <b>@id</b> on table <b>{tableName}</b>",
 				},
 				{
 					id,
@@ -518,7 +522,7 @@ async function validateLinkedFields(
 						},
 						{
 							tableName,
-							name: data["org:hasLegalName"] || data["hasLegalName"] || data["hasName"],
+							name: (data["org:hasLegalName"] || data["hasLegalName"] || data["hasName"]) as string,
 							fieldName,
 							b: (str) => `<b>${str}</b>`,
 						}
@@ -569,7 +573,7 @@ async function validateLinkedFields(
 				data[fieldName] = [data[fieldName][0]];
 			}
 
-			const linkedTable = field.link.table.className;
+			const linkedTable = field.link?.table.className;
 			const linkedIds: string[] = [];
 
 			if (predefinedCodeLists.includes(linkedTable)) {
@@ -604,9 +608,9 @@ async function validateLinkedFields(
 								fieldName,
 								item,
 								linkedTable,
-								b: (str) => `<b>${str}</b>`,
+								b: (str: string) => `<b>${str}</b>`,
 							}
-						)
+						) as string
 					);
 				}
 			});
@@ -649,7 +653,8 @@ function validateIfIdIsValidUrl(
 					intl.formatMessage(
 						{
 							id: "validation.messages.invalidIdFormat",
-							defaultMessage: `Invalid URL format: <b>{id}</b> for <b>@id</b> on table <b>{tableName}</b>`,
+							defaultMessage:
+								"Invalid URL format: <b>{id}</b> for <b>@id</b> on table <b>{tableName}</b>",
 						},
 						{
 							id,
@@ -664,7 +669,8 @@ function validateIfIdIsValidUrl(
 				intl.formatMessage(
 					{
 						id: "validation.messages.invalidIdFormat",
-						defaultMessage: `Invalid URL format: <b>{id}</b> for <b>@id</b> on table <b>{tableName}</b>`,
+						defaultMessage:
+							"Invalid URL format: <b>{id}</b> for <b>@id</b> on table <b>{tableName}</b>",
 					},
 					{
 						id,

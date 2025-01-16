@@ -1,13 +1,18 @@
 export class Base {
-	protected _fields: FieldType[];
+	protected _fields: FieldType[] = [];
 	public getFieldByName(name: string): FieldType {
-		return this.getAllFields().find((field) => {
-			if (field.name === name) return true;
-			if (field.name.includes(":")) {
-				return field.name.split(":")[1] === name;
+		const field = this.getAllFields().find((f) => {
+			if (f.name === name) return true;
+			if (f.name.includes(":")) {
+				return f.name.split(":")[1] === name;
 			}
+			if (f.displayName === name) return true;
 			return false;
 		});
+		if (!field) {
+			throw new Error(`Field ${name} not found`);
+		}
+		return field;
 	}
 
 	public getTopLevelFields(): FieldType[] {
@@ -18,7 +23,7 @@ export class Base {
 		const fields = [];
 		for (const field of this._fields) {
 			fields.push(field);
-			if (field.type === "object") {
+			if (field.type === "object" && field.properties) {
 				fields.push(...this.getFieldsRecursive(field.properties));
 			}
 		}
@@ -29,7 +34,7 @@ export class Base {
 		const result = [];
 		for (const field of fields) {
 			result.push(field);
-			if (field.type === "object") {
+			if (field.type === "object" && field.properties) {
 				result.push(...this.getFieldsRecursive(field.properties));
 			}
 		}

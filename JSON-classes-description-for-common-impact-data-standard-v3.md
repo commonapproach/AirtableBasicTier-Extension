@@ -10,7 +10,7 @@ The following classes are part of the CIDS ontology and are part of the basic ti
 
 ```json
 {
-	"@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
+	"@context": "https://ontology.commonapproach.org/contexts/cidsContext.json",
 	"@type": "cids:Organization",
 	"@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/",
 	"org:hasLegalName": "<ORGANIZATION_NAME>",
@@ -51,7 +51,7 @@ The following classes are part of the CIDS ontology and are part of the basic ti
 
 ```json
 {
-	"@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
+	"@context": "https://ontology.commonapproach.org/contexts/cidsContext.json",
 	"@type": "cids:Theme",
 	"@id": "<URI_FORMAT_ID>",
 	"hasName": "<THEME_NAME>",
@@ -75,7 +75,7 @@ The following classes are part of the CIDS ontology and are part of the basic ti
 
 ```json
 {
-  "@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
+  "@context": "https://ontology.commonapproach.org/contexts/cidsContext.json",
   "@type": "cids:Outcome",
   "@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/Outcome/<OUTCOME_NAME_URI_FORMAT>",
   "hasName": "<OUTCOME_NAME>",
@@ -100,7 +100,7 @@ The following classes are part of the CIDS ontology and are part of the basic ti
 
 ```json
 {
-   "@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
+   "@context": "https://ontology.commonapproach.org/contexts/cidsContext.json",
    "@type": "cids:Indicator",
    "@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/Indicator/<INDICATOR_NAME_URI_FORMAT>",
    "hasName": "<INDICATOR_NAME>",
@@ -132,14 +132,14 @@ The following classes are part of the CIDS ontology and are part of the basic ti
 
 ```json
 {
-	"@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
+	"@context": "https://ontology.commonapproach.org/contexts/cidsContext.json",
 	"@type": "cids:IndicatorReport",
 	"@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/IndicatorReport/<INDICATOR_NAME_URI_FORMAT>/<IDICATOR_REPORT_REFERENCE>",
 	"hasName": "<INDICATOR_REPORT_NAME>",
 	"hasComment": "<INDICATOR_REPORT_COMMENTS>",
 	"i72:unit_of_measure": "<STRING>",
 	"i72:value": {
-		"@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
+		"@context": "https://ontology.commonapproach.org/contexts/cidsContext.json",
 		"@type": "i72:Measure",
 		"i72:numerical_value": "<NUMERICAL_VALUE_AS_STRING>"
 	},
@@ -175,7 +175,7 @@ The following classes are part of the CIDS ontology and are part of the basic ti
 
 ```json
 {
-	"@context": "http://ontology.eil.utoronto.ca/cids/contexts/cidsContext.json",
+	"@context": "https://ontology.commonapproach.org/contexts/cidsContext.json",
 	"@type": "ic:Address",
 	"@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/Address/<ADDRESS_ID>",
 	"ic:hasStreet": "<STREET_NAME>",

@@ -20,7 +20,6 @@ function Main() {
 	const { setDialogContent } = useDialog();
 	const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
-	const [isImporting, setIsImporting] = useState(false);
 	const intl = useIntl();
 
 	const handleButtonClick = () => {
@@ -61,6 +60,7 @@ function Main() {
 				base={base}
 				isDialogOpen={isExportDialogOpen}
 				setDialogOpen={setIsExportDialogOpen}
+				setIsLoading={setIsLoading}
 			/>
 			<div style={{ padding: 12 }}>
 				<div
@@ -78,7 +78,7 @@ function Main() {
 							backgroundColor: "rgba(0,0,0,0)",
 						}}
 						onClick={handleButtonClick}
-						disabled={isImporting}
+						disabled={isLoading}
 					>
 						<div
 							style={{
@@ -108,9 +108,8 @@ function Main() {
 								async (jsonData) => {
 									setIsLoading(true);
 									try {
-										await importData(jsonData, base, setDialogContent, setIsImporting, intl);
+										await importData(jsonData, base, setDialogContent, intl, setIsLoading);
 									} catch (error) {
-										setIsImporting(false);
 										setDialogContent(
 											intl.formatMessage({
 												id: "generics.error",
@@ -123,12 +122,13 @@ function Main() {
 												}),
 											true
 										);
+									} finally {
+										setIsLoading(false);
 									}
 									// Reset the input value
 									if (document.body.contains(e.target)) {
 										e.target.value = "";
 									}
-									setIsLoading(false);
 								},
 								(error) => {
 									setDialogContent(
@@ -154,7 +154,7 @@ function Main() {
 							border: "1px solid #50b7e0",
 							backgroundColor: "rgba(0,0,0,0)",
 						}}
-						disabled={isImporting}
+						disabled={isLoading}
 						onClick={async () => {
 							setIsExportDialogOpen(true);
 						}}
@@ -183,7 +183,7 @@ function Main() {
 							border: "1px solid #2d62d7",
 							backgroundColor: "rgba(0,0,0,0)",
 						}}
-						disabled={isImporting}
+						disabled={isLoading}
 						onClick={async () => {
 							setIsLoading(true);
 							try {
@@ -212,8 +212,9 @@ function Main() {
 										}),
 									true
 								);
+							} finally {
+								setIsLoading(false);
 							}
-							setIsLoading(false);
 						}}
 					>
 						<div
@@ -277,7 +278,7 @@ function Main() {
 									marginTop: 5,
 									marginBottom: 5,
 								}}
-								disabled={isImporting}
+								disabled={isLoading}
 								onClick={async () => {
 									setIsLoading(true);
 									try {
@@ -306,8 +307,9 @@ function Main() {
 												}),
 											true
 										);
+									} finally {
+										setIsLoading(false);
 									}
-									setIsLoading(false);
 								}}
 							>
 								<div
@@ -334,7 +336,7 @@ function Main() {
 									marginTop: 5,
 									marginBottom: 5,
 								}}
-								disabled={isImporting}
+								disabled={isLoading}
 								onClick={async () => {
 									setIsLoading(true);
 									const allErrors = [];
@@ -402,7 +404,7 @@ function Main() {
 									marginTop: 5,
 									marginBottom: 5,
 								}}
-								disabled={isImporting}
+								disabled={isLoading}
 								onClick={async () => {
 									window.open(
 										"https://www.commonapproach.org/wp-content/uploads/2024/02/Common-Approach_Guide-for-Basic-Tier-Template-for-Airtable-version-2024-01-16.pdf"

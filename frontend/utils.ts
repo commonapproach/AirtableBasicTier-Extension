@@ -1,5 +1,8 @@
 import { FieldType } from "@airtable/blocks/models";
+import * as jsonld from "jsonld";
+import { Options } from "jsonld";
 import { IntlShape } from "react-intl";
+import { contextUrl } from "./domain/models";
 
 /**
  * Handles the change event of a file input element.
@@ -114,5 +117,101 @@ export function getActualFieldType(type: string): FieldType {
 			return FieldType.MULTIPLE_SELECTS;
 		default:
 			return FieldType.SINGLE_LINE_TEXT;
+	}
+}
+
+const trustedDomains = [
+	"ontology.commonapproach.org",
+	"sparql.cwrc.ca",
+	"www.w3.org",
+	"xmlns.com",
+	"www.opengis.net",
+	"schema.org",
+	"ontology.eil.utoronto.ca",
+];
+
+// Custom document loader
+/**
+ * Custom document loader that enforces HTTPS, checks for trusted domains, and fetches JSON-LD context documents.
+ *
+ * @param url - The URL of the context document to load.
+ * @returns A promise that resolves to an object containing the context document.
+ * @throws Will throw an error if the URL is not trusted, if the request times out, or if there is a network/CORS issue.
+ */
+const customLoader: Options.DocLoader["documentLoader"] = async (url: string) => {
+	// Enforce HTTPS by rewriting the URL
+	if (url.startsWith("http://")) {
+		// eslint-disable-next-line no-param-reassign
+		url = url.replace("http://", "https://");
+	}
+
+	// Check if the URL is in the trusted list
+	const urlDomain = new URL(url).hostname;
+	if (!trustedDomains.some((trustedDomain) => urlDomain.endsWith(trustedDomain))) {
+		throw new Error(`URL not trusted: ${url}`);
+	}
+
+	try {
+		// Fetch the context document using HTTPS
+		const controller = new AbortController();
+		const timeoutId = setTimeout(() => controller.abort(), 5000); // Set a timeout of 5 seconds
+
+		const response = await fetch(url, { signal: controller.signal }); // Use AbortController's signal
+		clearTimeout(timeoutId);
+		if (!response.ok) {
+			throw new Error(`Failed to load context from URL: ${url} (Status: ${response.status})`);
+		}
+		const document = await response.json();
+
+		// Return the fetched document
+		return {
+			contextUrl: undefined, // No additional context
+			documentUrl: url, // The URL of the document
+			document, // The resolved JSON-LD context
+		};
+	} catch (error: any) {
+		if (error.name === "AbortError") {
+			throw new Error(`Request timed out while trying to load context from URL: ${url}`);
+		} else if (error.message.includes("Failed to fetch")) {
+			throw new Error(`CORS issue or network error while trying to load context from URL: ${url}`);
+		} else {
+			throw new Error(`Error loading context from URL: ${url} (${error.message})`);
+		}
+	}
+};
+
+/**
+ * Parses JSON-LD data and returns an array of instances.
+ *
+ * This function expands the JSON-LD data if it is an array, and then compacts it using teh common approach context.
+ * It uses a custom document loader for both expanding and compacting the JSON-LD data.
+ *
+ * @param jsonLdData - The JSON-LD data to be parsed. It can be an array or an object.
+ * @returns An array of instances extracted from the compacted JSON-LD data.
+ * @throws Will throw an error if there is an issue with parsing the JSON-LD data.
+ */
+export async function parseJsonLd(jsonLdData: any) {
+	try {
+		// Expand JSON-LD if needed
+		const expandedData = Array.isArray(jsonLdData)
+			? await jsonld.expand(jsonLdData, { documentLoader: customLoader })
+			: jsonLdData;
+
+		// Compact JSON-LD using the CIDS context
+		const compactedData = await jsonld.compact(
+			expandedData,
+			{
+				"@context": contextUrl,
+			},
+			{
+				documentLoader: customLoader,
+			}
+		);
+
+		const instances = (compactedData["@graph"] as any[]) || [];
+
+		return instances;
+	} catch (error: any) {
+		throw new Error(`Error parsing JSON-LD: ${error.message}`);
 	}
 }

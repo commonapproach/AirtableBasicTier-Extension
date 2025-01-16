@@ -19,8 +19,8 @@ export async function importData(
 		open: boolean,
 		nextCallback?: () => void
 	) => void,
-	setIsImporting: (value: boolean) => void,
-	intl: IntlShape
+	intl: IntlShape,
+	setIsLoading: (loading: boolean) => void
 ) {
 	// Check if the user has CREATOR permission
 	if (!base.hasPermissionToCreateTable()) {
@@ -36,7 +36,6 @@ export async function importData(
 			}),
 			true
 		);
-		setIsImporting(false);
 		return;
 	}
 
@@ -52,7 +51,6 @@ export async function importData(
 			}),
 			true
 		);
-		setIsImporting(false);
 		return;
 	}
 
@@ -68,9 +66,11 @@ export async function importData(
 			}),
 			true
 		);
-		setIsImporting(false);
 		return;
 	}
+
+	// Commented out for now, as we dot not have the context for the JSON-LD
+	// jsonData = await parseJsonLd(jsonData);
 
 	jsonData = removeDuplicatedLinks(jsonData);
 
@@ -136,23 +136,22 @@ export async function importData(
 					}),
 					true,
 					async () => {
-						importFileData(base, jsonData, setDialogContent, setIsImporting, intl);
+						try {
+							setIsLoading(true);
+							await importFileData(base, jsonData, setDialogContent, intl);
+						} finally {
+							setIsLoading(false);
+						}
 					}
 				);
 			}
 		);
 	} else {
-		importFileData(base, jsonData, setDialogContent, setIsImporting, intl);
+		await importFileData(base, jsonData, setDialogContent, intl);
 	}
 }
 
-async function importFileData(
-	base: Base,
-	jsonData: any,
-	setDialogContent: any,
-	setIsImporting: (v: boolean) => void,
-	intl: IntlShape
-) {
+async function importFileData(base: Base, jsonData: any, setDialogContent: any, intl: IntlShape) {
 	setDialogContent(
 		intl.formatMessage({
 			id: "import.messages.wait",
@@ -164,7 +163,6 @@ async function importFileData(
 		}),
 		true
 	);
-	setIsImporting(true);
 	try {
 		// Ignore types/classes that are not recognized
 		const fullMap = { ...map, ...mapSFFModel };
@@ -173,7 +171,6 @@ async function importFileData(
 			: jsonData;
 		await importByData(base, filteredItems, intl);
 	} catch (error) {
-		setIsImporting(false);
 		setDialogContent(
 			intl.formatMessage({
 				id: "generics.error",
@@ -199,7 +196,6 @@ async function importFileData(
 		})}`,
 		true
 	);
-	setIsImporting(false);
 }
 
 async function importByData(base: Base, jsonData: any, intl: IntlShape) {
@@ -238,7 +234,7 @@ async function writeTable(base: Base, tableData: TableInterface[]): Promise<void
 
 		let record: { [key: string]: unknown } = {};
 		Object.entries(data).forEach(async ([key, value]) => {
-			if (key !== "@type" && key !== "@context" && !checkIfFieldIsRecognized(tableName, key)) {
+			if (key === "@type" || key === "@context" || !checkIfFieldIsRecognized(tableName, key)) {
 				return;
 			}
 
@@ -316,7 +312,7 @@ async function writeTable(base: Base, tableData: TableInterface[]): Promise<void
 						field.type !== "multiselect" &&
 						newValue
 					) {
-						newValue = newValue.toString();
+						newValue = newValue ? newValue.toString() : null;
 					}
 					record[fieldName] = newValue;
 				}
@@ -368,7 +364,12 @@ async function writeTableLinked(base: Base, tableData: TableInterface[]): Promis
 			cid = new mapSFFModel[tableName as SFFModelType]();
 		}
 
-		const field = cid.getFieldByName(key);
+		let field: FieldType | null = null;
+		try {
+			field = cid.getFieldByName(key);
+		} catch (_) {
+			return;
+		}
 
 		if (!value) return; // Skip if the value is empty
 
@@ -467,7 +468,7 @@ async function writeTableLinked(base: Base, tableData: TableInterface[]): Promis
 				cid = new mapSFFModel[tableName as SFFModelType]();
 			}
 
-			if (key !== "@type" && key !== "@context") {
+			if (key !== "@type" && key !== "@context" && checkIfFieldIsRecognized(tableName, key)) {
 				const field = cid.getFieldByName(key);
 				if (field) {
 					await findLinkFieldsRecursively(tableName, field, data);
@@ -620,7 +621,12 @@ function transformObjectFieldIfWrongFormat(jsonData: TableInterface[]) {
 				continue;
 			}
 
-			if (key === "@type" || key === "@context" || key === "@id") {
+			if (
+				key === "@type" ||
+				key === "@context" ||
+				key === "@id" ||
+				!checkIfFieldIsRecognized(data["@type"].split(":")[1], key)
+			) {
 				continue;
 			}
 
