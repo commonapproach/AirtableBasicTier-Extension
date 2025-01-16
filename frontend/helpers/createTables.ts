@@ -219,7 +219,26 @@ async function createLinkedFields(
 			return;
 		}
 
-		const linkedFieldTable2 = table2.getFieldByName(table1.name);
+		let linkedFieldTable2;
+		for (let attempt = 0; attempt < 5; attempt++) {
+			try {
+				linkedFieldTable2 = table2.getFieldByName(table1.name);
+				break;
+			} catch (error) {
+				if (attempt === 4) {
+					throw new Error(
+						intl.formatMessage(
+							{
+								id: "createTables.messages.error.linkedFieldNotFound",
+								defaultMessage: `Linked field "{fieldName}" not found on table "{tableName}" after multiple attempts.`,
+							},
+							{ fieldName: table1.name, tableName: table2.name }
+						)
+					);
+				}
+				await new Promise((resolve) => setTimeout(resolve, 1000));
+			}
+		}
 		await linkedFieldTable2.updateNameAsync(linkedFieldNameOnLInkedTable);
 	}
 

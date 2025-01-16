@@ -74,22 +74,20 @@ export async function createSFFModuleTables(intl: IntlShape) {
 		}
 	}
 
-	const mergedTables = [...createdTables, ...["Locality", "ProvinceTerritory", "OrganizationType"]];
-	for (const tableToCreate of mergedTables) {
-		if (predefinedCodeLists.includes(tableToCreate)) {
-			try {
-				await populateCodeList(base, tableToCreate);
-			} catch (error) {
-				throw new Error(
-					intl.formatMessage(
-						{
-							id: "createTables.messages.error.populateCodeList",
-							defaultMessage: `Error populating code list for table "{tableName}"`,
-						},
-						{ tableName: tableToCreate }
-					)
-				);
-			}
+	// Populate predefined code lists
+	for (const tableToCreate of predefinedCodeLists) {
+		try {
+			await populateCodeList(base, tableToCreate);
+		} catch (error) {
+			throw new Error(
+				intl.formatMessage(
+					{
+						id: "createTables.messages.error.populateCodeList",
+						defaultMessage: `Error populating code list for table "{tableName}"`,
+					},
+					{ tableName: tableToCreate }
+				)
+			);
 		}
 	}
 }
@@ -248,7 +246,26 @@ async function createLinkedFields(
 			return;
 		}
 
-		const linkedFieldTable2 = table2.getFieldByName(table1.name);
+		let linkedFieldTable2;
+		for (let attempt = 0; attempt < 5; attempt++) {
+			try {
+				linkedFieldTable2 = table2.getFieldByName(table1.name);
+				break;
+			} catch (error) {
+				if (attempt === 4) {
+					throw new Error(
+						intl.formatMessage(
+							{
+								id: "createTables.messages.error.linkedFieldNotFound",
+								defaultMessage: `Linked field "{fieldName}" not found on table "{tableName}" after multiple attempts.`,
+							},
+							{ fieldName: table1.name, tableName: table2.name }
+						)
+					);
+				}
+				await new Promise((resolve) => setTimeout(resolve, 1000));
+			}
+		}
 		await linkedFieldTable2.updateNameAsync(linkedFieldNameOnLInkedTable);
 	}
 
