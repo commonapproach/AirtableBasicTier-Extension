@@ -15,6 +15,7 @@
 	"generics.success": "Success",
 	"generics.warning": "Warning",
 	"generics.error.message": "Something went wrong",
+	"generics.error.note": "The operation was interrupted. Please fix the issue before retrying.",
 	"import.messages.wait": "Wait a moment...",
 	"import.messages.importing": "Importing data...",
 	"import.messages.error.wrongPermissionLevel": "You don't have permission to create tables in this base, please contact the base owner to give you <b>CREATOR</b> permission.",
@@ -32,9 +33,10 @@
 	"export.messages.enterOrganization": "Enter a name for the exported file:",
 	"export.messages.error.missingTable": "Table <b>{tableName}</b> is missing. Please create the tables first.",
 	"export.messages.error.missingOrganizationOnExport": "Please enter a name for the exported file.",
+	"export.messages.error.invalidFieldType": "Field <b>{fieldName}</b> in table <b>{tableName}</b> has an invalid type. Expected type: <b>{expectedType}</b>. Please change the field type.",
 	"export.messages.warning.continue": "<p>Do you want to export anyway?</p>",
-	"export.messages.warning.fieldWillNotBeExported ": "Field <b>{fieldName}</b> on table <b>{tableName}</b> will not be exported<hr/>",
-	"export.messages.warning.emptyTable": "<hr/>Table <b>${tableName}</b> is empty<hr/>",
+	"export.messages.warning.fieldWillNotBeExported ": "Field <b>{fieldName}</b> on table <b>{tableName}</b> will not be exported",
+	"export.messages.warning.emptyTable": "Table <b>{tableName}</b> is empty",
 	"createTables.messages.success": "Tables created successfully",
 	"createTables.messages.error.tableNameConflict": "Please rename the table \"{tableName}\" to \"{newTableName}\"",
 	"createTables.messages.error.createTable": "Please, create table \"{tableName}\"",
@@ -62,5 +64,6 @@
 	"validation.messages.missingLinkedField": "{tableName} <b>{name}</b> has no {fieldName}",
 	"validation.messages.multipleValuesWarning": "Multiple values found in field <b>{fieldName}</b> at id {dataId} on table <b>{tableName}</b>. Only the first value {firstValue} will be considered",
 	"validation.messages.multipleValues": "Multiple values found in field <b>{fieldName}</b> at id {dataId} on table <b>{tableName}</b>.",
-	"validation.messages.linkedFieldNotFound": "{tableName} <b>{name}</b> linked on {fieldName} to item <b>{item}</b> that does not exist in the {linkedTable} table"
+	"validation.messages.linkedFieldNotFound": "{tableName} <b>{name}</b> linked on {fieldName} to item <b>{item}</b> that does not exist in the {linkedTable} table",
+	"validation.messages.invalidPrimaryField": "Table <b>{tableName}</b> must have <b>@id</b> as the primary field."
 }

@@ -7,7 +7,8 @@ import { LinkedCellInterface } from "../domain/interfaces/cell.interface";
 import { contextUrl, ignoredFields, map, mapSFFModel, predefinedCodeLists } from "../domain/models";
 import { FieldType } from "../domain/models/Base";
 import { validate } from "../domain/validation/validator";
-import { downloadJSONLD } from "../utils";
+import { checkPrimaryField } from "../helpers/checkPrimaryField";
+import { downloadJSONLD, getActualFieldType } from "../utils";
 
 export async function exportData(
 	base: Base,
@@ -50,6 +51,56 @@ export async function exportData(
 				true
 			);
 			return;
+		}
+	}
+
+	const primaryFieldErrors = await checkPrimaryField(base, intl);
+	if (primaryFieldErrors.length > 0) {
+		setDialogContent(
+			`${intl.formatMessage({
+				id: "generics.error",
+				defaultMessage: "Error",
+			})}!`,
+			primaryFieldErrors.join("<hr/>"),
+			true
+		);
+		return;
+	}
+
+	// Validate field types
+	for (const table of tables) {
+		if (!Object.keys(fullMap).includes(table.name)) {
+			continue;
+		}
+
+		const cid = new fullMap[table.name]();
+		for (const field of cid.getAllFields()) {
+			const airtableField = table.fields.find((f) => f.name === (field.displayName || field.name));
+			if (airtableField) {
+				const expectedType = getActualFieldType(field.type);
+				if (airtableField.type !== expectedType) {
+					setDialogContent(
+						`${intl.formatMessage({
+							id: "generics.error",
+							defaultMessage: "Error",
+						})}!`,
+						intl.formatMessage(
+							{
+								id: "export.messages.error.invalidFieldType",
+								defaultMessage: `Field <b>{fieldName}</b> in table <b>{tableName}</b> has an invalid type. Expected type: <b>{expectedType}</b>. Please change the field type.`,
+							},
+							{
+								fieldName: field.displayName || field.name,
+								tableName: table.name,
+								expectedType,
+								b: (str) => `<b>${str}</b>`,
+							}
+						),
+						true
+					);
+					return;
+				}
+			}
 		}
 	}
 
@@ -122,7 +173,8 @@ export async function exportData(
 					if (optionField) {
 						row[field.name] = field.representedType === "array" ? [optionField.id] : optionField.id;
 					} else {
-						row[field.name] = field.defaultValue;
+						row[field.name] =
+							field.representedType === "array" ? [fieldValue["name"]] : fieldValue["name"];
 					}
 				} else if (field.type === "multiselect") {
 					const fieldValue = record.getCellValue(field.displayName || field.name) ?? [];
@@ -140,14 +192,14 @@ export async function exportData(
 							(fieldValue as { name: string }[]).map((item) => item.name).includes(opt.name)
 						);
 					}
-					if (optionField) {
-						row[field.name] =
-							field.representedType === "array"
-								? optionField.map((opt) => opt.id)
-								: optionField.map((opt) => opt.id);
-					} else {
-						row[field.name] = field.defaultValue;
-					}
+					const recognizedOptionIds = optionField.map((opt) => opt.id);
+					const unrecognizedOptionNames = (fieldValue as { name: string }[])
+						.filter((item) => !optionField.map((opt) => opt.name).includes(item.name))
+						.map((item) => item.name);
+					row[field.name] =
+						field.representedType === "array"
+							? [...recognizedOptionIds, ...unrecognizedOptionNames]
+							: [...recognizedOptionIds, ...unrecognizedOptionNames].join(", ");
 				} else if (field.type === "datetime") {
 					const fieldValue = record.getCellValueAsString(field.displayName || field.name) ?? "";
 					if (fieldValue && typeof fieldValue === "string") {
@@ -203,8 +255,11 @@ export async function exportData(
 	const { errors, warnings } = await validate(data, "export", intl);
 
 	const emptyTableWarning = await checkForEmptyTables(base, intl);
-	const allWarnings =
-		checkForNotExportedFields(base, intl) + warnings.join("<hr/>") + emptyTableWarning;
+	const allWarnings = [
+		...checkForNotExportedFields(base, intl),
+		...warnings,
+		...emptyTableWarning,
+	].join("<hr/>");
 
 	if (errors.length > 0) {
 		setDialogContent(
@@ -268,7 +323,7 @@ function getFileName(orgName: string): string {
 }
 
 function checkForNotExportedFields(base: Base, intl: IntlShape) {
-	let warnings = "";
+	let warnings: string[] = [];
 	const fullMap = { ...map, ...mapSFFModel };
 	for (const table of base.tables) {
 		if (!Object.keys(fullMap).includes(table.name)) {
@@ -283,16 +338,18 @@ function checkForNotExportedFields(base: Base, intl: IntlShape) {
 				continue;
 			}
 			if (!internalFields.includes(field)) {
-				warnings += intl.formatMessage(
-					{
-						id: "export.messages.warning.fieldWillNotBeExported",
-						defaultMessage: `Field <b>{fieldName}</b> on table <b>{tableName}</b> will not be exported<hr/>`,
-					},
-					{
-						fieldName: field,
-						tableName: table.name,
-						b: (str) => `<b>${str}</b>`,
-					}
+				warnings.push(
+					intl.formatMessage(
+						{
+							id: "export.messages.warning.fieldWillNotBeExported",
+							defaultMessage: `Field <b>{fieldName}</b> on table <b>{tableName}</b> will not be exported`,
+						},
+						{
+							fieldName: field,
+							tableName: table.name,
+							b: (str) => `<b>${str}</b>`,
+						}
+					)
 				);
 			}
 		}
@@ -301,7 +358,7 @@ function checkForNotExportedFields(base: Base, intl: IntlShape) {
 }
 
 async function checkForEmptyTables(base: Base, intl: IntlShape) {
-	let warnings = "";
+	let warnings: string[] = [];
 	const fullMap = { ...map, ...mapSFFModel };
 	for (const table of base.tables) {
 		if (!Object.keys(fullMap).includes(table.name)) {
@@ -309,15 +366,17 @@ async function checkForEmptyTables(base: Base, intl: IntlShape) {
 		}
 		const records = await table.selectRecordsAsync();
 		if (records.records.length === 0) {
-			warnings += intl.formatMessage(
-				{
-					id: "export.messages.warning.emptyTable",
-					defaultMessage: `<hr/>Table <b>{tableName}</b> is empty<hr/>`,
-				},
-				{
-					tableName: table.name,
-					b: (str) => `<b>${str}</b>`,
-				}
+			warnings.push(
+				intl.formatMessage(
+					{
+						id: "export.messages.warning.emptyTable",
+						defaultMessage: `Table <b>{tableName}</b> is empty`,
+					},
+					{
+						tableName: table.name,
+						b: (str) => `<b>${str}</b>`,
+					}
+				)
 			);
 		}
 	}

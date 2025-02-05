@@ -48,7 +48,14 @@ function DialogContextProvider({ children }) {
 						<Dialog.CloseButton />
 						<Heading>{header}</Heading>
 						<p dangerouslySetInnerHTML={{ __html: text }} />
-
+						{(header === "Error" || header === "Erreur") && (
+							<p style={{ fontSize: "12px", fontWeight: "bold", paddingLeft: 4 }}>
+								<FormattedMessage
+									id="generics.error.note"
+									defaultMessage="The operation was interrupted. Please fix the issue before retrying."
+								/>
+							</p>
+						)}
 						<div style={{ display: "flex", gap: 4 }}>
 							<Button onClick={() => setOpenDialog(false)}>
 								<FormattedMessage

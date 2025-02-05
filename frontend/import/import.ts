@@ -9,6 +9,7 @@ import { validate } from "../domain/validation/validator";
 import { createSFFModuleTables } from "../helpers/createSFFModuleTables";
 import { createTables } from "../helpers/createTables";
 import { executeInBatches } from "../utils";
+import { checkPrimaryField } from "../helpers/checkPrimaryField";
 
 export async function importData(
 	jsonData: any,
@@ -64,6 +65,19 @@ export async function importData(
 				id: "import.messages.error.missingId",
 				defaultMessage: "All records must have an <b>@id</b> property.",
 			}),
+			true
+		);
+		return;
+	}
+
+	const primaryFieldErrors = await checkPrimaryField(base, intl);
+	if (primaryFieldErrors.length > 0) {
+		setDialogContent(
+			`${intl.formatMessage({
+				id: "generics.error",
+				defaultMessage: "Error",
+			})}!`,
+			primaryFieldErrors.join("<hr/>"),
 			true
 		);
 		return;

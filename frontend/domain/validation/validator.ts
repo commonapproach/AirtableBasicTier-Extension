@@ -623,7 +623,7 @@ async function validateLinkedFields(
 }
 
 function removeEmptyRows(tableData: TableInterface[]) {
-	return tableData.filter((item) => item["@id"].length > 0);
+	return tableData.filter((item) => item["@id"] && item["@id"].length > 0);
 }
 
 function validateIfIdIsValidUrl(

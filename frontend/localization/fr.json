@@ -15,6 +15,7 @@
 	"generics.success": "Succès",
 	"generics.warning": "Avertissement",
 	"generics.error.message": "Quelque chose n'a pas fonctionné",
+	"generics.error.note": "L'opération a été interrompue. Veuillez corriger le problème avant de réessayer.",
 	"import.messages.wait": "Veuillez patienter...",
 	"import.messages.importing": "Importation des données en cours...",
 	"import.messages.error.wrongPermissionLevel": "Vous n'avez pas la permission de créer des tables dans cette base, veuillez contacter le propriétaire de la base pour vous donner la permission de <b>CRÉATEUR</b>.",
@@ -33,8 +34,9 @@
 	"export.messages.error.missingTable": "La table <b>{tableName}</b> est manquante. Veuillez créer les tables d'abord.",
 	"export.messages.error.missingOrganizationOnExport": "Veuillez entrer un nom pour le fichier exporté.",
 	"export.messages.warning.continue": "<p>Voulez-vous exporter quand même ?</p>",
-	"export.messages.warning.fieldWillNotBeExported": "Le champ <b>{fieldName}</b> de la table <b>{tableName}</b> ne sera pas exporté<hr/>",
-	"export.messages.warning.emptyTable": "<hr/>La table <b>${tableName}</b> est vide<hr/>",
+	"export.messages.warning.fieldWillNotBeExported": "Le champ <b>{fieldName}</b> de la table <b>{tableName}</b> ne sera pas exporté",
+	"export.messages.warning.emptyTable": "La table <b>{tableName}</b> est vide",
+	"export.messages.error.invalidFieldType": "Le champ <b>{fieldName}</b> dans la table <b>{tableName}</b> a un type invalide. Type attendu : <b>{expectedType}</b>. Veuillez changer le type du champ.",
 	"createTables.messages.success": "Tables créées avec succès",
 	"createTables.messages.error.tableNameConflict": "Veuillez renommer la table \"{tableName}\" en \"{newTableName}\"",
 	"createTables.messages.error.createTable": "Veuillez créer la table \"{tableName}\"",
@@ -62,5 +64,6 @@
 	"validation.messages.missingLinkedField": "{tableName} <b>{name}</b> n'a pas de {fieldName}",
 	"validation.messages.multipleValuesWarning": "Valeurs multiples trouvées dans le champ <b>{fieldName}</b> à l'ID {dataId} de la table <b>{tableName}</b>. Seule la première valeur {firstValue} sera considérée",
 	"validation.messages.multipleValues": "Valeurs multiples trouvées dans le champ <b>{fieldName}</b> à l'ID {dataId} de la table <b>{tableName}</b>.",
-	"validation.messages.linkedFieldNotFound": "{tableName} <b>{name}</b> lié sur {fieldName} à l'élément <b>{item}</b> qui n'existe pas dans la table {linkedTable}"
+	"validation.messages.linkedFieldNotFound": "{tableName} <b>{name}</b> lié sur {fieldName} à l'élément <b>{item}</b> qui n'existe pas dans la table {linkedTable}",
+	"validation.messages.invalidPrimaryField": "La table <b>{tableName}</b> doit avoir <b>@id</b> comme champ principal."
 }
