@@ -104,6 +104,8 @@ export async function exportData(
 		}
 	}
 
+	const changeOnDefaultCodeListsWarning: string[] = [];
+
 	for (const table of tables) {
 		// If the table is not in the map, skip it
 		if (!Object.keys(fullMap).includes(table.name)) {
@@ -119,14 +121,8 @@ export async function exportData(
 
 		const cid = new fullMap[table.name]();
 		for (const record of records) {
-			// Skip deleted records and records that are defined in the common approach code lists
-			if (
-				record.isDeleted ||
-				!table.fields.some((field) => record.getCellValue(field.name)) ||
-				(codeList &&
-					record.getCellValueAsString("@id") &&
-					codeList.find((item) => item["@id"] === record.getCellValueAsString("@id")))
-			) {
+			// Skip deleted records and records with no values
+			if (record.isDeleted || !table.fields.some((field) => record.getCellValue(field.name))) {
 				continue;
 			}
 
@@ -136,6 +132,42 @@ export async function exportData(
 			};
 
 			let isEmpty = true; // Flag to check if the row is empty
+
+			// Check if the record is in the predefined code list skip if it is
+			// And show a warning message and skip if there are changes
+			if (codeList && record.getCellValueAsString("@id")) {
+				const existingItem = codeList.find(
+					(item) => item["@id"] === record.getCellValueAsString("@id")
+				);
+				if (existingItem) {
+					let hasChanges = false;
+					for (const fieldName of Object.keys(existingItem)) {
+						const recordValue = record.getCellValue(fieldName);
+						const existingValue = existingItem[fieldName];
+
+						if (recordValue !== existingValue) {
+							hasChanges = true;
+							break;
+						}
+					}
+					if (hasChanges) {
+						changeOnDefaultCodeListsWarning.push(
+							intl.formatMessage(
+								{
+									id: "export.messages.warning.codeListChangesIgnored",
+									defaultMessage: `Changes made in the predefined code list item with @id <b>{id}</b> in table <b>{tableName}</b> will be ignored.`,
+								},
+								{
+									id: record.getCellValueAsString("@id"),
+									tableName: table.name,
+									b: (str) => `<b style="word-break: break-word;">${str}</b>`,
+								}
+							)
+						);
+					}
+					continue;
+				}
+			}
 
 			for (const field of cid.getTopLevelFields()) {
 				if (field.type === "link") {
@@ -259,6 +291,7 @@ export async function exportData(
 		...checkForNotExportedFields(base, intl),
 		...warnings,
 		...emptyTableWarning,
+		...changeOnDefaultCodeListsWarning,
 	].join("<hr/>");
 
 	if (errors.length > 0) {

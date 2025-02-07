@@ -37,6 +37,7 @@
 	"export.messages.warning.continue": "<p>Do you want to export anyway?</p>",
 	"export.messages.warning.fieldWillNotBeExported ": "Field <b>{fieldName}</b> on table <b>{tableName}</b> will not be exported",
 	"export.messages.warning.emptyTable": "Table <b>{tableName}</b> is empty",
+	"export.messages.warning.codeListChangesIgnored": "Changes made in the predefined code list item with @id <b>{id}</b> in table <b>{tableName}</b> will be ignored.",
 	"createTables.messages.success": "Tables created successfully",
 	"createTables.messages.error.tableNameConflict": "Please rename the table \"{tableName}\" to \"{newTableName}\"",
 	"createTables.messages.error.createTable": "Please, create table \"{tableName}\"",
@@ -65,5 +66,5 @@
 	"validation.messages.multipleValuesWarning": "Multiple values found in field <b>{fieldName}</b> at id {dataId} on table <b>{tableName}</b>. Only the first value {firstValue} will be considered",
 	"validation.messages.multipleValues": "Multiple values found in field <b>{fieldName}</b> at id {dataId} on table <b>{tableName}</b>.",
 	"validation.messages.linkedFieldNotFound": "{tableName} <b>{name}</b> linked on {fieldName} to item <b>{item}</b> that does not exist in the {linkedTable} table",
-	"validation.messages.invalidPrimaryField": "Table <b>{tableName}</b> must have <b>@id</b> as the primary field."
+	"validation.messages.invalidPrimaryField": "Table <b>{tableName}</b> must have <b>@id</b> as primary field."
 }

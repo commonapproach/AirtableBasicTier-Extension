@@ -48,7 +48,7 @@ function DialogContextProvider({ children }) {
 						<Dialog.CloseButton />
 						<Heading>{header}</Heading>
 						<p dangerouslySetInnerHTML={{ __html: text }} />
-						{(header === "Error" || header === "Erreur") && (
+						{(header.includes("Error") || header.includes("Erreur")) && (
 							<p style={{ fontSize: "12px", fontWeight: "bold", paddingLeft: 4 }}>
 								<FormattedMessage
 									id="generics.error.note"
