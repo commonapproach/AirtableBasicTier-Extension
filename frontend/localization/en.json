@@ -63,8 +63,8 @@
 	"validation.messages.warning.wrongReferenceForIndicator": "Indicator <b>{indicatorId}</b> does not exist in the Organization table",
 	"validation.messages.dataIsEmptyOrNotArray": "Table data is empty or not an array",
 	"validation.messages.missingLinkedField": "{tableName} <b>{name}</b> has no {fieldName}",
-	"validation.messages.multipleValuesWarning": "Multiple values found in field <b>{fieldName}</b> at id {dataId} on table <b>{tableName}</b>. Only the first value {firstValue} in field will be considered",
-	"validation.messages.multipleValues": "Multiple values found in field <b>{fieldName}</b> at id {dataId} on table <b>{tableName}</b>.",
+	"validation.messages.multipleValuesWarning": "Multiple values found in field <b>{fieldName}</b> at id {dataId} on table <b>{tableName}</b>. Only the first value {firstValue} will be imported.",
+	"validation.messages.multipleValues": "Multiple values found in field <b>{fieldName}</b> at id {dataId} on table <b>{tableName}</b>. Only the first value {firstValue} will be exported.",
 	"validation.messages.linkedFieldNotFound": "{tableName} <b>{name}</b> linked on {fieldName} to item <b>{item}</b> that does not exist in the {linkedTable} table",
 	"validation.messages.invalidPrimaryField": "Table <b>{tableName}</b> must have <b>@id</b> as the primary field."
 }
