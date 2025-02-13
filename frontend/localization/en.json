@@ -15,7 +15,7 @@
 	"generics.success": "Success",
 	"generics.warning": "Head's up!",
 	"generics.error.message": "Oops, something went wrong.",
-	"generics.error.note": "The operation was interrupted. Please address the following issue and try again...",
+	"generics.error.note": "The operation was interrupted. Please address the following issue and try again.",
 	"import.messages.wait": "Wait a moment...",
 	"import.messages.importing": "Importing data...",
 	"import.messages.error.wrongPermissionLevel": "You don't have permission to create tables in this base, please contact the base owner to give you <b>CREATOR</b> permission.",
