@@ -6,10 +6,10 @@ import { TableInterface } from "../domain/interfaces/table.interface";
 import { map, mapSFFModel, ModelType, SFFModelType } from "../domain/models";
 import { FieldType } from "../domain/models/Base";
 import { validate } from "../domain/validation/validator";
+import { checkPrimaryField } from "../helpers/checkPrimaryField";
 import { createSFFModuleTables } from "../helpers/createSFFModuleTables";
 import { createTables } from "../helpers/createTables";
-import { executeInBatches } from "../utils";
-import { checkPrimaryField } from "../helpers/checkPrimaryField";
+import { executeInBatches, parseJsonLd } from "../utils";
 
 export async function importData(
 	jsonData: any,
@@ -83,8 +83,7 @@ export async function importData(
 		return;
 	}
 
-	// Commented out for now, as we dot not have the context for the JSON-LD
-	// jsonData = await parseJsonLd(jsonData);
+	jsonData = await parseJsonLd(jsonData);
 
 	jsonData = removeDuplicatedLinks(jsonData);
 
@@ -295,7 +294,7 @@ async function writeTable(base: Base, tableData: TableInterface[]): Promise<void
 								newValue = null;
 							}
 						} else if (field.type === "multiselect") {
-							newValue = (newValue as string[]).map((val) => {
+							newValue = (Array.isArray(newValue) ? newValue : [newValue]).map((val) => {
 								const optionField = options.find((opt) => opt.id === val);
 								if (optionField) {
 									return {
@@ -556,7 +555,6 @@ function warnIfUnrecognizedFieldsWillBeIgnored(tableData: TableInterface[], intl
 			continue;
 		}
 
-		classesSet.add(tableName);
 		for (const key in data) {
 			if (!checkIfFieldIsRecognized(tableName, key) && key !== "@type" && key !== "@context") {
 				warnings.push(
@@ -568,6 +566,7 @@ function warnIfUnrecognizedFieldsWillBeIgnored(tableData: TableInterface[], intl
 						{ tableName, fieldName: key, b: (str) => `<b>${str}</b>` }
 					)}`
 				);
+				classesSet.add(tableName);
 			}
 		}
 	}
@@ -580,6 +579,13 @@ function checkIfFieldIsRecognized(tableName: string, fieldName: string) {
 		cid = new map[tableName as ModelType]();
 	} else {
 		cid = new mapSFFModel[tableName as SFFModelType]();
+	}
+	if (cid.className === "Theme") {
+		const fields = cid.getAllFields();
+		for (const field of fields) {
+			console.log("cids field name", field.name);
+			console.log("fieldName", fieldName);
+		}
 	}
 	return cid
 		.getAllFields()

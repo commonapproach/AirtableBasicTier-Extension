@@ -169,6 +169,43 @@ export async function exportData(
 				}
 			}
 
+			// If records has all values, except for the @id, equal to a code list item, warn the user
+			if (codeList) {
+				const existingItem = codeList.find((item) =>
+					Object.keys(item).every(
+						(key) => key === "@id" || record.getCellValueAsString(key) === item[key].toString()
+					)
+				);
+				if (existingItem) {
+					let hasChanges = false;
+					for (const fieldName of Object.keys(existingItem)) {
+						const recordValue = record.getCellValue(fieldName);
+						const existingValue = existingItem[fieldName];
+
+						if (recordValue !== existingValue) {
+							hasChanges = true;
+							break;
+						}
+					}
+					if (hasChanges) {
+						changeOnDefaultCodeListsWarning.push(
+							intl.formatMessage(
+								{
+									id: "export.messages.warning.codeListSimilarItem",
+									defaultMessage: `Record in table <b>{tableName}</b> with @id: <b>{recordId}</b> is similar to the predefined code list item with @id: <b>{codeListItemId}</b>.`,
+								},
+								{
+									codeListItemId: existingItem["@id"],
+									recordId: record.getCellValueAsString("@id"),
+									tableName: table.name,
+									b: (str) => `<b style="word-break: break-word;">${str}</b>`,
+								}
+							)
+						);
+					}
+				}
+			}
+
 			for (const field of cid.getTopLevelFields()) {
 				if (field.type === "link") {
 					const value: any = record.getCellValue(field.displayName || field.name);

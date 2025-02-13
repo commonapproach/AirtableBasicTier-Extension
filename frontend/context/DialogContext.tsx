@@ -47,7 +47,6 @@ function DialogContextProvider({ children }) {
 					>
 						<Dialog.CloseButton />
 						<Heading>{header}</Heading>
-						<p dangerouslySetInnerHTML={{ __html: text }} />
 						{(header.includes("Error") || header.includes("Erreur")) && (
 							<p style={{ fontSize: "12px", fontWeight: "bold", paddingLeft: 4 }}>
 								<FormattedMessage
@@ -56,6 +55,7 @@ function DialogContextProvider({ children }) {
 								/>
 							</p>
 						)}
+						<p dangerouslySetInnerHTML={{ __html: text }} />
 						<div style={{ display: "flex", gap: 4 }}>
 							<Button onClick={() => setOpenDialog(false)}>
 								<FormattedMessage
