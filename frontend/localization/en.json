@@ -38,7 +38,7 @@
 	"export.messages.warning.fieldWillNotBeExported ": "Field <b>{fieldName}</b> on table <b>{tableName}</b> will not be exported",
 	"export.messages.warning.emptyTable": "Table <b>{tableName}</b> is empty",
 	"export.messages.warning.codeListChangesIgnored": "Changes made in the predefined code list item with @id <b>{id}</b> in table <b>{tableName}</b> will be ignored.",
-	"export.messages.warning.codeListSimilarItem": "Record in table <b>{tableName}</b> with @id: <b>{recordId}</b> is similar to the predefined code list item with @id: <b>{codeListItemId}</b>.",
+	"export.messages.warning.codeListSimilarItem": "Record in table <b>{tableName}</b> with @id: <b>{recordId}</b> is similar to the predefined code list item with @id: <b>{codeListItemId}</b>. Please review the code list item before exporting, or a custom code list item will be exported.",
 	"createTables.messages.success": "Tables created successfully",
 	"createTables.messages.error.tableNameConflict": "Please rename the table \"{tableName}\" to \"{newTableName}\"",
 	"createTables.messages.error.createTable": "Please, create table \"{tableName}\"",
@@ -67,5 +67,10 @@
 	"validation.messages.multipleValuesWarning": "Multiple values found in field <b>{fieldName}</b> at id {dataId} on table <b>{tableName}</b>. Only the first value {firstValue} will be imported.",
 	"validation.messages.multipleValues": "Multiple values found in field <b>{fieldName}</b> at id {dataId} on table <b>{tableName}</b>. Only the first value {firstValue} will be exported.",
 	"validation.messages.linkedFieldNotFound": "{tableName} <b>{name}</b> linked on {fieldName} to item <b>{item}</b> that does not exist in the {linkedTable} table",
-	"validation.messages.invalidPrimaryField": "Table <b>{tableName}</b> must have <b>@id</b> as the primary field."
+	"validation.messages.invalidPrimaryField": "Table <b>{tableName}</b> must have <b>@id</b> as the primary field.",
+	"validation.messages.warning.invalidStringType": "The field <b>{fieldName}</b> in <b>{tableName}</b> must be text. Please update the value to be a text string.",
+	"validation.messages.warning.invalidUrlType": "The field <b>{fieldName}</b> in <b>{tableName}</b> must be a valid URL (e.g., https://example.com).",
+	"validation.messages.warning.invalidNumberType": "The field <b>{fieldName}</b> in <b>{tableName}</b> must be a whole number greater than or equal to 0.",
+	"validation.messages.warning.invalidBooleanType": "The field <b>{fieldName}</b> in <b>{tableName}</b> must be either true or false.",
+	"validation.messages.warning.invalidDateFormat": "The field <b>{fieldName}</b> in <b>{tableName}</b> must be a valid date in format YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ."
 }

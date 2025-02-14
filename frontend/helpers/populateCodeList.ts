@@ -6,7 +6,7 @@ import {
 	getAllPopulationServed,
 	getAllProvinceTerritory,
 	getAllSectors,
-} from "../domain/codeLists/getCodeLists";
+} from "../domain/fetchServer/getCodeLists";
 
 export const populateCodeList = async (base: Base, tableName: string) => {
 	let data: CodeList[] = [];

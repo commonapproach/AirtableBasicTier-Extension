@@ -2,7 +2,7 @@ import Base from "@airtable/blocks/dist/types/src/models/base";
 import { Record } from "@airtable/blocks/models";
 import moment from "moment-timezone";
 import { IntlShape } from "react-intl";
-import { CodeList, getCodeListByTableName } from "../domain/codeLists/getCodeLists";
+import { CodeList, getCodeListByTableName } from "../domain/fetchServer/getCodeLists";
 import { LinkedCellInterface } from "../domain/interfaces/cell.interface";
 import { contextUrl, ignoredFields, map, mapSFFModel, predefinedCodeLists } from "../domain/models";
 import { FieldType } from "../domain/models/Base";
@@ -37,10 +37,10 @@ export async function exportData(
 	for (const [key] of Object.entries(fullMap)) {
 		if (!tableNames.includes(key)) {
 			setDialogContent(
-				`${intl.formatMessage({
+				intl.formatMessage({
 					id: "generics.error",
 					defaultMessage: "Error",
-				})}!`,
+				}),
 				intl.formatMessage(
 					{
 						id: "export.messages.error.missingTable",
@@ -57,10 +57,10 @@ export async function exportData(
 	const primaryFieldErrors = await checkPrimaryField(base, intl);
 	if (primaryFieldErrors.length > 0) {
 		setDialogContent(
-			`${intl.formatMessage({
+			intl.formatMessage({
 				id: "generics.error",
 				defaultMessage: "Error",
-			})}!`,
+			}),
 			primaryFieldErrors.join("<hr/>"),
 			true
 		);
@@ -80,10 +80,10 @@ export async function exportData(
 				const expectedType = getActualFieldType(field.type);
 				if (airtableField.type !== expectedType) {
 					setDialogContent(
-						`${intl.formatMessage({
+						intl.formatMessage({
 							id: "generics.error",
 							defaultMessage: "Error",
-						})}!`,
+						}),
 						intl.formatMessage(
 							{
 								id: "export.messages.error.invalidFieldType",
@@ -192,7 +192,7 @@ export async function exportData(
 							intl.formatMessage(
 								{
 									id: "export.messages.warning.codeListSimilarItem",
-									defaultMessage: `Record in table <b>{tableName}</b> with @id: <b>{recordId}</b> is similar to the predefined code list item with @id: <b>{codeListItemId}</b>.`,
+									defaultMessage: `Record in table <b>{tableName}</b> with @id: <b>{recordId}</b> is similar to the predefined code list item with @id: <b>{codeListItemId}</b>. Please review the code list item before exporting, or a custom code list item will be exported.`,
 								},
 								{
 									codeListItemId: existingItem["@id"],
@@ -333,10 +333,10 @@ export async function exportData(
 
 	if (errors.length > 0) {
 		setDialogContent(
-			`${intl.formatMessage({
+			intl.formatMessage({
 				id: "generics.error",
 				defaultMessage: "Error",
-			})}!`,
+			}),
 			errors.map((item) => `<p>${item}</p>`).join(""),
 			true
 		);
@@ -345,18 +345,18 @@ export async function exportData(
 
 	if (allWarnings.length > 0) {
 		setDialogContent(
-			`${intl.formatMessage({
+			intl.formatMessage({
 				id: "generics.warning",
 				defaultMessage: "Warning",
-			})}!`,
+			}),
 			allWarnings,
 			true,
 			() => {
 				setDialogContent(
-					`${intl.formatMessage({
+					intl.formatMessage({
 						id: "generics.warning",
 						defaultMessage: "Warning",
-					})}!`,
+					}),
 					intl.formatMessage({
 						id: "export.messages.warning.continue",
 						defaultMessage: "<p>Do you want to export anyway?</p>",

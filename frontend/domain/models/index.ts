@@ -43,9 +43,10 @@ export type ModelType = keyof typeof map;
 
 export type SFFModelType = keyof typeof mapSFFModel;
 
+// The order matters here
 export const contextUrl = [
-	"https://ontology.commonapproach.org/cids.jsonld",
-	"https://ontology.commonapproach.org/sff-1.0.jsonld",
+	"https://ontology.commonapproach.org/cids.jsonld", // Base context
+	"https://ontology.commonapproach.org/sff-1.0.jsonld", // Extended context for SFF module
 ];
 
 export const ignoredFields = {

@@ -2,8 +2,8 @@ import { FieldType } from "@airtable/blocks/models";
 import * as jsonld from "jsonld";
 import { Options } from "jsonld";
 import { IntlShape } from "react-intl";
-import defaultContext from "./jsonld_context/default_context.json";
-import sffContext from "./jsonld_context/sff_context.json";
+import { getContext } from "./domain/fetchServer/getContext";
+import { contextUrl, map, mapSFFModel } from "./domain/models";
 
 /**
  * Handles the change event of a file input element.
@@ -131,13 +131,6 @@ const trustedDomains = [
 	"ontology.eil.utoronto.ca",
 ];
 
-// Custom document loader
-// Map of URLs to local context files
-const localContexts: { [key: string]: any } = {
-	"https://ontology.commonapproach.org/cids.jsonld": defaultContext,
-	"https://ontology.commonapproach.org/sff-1.0.jsonld": sffContext,
-};
-
 /**
  * Custom document loader that enforces HTTPS, checks for trusted domains, and fetches JSON-LD context documents.
  *
@@ -146,28 +139,29 @@ const localContexts: { [key: string]: any } = {
  * @throws Will throw an error if the URL is not trusted, if the request times out, or if there is a network/CORS issue.
  */
 const customLoader: Options.DocLoader["documentLoader"] = async (url: string) => {
-	// Check if we have a local context for this URL
-	if (localContexts[url]) {
-		return {
-			contextUrl: undefined,
-			documentUrl: url,
-			document: localContexts[url],
-		};
-	}
-
-	// Enforce HTTPS by rewriting the URL
-	if (url.startsWith("http://")) {
-		// eslint-disable-next-line no-param-reassign
-		url = url.replace("http://", "https://");
-	}
-
-	// Check if the URL is in the trusted list
-	const urlDomain = new URL(url).hostname;
-	if (!trustedDomains.some((trustedDomain) => urlDomain.endsWith(trustedDomain))) {
-		throw new Error(`URL not trusted: ${url}`);
-	}
-
 	try {
+		// Get default context
+		if (contextUrl.includes(url)) {
+			const context = await getContext(url);
+
+			return {
+				contextUrl: undefined,
+				documentUrl: url,
+				document: context,
+			};
+		}
+
+		// Enforce HTTPS by rewriting the URL
+		if (url.startsWith("http://")) {
+			// eslint-disable-next-line no-param-reassign
+			url = url.replace("http://", "https://");
+		}
+
+		// Check if the URL is in the trusted list
+		const urlDomain = new URL(url).hostname;
+		if (!trustedDomains.some((trustedDomain) => urlDomain.endsWith(trustedDomain))) {
+			throw new Error(`URL not trusted: ${url}`);
+		}
 		// Fetch the context document using HTTPS
 		const controller = new AbortController();
 		const timeoutId = setTimeout(() => controller.abort(), 5000); // Set a timeout of 5 seconds
@@ -233,23 +227,43 @@ async function processJsonLdObject(obj: any): Promise<any[]> {
 
 	if (alreadyGood) {
 		// The object already uses a good context; return it as a single-element array.
+		if (Array.isArray(obj["@type"])) {
+			obj["@type"] = findFirstRecognizedType(obj["@type"]);
+		}
 		return [obj];
 	} else {
 		// Otherwise, process it:
 		const expanded = await jsonld.expand(obj, { documentLoader: customLoader });
+
+		// Fetch both contexts dynamically
+		const [defaultContextData, sffContextData] = await Promise.all([
+			getContext(contextUrl[0]),
+			getContext(contextUrl[1]),
+		]);
+
 		const mergedContext = [
-			defaultContext["@context"],
-			sffContext["@context"],
+			defaultContextData["@context"],
+			sffContextData["@context"],
 		] as unknown as jsonld.ContextDefinition;
+
 		const compacted = await jsonld.compact(expanded, mergedContext, {
 			documentLoader: customLoader,
 		});
 
 		// The compacted document might contain an @graph.
-		const instances = (compacted["@graph"] as any[]) || [compacted];
+		let instances = (compacted["@graph"] as any[]) || [compacted];
 
 		// Apply URL replacement to each instance.
-		return instances.map((instance) => replaceOldUrls(instance));
+		instances = instances.map((instance) => replaceOldUrls(instance));
+
+		// check if @type is an array if yes we find first recognized type
+		instances.forEach((instance) => {
+			if (Array.isArray(instance["@type"])) {
+				instance["@type"] = findFirstRecognizedType(instance["@type"]);
+			}
+		});
+
+		return instances;
 	}
 }
 
@@ -305,7 +319,7 @@ function replaceOldUrls(input: any): any {
 				newObj[key] = replaceOldUrls(value);
 			}
 		}
-		// Optionally, clean up duplicate keys if both "cids:relatesTo" and "relatesTo" exist.
+		// Clean up duplicate keys if they exist.
 		for (const key in newObj) {
 			// eslint-disable-next-line no-prototype-builtins
 			if (!key.includes(":") && newObj.hasOwnProperty("cids:" + key)) {
@@ -352,4 +366,34 @@ function removeCidsPrefix(obj: any): any {
 		return newObj;
 	}
 	return obj;
+}
+
+// Extract class name from any format
+function extractClassName(type: string): string {
+	// Handle prefixed format (e.g., "cids:MyClass")
+	if (type.includes(":")) {
+		return type.split(":").pop() || "";
+	}
+	// Handle URL format (e.g., "http://example.com/MyClass" or "http://example.com/example#MyClass")
+	return type.split(/[/#]/).pop() || "";
+}
+
+function findFirstRecognizedType(types: string | string[]): string {
+	if (!Array.isArray(types)) {
+		return types;
+	}
+
+	// Create a set of recognized class names from both maps
+	const recognizedTypes = new Set([...Object.keys(map), ...Object.keys(mapSFFModel)]);
+
+	// Try to find the first matching type
+	for (const type of types) {
+		const className = extractClassName(type);
+		if (recognizedTypes.has(className)) {
+			return type;
+		}
+	}
+
+	// If no recognized type is found, return the first one
+	return types[0];
 }

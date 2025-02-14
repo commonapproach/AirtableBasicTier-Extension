@@ -26,10 +26,10 @@ export async function importData(
 	// Check if the user has CREATOR permission
 	if (!base.hasPermissionToCreateTable()) {
 		setDialogContent(
-			`${intl.formatMessage({
+			intl.formatMessage({
 				id: "generics.error",
 				defaultMessage: "Error",
-			})}!`,
+			}),
 			intl.formatMessage({
 				id: "import.messages.error.wrongPermissionLevel",
 				defaultMessage:
@@ -42,10 +42,10 @@ export async function importData(
 
 	if (validateIfEmptyFile(jsonData)) {
 		setDialogContent(
-			`${intl.formatMessage({
+			intl.formatMessage({
 				id: "generics.error",
 				defaultMessage: "Error",
-			})}!`,
+			}),
 			intl.formatMessage({
 				id: "import.messages.error.emptyOrNotArray",
 				defaultMessage: "Table data is empty or not an array",
@@ -57,10 +57,10 @@ export async function importData(
 
 	if (!doAllRecordsHaveId(jsonData)) {
 		setDialogContent(
-			`${intl.formatMessage({
+			intl.formatMessage({
 				id: "generics.error",
 				defaultMessage: "Error",
-			})}!`,
+			}),
 			intl.formatMessage({
 				id: "import.messages.error.missingId",
 				defaultMessage: "All records must have an <b>@id</b> property.",
@@ -73,10 +73,10 @@ export async function importData(
 	const primaryFieldErrors = await checkPrimaryField(base, intl);
 	if (primaryFieldErrors.length > 0) {
 		setDialogContent(
-			`${intl.formatMessage({
+			intl.formatMessage({
 				id: "generics.error",
 				defaultMessage: "Error",
-			})}!`,
+			}),
 			primaryFieldErrors.join("<hr/>"),
 			true
 		);
@@ -93,10 +93,10 @@ export async function importData(
 	// Check if json data is a valid json array
 	if (!Array.isArray(jsonData)) {
 		setDialogContent(
-			`${intl.formatMessage({
+			intl.formatMessage({
 				id: "generics.error",
 				defaultMessage: "Error",
-			})}!`,
+			}),
 			intl.formatMessage({
 				id: "import.messages.error.invalidJson",
 				defaultMessage: "Invalid JSON data, please check the data and try again.",
@@ -119,10 +119,10 @@ export async function importData(
 
 	if (allErrors.length > 0) {
 		setDialogContent(
-			`${intl.formatMessage({
+			intl.formatMessage({
 				id: "generics.error",
 				defaultMessage: "Error",
-			})}!`,
+			}),
 			allErrors,
 			true
 		);
@@ -131,18 +131,18 @@ export async function importData(
 
 	if (allWarnings.length > 0) {
 		setDialogContent(
-			`${intl.formatMessage({
+			intl.formatMessage({
 				id: "generics.warning",
 				defaultMessage: "Warning",
-			})}!`,
+			}),
 			allWarnings,
 			true,
 			() => {
 				setDialogContent(
-					`${intl.formatMessage({
+					intl.formatMessage({
 						id: "generics.warning",
 						defaultMessage: "Warning",
-					})}!`,
+					}),
 					intl.formatMessage({
 						id: "import.messages.warning.continue",
 						defaultMessage: "<p>Do you want to import anyway?</p>",
@@ -199,10 +199,10 @@ async function importFileData(base: Base, jsonData: any, setDialogContent: any, 
 		return;
 	}
 	setDialogContent(
-		`${intl.formatMessage({
+		intl.formatMessage({
 			id: "generics.success",
 			defaultMessage: "Success",
-		})}!`,
+		}),
 		`${intl.formatMessage({
 			id: "import.messages.success",
 			defaultMessage: "Your data has been successfully imported.",

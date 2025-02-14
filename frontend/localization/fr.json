@@ -37,8 +37,8 @@
 	"export.messages.warning.fieldWillNotBeExported": "Le champ <b>{fieldName}</b> de la table <b>{tableName}</b> ne sera pas exporté",
 	"export.messages.warning.emptyTable": "La table <b>{tableName}</b> est vide",
 	"export.messages.warning.codeListChangesIgnored": "Les modifications apportées à l'élément de la liste de codes prédéfinie avec @id <b>{id}</b> dans la table <b>{tableName}</b> seront ignorées.",
-	"export.messages.warning.codeListSimilarItem": "L'enregistrement dans le tableau <b>{tableName}</b> avec @id <b>{id}</b> est similaire à l'élément de la liste de codes prédéfinis avec @id: <b>{codeListItemId}</b>.",
-  "export.messages.error.invalidFieldType": "Le champ <b>{fieldName}</b> dans la table <b>{tableName}</b> n'est pas valide car il n'est pas aligné avec la Norme commune des données d'impact. Type attendu : <b>{expectedType}</b>. Veuillez changer le type du champ.",
+	"export.messages.warning.codeListSimilarItem": "L'enregistrement dans le tableau <b>{tableName}</b> avec @id: <b>{recordId}</b> est similaire à l'élément de la liste de codes prédéfinis avec @id: <b>{codeListItemId}</b>. Veuillez examiner l'élément de la liste de codes avant d'exporter, ou un élément de liste de codes personnalisé sera exporté.",
+	"export.messages.error.invalidFieldType": "Le champ <b>{fieldName}</b> dans la table <b>{tableName}</b> n'est pas valide car il n'est pas aligné avec la Norme commune des données d'impact. Type attendu : <b>{expectedType}</b>. Veuillez changer le type du champ.",
 	"createTables.messages.success": "Tables créées avec succès",
 	"createTables.messages.error.tableNameConflict": "Veuillez renommer la table \"{tableName}\" en \"{newTableName}\"",
 	"createTables.messages.error.createTable": "Veuillez créer la table \"{tableName}\"",
@@ -67,5 +67,10 @@
 	"validation.messages.multipleValuesWarning": "Plusieurs valeurs ont été trouvées dans le champ <b>{fieldName}</b à l'id {dataId} sur la table <b>{tableName}</b>. Seule la première valeur {firstValue} sera importée.",
 	"validation.messages.multipleValues": "Plusieurs valeurs ont été trouvées dans le champ <b>{fieldName}</b à l'id {dataId} sur la table <b>{tableName}</b>. Seule la première valeur  {firstValue} sera exportée.",
 	"validation.messages.linkedFieldNotFound": "{tableName} <b>{name}</b> lié sur {fieldName} à l'élément <b>{item}</b> qui n'existe pas dans la table {linkedTable}",
-	"validation.messages.invalidPrimaryField": "La table <b>{tableName}</b> doit avoir <b>@id</b> comme champ principal."
+	"validation.messages.invalidPrimaryField": "La table <b>{tableName}</b> doit avoir <b>@id</b> comme champ principal.",
+	"validation.messages.warning.invalidStringType": "Le champ <b>{fieldName}</b> dans <b>{tableName}</b> doit être du texte. Veuillez mettre à jour la valeur pour qu'elle soit une chaîne de texte.",
+	"validation.messages.warning.invalidUrlType": "Le champ <b>{fieldName}</b> dans <b>{tableName}</b> doit être une URL valide (ex: https://example.com).",
+	"validation.messages.warning.invalidNumberType": "Le champ <b>{fieldName}</b> dans <b>{tableName}</b> doit être un nombre entier supérieur ou égal à 0.",
+	"validation.messages.warning.invalidBooleanType": "Le champ <b>{fieldName}</b> dans <b>{tableName}</b> doit être vrai ou faux.",
+	"validation.messages.warning.invalidDateFormat": "Le champ <b>{fieldName}</b> dans <b>{tableName}</b> doit être une date valide au format YYYY-MM-DD ou YYYY-MM-DDTHH:mm:ssZ."
 }

@@ -10,7 +10,10 @@ The following classes are part of the SFF module.
 
 ```json
 {
-	"@context": "https://ontology.commonapproach.org/contexts/cidsContext.json",
+	"@context": [
+		"https://ontology.commonapproach.org/cids.jsonld",
+		"https://ontology.commonapproach.org/sff-1.0.jsonld"
+	],
 	"@type": "cids:OrganizationProfile",
 	"@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/OrganizationProfile/<ORGANIZATION_NAME_URI_FORMAT>",
 	"forOrganization": "<ORGANIZATION_ID>",
@@ -66,7 +69,7 @@ The following classes are part of the SFF module.
 
 #### Data Types:
 
-- @context - constant, string, required;
+- @context - constant, string or array, required;
 - @type - string, required;
 - @id - string, unique, URI, required;
 - forOrganization - string, required on export / warning on import, default value "";
@@ -86,7 +89,10 @@ The following classes are part of the SFF module.
 
 ```json
 {
-	"@context": "https://ontology.commonapproach.org/contexts/cidsContext.json",
+	"@context": [
+		"https://ontology.commonapproach.org/cids.jsonld",
+		"https://ontology.commonapproach.org/sff-1.0.jsonld"
+	],
 	"@type": "cids:ImpactReport",
 	"@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/ImpactReport/<IMPACT_REPORT_NAME_URI_FORMAT>",
 	"hasName": "<IMPACT_REPORT_NAME>",
@@ -98,7 +104,7 @@ The following classes are part of the SFF module.
 
 #### Data Types:
 
-- @context - constant, string, required;
+- @context - constant, string or array, required;
 - @type - string, required;
 - @id - string, unique, URI, required;
 - hasName - string, required on export / warning on import, default value "";
@@ -115,7 +121,10 @@ The following classes are part of the SFF module.
 
 ```json
 {
-	"@context": "https://ontology.commonapproach.org/contexts/cidsContext.json",
+	"@context": [
+		"https://ontology.commonapproach.org/cids.jsonld",
+		"https://ontology.commonapproach.org/sff-1.0.jsonld"
+	],
 	"@type": "cids:FundingStatus",
 	"@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/FundingStatus/<FUNDING_STATUS_NAME_URI_FORMAT>",
 	"forFunderId": "<ORGANIZATION_ID>",
@@ -128,7 +137,7 @@ The following classes are part of the SFF module.
 
 #### Data Types:
 
-- @context - constant, string, required;
+- @context - constant, string or array, required;
 - @type - string, required;
 - @id - string, unique, URI, required;
 - forFunderId - string, warning, default value "";
@@ -141,7 +150,10 @@ The following classes are part of the SFF module.
 
 ```json
 {
-	"@context": "https://ontology.commonapproach.org/contexts/cidsContext.json",
+	"@context": [
+		"https://ontology.commonapproach.org/cids.jsonld",
+		"https://ontology.commonapproach.org/sff-1.0.jsonld"
+	],
 	"@type": "cids:TeamProfile",
 	"@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/TeamProfile/<TEAM_PROFILE_NAME_URI_FORMAT>",
 	"hasTeamSize": "<NUMBER_OF_MEMBERS>",
@@ -158,7 +170,7 @@ The following classes are part of the SFF module.
 
 #### Data Types:
 
-- @context - constant, string, required;
+- @context - constant, string or array, required;
 - @type - string, required;
 - @id - string, unique, URI, required;
 - hasTeamSize - string, required on export / warning on import, default value "";
@@ -171,7 +183,10 @@ The following classes are part of the SFF module.
 
 ```json
 {
-	"@context": "https://ontology.commonapproach.org/contexts/cidsContext.json",
+	"@context": [
+		"https://ontology.commonapproach.org/cids.jsonld",
+		"https://ontology.commonapproach.org/sff-1.0.jsonld"
+	],
 	"@type": "cids:EDGProfile",
 	"@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/EquityDeservingGroupProfile/<EDG_PROFILE_NAME_URI_FORMAT>",
 	"forEDG": "<EQUITY_DESERVING_GROUP_ID>",
@@ -182,7 +197,7 @@ The following classes are part of the SFF module.
 
 #### Data Types:
 
-- @context - constant, string, required;
+- @context - constant, string or array, required;
 - @type - string, required;
 - @id - string, unique, URI, required;
 - forEDG - string, required on export / warning on import, default value "";
@@ -193,7 +208,10 @@ The following classes are part of the SFF module.
 
 ```json
 {
-	"@context": "https://ontology.commonapproach.org/contexts/cidsContext.json",
+	"@context": [
+		"https://ontology.commonapproach.org/cids.jsonld",
+		"https://ontology.commonapproach.org/sff-1.0.jsonld"
+	],
 	"@type": "cids:EquityDeservingGroup",
 	"@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/EquityDeservingGroup/<EDG_NAME_URI_FORMAT>",
 	"hasDescription": "<EDG_DESCRIPTION>",
@@ -208,7 +226,7 @@ The following classes are part of the SFF module.
 
 #### Data Types:
 
-- @context - constant, string, required;
+- @context - constant, string or array, required;
 - @type - string, required;
 - @id - string, unique, URI, required;
 - hasCharacteristic - strings array, warning, default value [];
@@ -219,7 +237,10 @@ The following classes are part of the SFF module.
 
 ```json
 {
-	"@context": "https://ontology.commonapproach.org/contexts/cidsContext.json",
+	"@context": [
+		"https://ontology.commonapproach.org/cids.jsonld",
+		"https://ontology.commonapproach.org/sff-1.0.jsonld"
+	],
 	"@type": "cids:Person",
 	"@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/Person/<PERSON_NAME_URI_FORMAT>",
 	"foaf:givenName": "<FIRST_NAME>",
@@ -244,7 +265,10 @@ The following classes are part of the SFF module.
 
 ```json
 {
-	"@context": "https://ontology.commonapproach.org/contexts/cidsContext.json",
+	"@context": [
+		"https://ontology.commonapproach.org/cids.jsonld",
+		"https://ontology.commonapproach.org/sff-1.0.jsonld"
+	],
 	"@type": "cids:Characteristic",
 	"@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/Characteristic/<CHARACTERISTIC_NAME_URI_FORMAT>",
 	"hasName": "<CHARACTERISTIC_NAME>",
@@ -259,7 +283,7 @@ The following classes are part of the SFF module.
 
 #### Data Types:
 
-- @context - constant, string, required;
+- @context - constant, string or array, required;
 - @type - string, required;
 - @id - string, unique, URI, required;
 - hasCode - strings array, warning, default value [];
@@ -270,7 +294,10 @@ The following classes are part of the SFF module.
 
 ```json
 {
-	"@context": "https://ontology.commonapproach.org/contexts/cidsContext.json",
+	"@context": [
+		"https://ontology.commonapproach.org/cids.jsonld",
+		"https://ontology.commonapproach.org/sff-1.0.jsonld"
+	],
 	"@type": "cids:<CODE_LIST_NAME>",
 	"@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/CodeList/<CODE_NAME_URI_FORMAT>",
 	"instance": "<CODE_REFERENCE>",
@@ -280,7 +307,7 @@ The following classes are part of the SFF module.
 
 #### Data Types:
 
-- @context - constant, string, required;
+- @context - constant, string or array, required;
 - @type - string, required;
 - @id - string, unique, URI, required;
 - instance - string, required on export / warning on import, default value "";
@@ -290,7 +317,10 @@ The following classes are part of the SFF module.
 
 ```json
 {
-	"@context": "https://ontology.commonapproach.org/contexts/cidsContext.json",
+	"@context": [
+		"https://ontology.commonapproach.org/cids.jsonld",
+		"https://ontology.commonapproach.org/sff-1.0.jsonld"
+	],
 	"@type": "cids:Code",
 	"@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/Code/<CODE_NAME_URI_FORMAT>",
 	"definedBy": "<ORGANIZATION_ID>",
@@ -300,7 +330,10 @@ The following classes are part of the SFF module.
 	"hasDescription": "<CODE_DESCRIPTION>",
 	"schema:codeValue": "<CODE_VALUE>",
 	"i72:value": {
-		"@context": "https://ontology.commonapproach.org/contexts/cidsContext.json",
+		"@context": [
+			"https://ontology.commonapproach.org/cids.jsonld",
+			"https://ontology.commonapproach.org/sff-1.0.jsonld"
+		],
 		"@type": "i72:Measure",
 		"i72:numerical_value": "<NUMERICAL_VALUE_AS_STRING>",
 		"i72:unit_of_measure": "<STRING>"
@@ -310,7 +343,7 @@ The following classes are part of the SFF module.
 
 #### Data Types:
 
-- @context - constant, string, required;
+- @context - constant, string or array, required;
 - @type - string, required;
 - @id - string, unique, URI, required;
 - definedBy - string, required on export / warning on import, default value "";
