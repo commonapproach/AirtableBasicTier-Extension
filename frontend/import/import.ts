@@ -556,7 +556,7 @@ function warnIfUnrecognizedFieldsWillBeIgnored(tableData: TableInterface[], intl
 		}
 
 		for (const key in data) {
-			if (!checkIfFieldIsRecognized(tableName, key) && key !== "@type" && key !== "@context") {
+			if (key !== "@type" && key !== "@context" && !checkIfFieldIsRecognized(tableName, key)) {
 				warnings.push(
 					`${intl.formatMessage(
 						{
@@ -579,13 +579,6 @@ function checkIfFieldIsRecognized(tableName: string, fieldName: string) {
 		cid = new map[tableName as ModelType]();
 	} else {
 		cid = new mapSFFModel[tableName as SFFModelType]();
-	}
-	if (cid.className === "Theme") {
-		const fields = cid.getAllFields();
-		for (const field of fields) {
-			console.log("cids field name", field.name);
-			console.log("fieldName", fieldName);
-		}
 	}
 	return cid
 		.getAllFields()

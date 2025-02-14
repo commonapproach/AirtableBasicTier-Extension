@@ -37,7 +37,7 @@
 	"export.messages.warning.fieldWillNotBeExported": "Le champ <b>{fieldName}</b> de la table <b>{tableName}</b> ne sera pas exporté",
 	"export.messages.warning.emptyTable": "La table <b>{tableName}</b> est vide",
 	"export.messages.warning.codeListChangesIgnored": "Les modifications apportées à l'élément de la liste de codes prédéfinie avec @id <b>{id}</b> dans la table <b>{tableName}</b> seront ignorées.",
-	"export.messages.warning.codeListSimilarItem": "L'enregistrement dans le tableau <b>{tableName}</b> avec @id: <b>{recordId}</b> est similaire à l'élément de la liste de codes prédéfinis avec @id: <b>{codeListItemId}</b>. Veuillez examiner l'élément de la liste de codes avant d'exporter, ou un élément de liste de codes personnalisé sera exporté.",
+	"export.messages.warning.codeListSimilarItem": "L'enregistrement dans le tableau <b>{tableName}</b> avec @id: <b>{recordId}</b> est similaire à l'élément de la liste de codes prédéfinis avec @id: <b>{codeListItemId}</b>.<br/>Veuillez examiner l'élément de la liste de codes avant d'exporter, ou un élément de liste de codes personnalisé sera exporté.",
 	"export.messages.error.invalidFieldType": "Le champ <b>{fieldName}</b> dans la table <b>{tableName}</b> n'est pas valide car il n'est pas aligné avec la Norme commune des données d'impact. Type attendu : <b>{expectedType}</b>. Veuillez changer le type du champ.",
 	"createTables.messages.success": "Tables créées avec succès",
 	"createTables.messages.error.tableNameConflict": "Veuillez renommer la table \"{tableName}\" en \"{newTableName}\"",

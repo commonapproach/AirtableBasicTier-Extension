@@ -192,7 +192,7 @@ export async function exportData(
 							intl.formatMessage(
 								{
 									id: "export.messages.warning.codeListSimilarItem",
-									defaultMessage: `Record in table <b>{tableName}</b> with @id: <b>{recordId}</b> is similar to the predefined code list item with @id: <b>{codeListItemId}</b>. Please review the code list item before exporting, or a custom code list item will be exported.`,
+									defaultMessage: `Record in table <b>{tableName}</b> with @id: <b>{recordId}</b> is similar to the predefined code list item with @id: <b>{codeListItemId}</b>.<br/>Please review the code list item before exporting, or a custom code list item will be exported.`,
 								},
 								{
 									codeListItemId: existingItem["@id"],
