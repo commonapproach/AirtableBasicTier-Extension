@@ -85,7 +85,7 @@ The following classes are part of the SFF module.
 - hasFundingStatus - strings array, warning, default value [];
 - reportedDate - string, required on export / warning on import, default value "";
 
-### cids:ImpactReport
+### cids:ReportInfo
 
 ```json
 {
@@ -93,8 +93,8 @@ The following classes are part of the SFF module.
 		"https://ontology.commonapproach.org/cids.jsonld",
 		"https://ontology.commonapproach.org/sff-1.0.jsonld"
 	],
-	"@type": "cids:ImpactReport",
-	"@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/ImpactReport/<IMPACT_REPORT_NAME_URI_FORMAT>",
+	"@type": "cids:ReportInfo",
+	"@id": "http://<ORGANIZATION_NAME_URL_FORMAT>.org/ReportInfo/<IMPACT_REPORT_NAME_URI_FORMAT>",
 	"hasName": "<IMPACT_REPORT_NAME>",
 	"forOrganization": "<ORGANIZATION_ID>",
 	"prov:startedAtTime": "<DATE_TIME_IN_XSD_DATE_TIME_FORMAT>", //“YYYY-MM-DDThh:mm:ss[Z| (+|-)hh:mm]”
