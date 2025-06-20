@@ -7,7 +7,14 @@ export interface CodeList {
 	hasDescription?: string;
 }
 
+interface CacheItem {
+	data: CodeList[];
+	timestamp: number;
+	expiresIn: number; // 24 hours in milliseconds
+}
+
 const inMemoryCache: { [key: string]: CodeList[] } = {};
+const CACHE_EXPIRATION_TIME = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
 async function fetchAndParseCodeList(url: string): Promise<CodeList[]> {
 	try {
@@ -19,9 +26,30 @@ async function fetchAndParseCodeList(url: string): Promise<CodeList[]> {
 		// Check if the data is in the local storage
 		const cachedData = localStorage.getItem(url);
 		if (cachedData) {
-			const parsedData = JSON.parse(cachedData);
-			inMemoryCache[url] = parsedData;
-			return parsedData;
+			try {
+				const parsedData = JSON.parse(cachedData);
+
+				// Check if it's the new cache format with expiration
+				if (parsedData.data && parsedData.timestamp && parsedData.expiresIn) {
+					const now = Date.now();
+					const isExpired = now - parsedData.timestamp > parsedData.expiresIn;
+
+					if (!isExpired) {
+						// Cache is still valid
+						inMemoryCache[url] = parsedData.data;
+						return parsedData.data;
+					} else {
+						// Cache expired, remove it
+						localStorage.removeItem(url);
+					}
+				} else if (Array.isArray(parsedData)) {
+					// Old cache format - invalidate it by removing from localStorage
+					localStorage.removeItem(url);
+				}
+			} catch (error) {
+				// Invalid JSON or corrupted cache, remove it
+				localStorage.removeItem(url);
+			}
 		}
 
 		const response = await fetch(url);
@@ -73,9 +101,18 @@ async function fetchAndParseCodeList(url: string): Promise<CodeList[]> {
 
 		inMemoryCache[url] = codeList;
 
-		// Save the data to the local storage if codeList is not empty and has less then 200kb
-		if (codeList.length > 0 && JSON.stringify(codeList).length < 200000) {
-			localStorage.setItem(url, JSON.stringify(codeList));
+		// Save the data to the local storage with expiration if codeList is not empty and has less than 200kb
+		if (codeList.length > 0) {
+			const cacheItem: CacheItem = {
+				data: codeList,
+				timestamp: Date.now(),
+				expiresIn: CACHE_EXPIRATION_TIME,
+			};
+
+			const serializedCache = JSON.stringify(cacheItem);
+			if (serializedCache.length < 200000) {
+				localStorage.setItem(url, serializedCache);
+			}
 		}
 
 		return codeList;

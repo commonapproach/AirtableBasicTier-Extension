@@ -45,13 +45,13 @@ export type SFFModelType = keyof typeof mapSFFModel;
 
 // The order matters here
 export const contextUrl = [
-	"https://ontology.commonapproach.org/cids.jsonld", // Base context
-	"https://ontology.commonapproach.org/sff-1.0.jsonld", // Extended context for SFF module
+	"https://ontology.commonapproach.org/contexts/cidsContext.jsonld", // Base context
+	"https://ontology.commonapproach.org/contexts/sffContext.jsonld", // Extended context for SFF module
 ];
 
 export const ignoredFields = {
 	Organization: ["hasOrganizationProfile", "hasFundingStatus", "hasReportInfo"],
-	Theme: ["hasOutcome"],
+	Theme: ["hasOutcome", "From field: relatesTo"],
 	Address: ["forOrganization"],
 	Person: ["forOrganizationProfile"],
 	TeamProfile: ["forOrganizationProfileManagementTeam", "forOrganizationProfileBoard"],

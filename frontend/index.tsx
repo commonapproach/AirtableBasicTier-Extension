@@ -471,19 +471,107 @@ function Main() {
 					>
 						<FormattedMessage
 							id="app.getSampleData"
-							defaultMessage="New user? Try importing this"
+							defaultMessage="New user? Try importing a"
 						/>
 						&nbsp;
-						<a
-							href="https://ontology.commonapproach.org/examples/CIDSBasicZerokitsTestData-SHARED.json"
-							rel="noreferrer"
-							download
+						<span
+							style={{
+								cursor: "pointer",
+								color: "#3caea3",
+								textDecoration: "underline",
+							}}
+							onClick={async (event) => {
+								event.preventDefault();
+								try {
+									const url =
+										"https://ontology.commonapproach.org/examples/CIDSBasicZerokitsTestData-SHARED.json";
+									const response = await fetch(url);
+									const data = await response.blob();
+
+									// Create a blob URL and trigger download
+									const blobUrl = window.URL.createObjectURL(data);
+									const a = document.createElement("a");
+									a.style.display = "none";
+									a.href = blobUrl;
+									a.download = "CIDSBasicZerokitsTestData-SHARED.json";
+									document.body.appendChild(a);
+									a.click();
+
+									// Clean up
+									window.URL.revokeObjectURL(blobUrl);
+									document.body.removeChild(a);
+								} catch (error) {
+									setDialogContent(
+										intl.formatMessage({
+											id: "generics.error",
+											defaultMessage: "Error",
+										}),
+										intl.formatMessage({
+											id: "import.messages.error.downloadingSampleData",
+											defaultMessage: "Error downloading sample data",
+										}),
+										true
+									);
+								}
+							}}
 						>
 							<FormattedMessage
 								id="app.link.sampleData"
-								defaultMessage="sample data file"
+								defaultMessage="Basic Tier sample data file"
 							/>
-						</a>
+						</span>
+						&nbsp;
+						<FormattedMessage
+							id="generics.or"
+							defaultMessage="or"
+						/>
+						&nbsp;
+						<span
+							style={{
+								cursor: "pointer",
+								color: "#3caea3",
+								textDecoration: "underline",
+							}}
+							onClick={async (event) => {
+								event.preventDefault();
+								try {
+									const url =
+										"https://ontology.commonapproach.org/examples/CIDSBasictestandSFFSampleData.json";
+									const response = await fetch(url);
+									const data = await response.blob();
+
+									// Create a blob URL and trigger download
+									const blobUrl = window.URL.createObjectURL(data);
+									const a = document.createElement("a");
+									a.style.display = "none";
+									a.href = blobUrl;
+									a.download = "CIDSBasictestandSFFSampleData.json";
+									document.body.appendChild(a);
+									a.click();
+
+									// Clean up
+									window.URL.revokeObjectURL(blobUrl);
+									document.body.removeChild(a);
+								} catch (error) {
+									setDialogContent(
+										intl.formatMessage({
+											id: "generics.error",
+											defaultMessage: "Error",
+										}),
+										intl.formatMessage({
+											id: "import.messages.error.downloadingSampleData",
+											defaultMessage: "Error downloading sample data",
+										}),
+										true
+									);
+								}
+							}}
+						>
+							<FormattedMessage
+								id="app.link.sampleDataSFF"
+								defaultMessage="Basic Tier + SFF sample data file"
+							/>
+						</span>
 					</Text>
 				</div>
 			</div>
