@@ -8,6 +8,7 @@ import { predefinedCodeLists } from "./domain/models";
 import { createSFFModuleTables } from "./helpers/createSFFModuleTables";
 import { createTables } from "./helpers/createTables";
 import { populateCodeList } from "./helpers/populateCodeList";
+import { populateSeliGLI } from "./helpers/seliGLI";
 import { importData } from "./import/import";
 import English from "./localization/en.json";
 import French from "./localization/fr.json";
@@ -99,6 +100,7 @@ function Main() {
 							/>
 						</div>
 					</Button>
+					{/* SELI-GLI Import Button moved to menu below code lists */}
 					<input
 						type="file"
 						ref={fileInputRef}
@@ -396,6 +398,66 @@ function Main() {
 									<FormattedMessage
 										id="app.button.syncCodeLists"
 										defaultMessage="Code Lists"
+									/>
+								</div>
+							</TextButton>
+							{/* SELI-GLI Import Button in menu */}
+							<TextButton
+								style={{
+									marginTop: 5,
+									marginBottom: 5,
+								}}
+								disabled={isLoading}
+								onClick={async () => {
+									setIsLoading(true);
+									try {
+										await populateSeliGLI(base);
+										setDialogContent(
+											intl.formatMessage({
+												id: "generics.success",
+												defaultMessage: "Success",
+											}),
+											intl.formatMessage({
+												id: "app.button.importSeliGLI.success",
+												defaultMessage:
+													"SELI-GLI Themes, Outcomes, and Indicators imported successfully!",
+											}),
+											false
+										);
+									} catch (error) {
+										setDialogContent(
+											intl.formatMessage({
+												id: "generics.error",
+												defaultMessage: "Error",
+											}),
+											error.message ||
+												intl.formatMessage({
+													id: "generics.error.message",
+													defaultMessage: "Something went wrong",
+												}),
+											true
+										);
+									} finally {
+										setIsLoading(false);
+									}
+								}}
+							>
+								<div
+									style={{
+										alignItems: "center",
+										textAlign: "center",
+										display: "flex",
+										gap: 2,
+										color: "#1B4B9D",
+									}}
+								>
+									<Icon
+										name="link"
+										size={16}
+									/>
+									<FormattedMessage
+										id="app.button.importSeliGLI"
+										defaultMessage="Import SELI-GLI"
 									/>
 								</div>
 							</TextButton>

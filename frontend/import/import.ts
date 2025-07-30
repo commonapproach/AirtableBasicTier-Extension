@@ -5,11 +5,15 @@ import { IntlShape } from "react-intl";
 import { TableInterface } from "../domain/interfaces/table.interface";
 import { map, mapSFFModel, ModelType, SFFModelType } from "../domain/models";
 import { FieldType } from "../domain/models/Base";
+// import {
+// 	formatSHACLValidationResults,
+// 	validateWithSHACL as validateFn,
+// } from "../domain/validation/shaclValidator";
 import { validate } from "../domain/validation/validator";
 import { checkPrimaryField } from "../helpers/checkPrimaryField";
 import { createSFFModuleTables } from "../helpers/createSFFModuleTables";
 import { createTables } from "../helpers/createTables";
-import { executeInBatches, parseJsonLd } from "../utils";
+import { convertIcAddressToPostalAddress, executeInBatches, parseJsonLd } from "../utils";
 
 export async function importData(
 	jsonData: any,
@@ -85,6 +89,33 @@ export async function importData(
 
 	jsonData = await parseJsonLd(jsonData);
 
+	// After parsing, convert all Address objects (by @type) in the array
+	if (Array.isArray(jsonData)) {
+		jsonData = jsonData.map((obj) => {
+			if (
+				obj &&
+				typeof obj === "object" &&
+				obj["@type"] &&
+				((typeof obj["@type"] === "string" && obj["@type"].toLowerCase().includes("address")) ||
+					(Array.isArray(obj["@type"]) &&
+						obj["@type"].some((t: string) => t.toLowerCase().includes("address"))))
+			) {
+				return convertIcAddressToPostalAddress(obj);
+			}
+			return obj;
+		});
+	} else if (
+		jsonData &&
+		typeof jsonData === "object" &&
+		jsonData["@type"] &&
+		((typeof jsonData["@type"] === "string" &&
+			jsonData["@type"].toLowerCase().includes("address")) ||
+			(Array.isArray(jsonData["@type"]) &&
+				jsonData["@type"].some((t: string) => t.toLowerCase().includes("address"))))
+	) {
+		jsonData = convertIcAddressToPostalAddress(jsonData);
+	}
+
 	jsonData = removeDuplicatedLinks(jsonData);
 
 	let allErrors = "";
@@ -113,6 +144,78 @@ export async function importData(
 	let { errors, warnings } = await validate(jsonData, "import", intl);
 
 	warnings = [...warnings, ...warnIfUnrecognizedFieldsWillBeIgnored(jsonData, intl)];
+
+	// // Perform SHACL validation (CIDS always, SFF if needed)
+	// try {
+	// 	setDialogContent(
+	// 		intl.formatMessage({
+	// 			id: "import.messages.validating.shacl",
+	// 			defaultMessage: "Validating data against SHACL shapes...",
+	// 		}),
+	// 		intl.formatMessage({
+	// 			id: "import.messages.validating.shacl.description",
+	// 			defaultMessage: "Checking if the data conforms to the required shapes and constraints.",
+	// 		}),
+	// 		true
+	// 	);
+
+	// 	// Always validate with cids.shacl.ttl
+	// 	const { loadSHACLData } = await import("../utils");
+	// 	const cidsTtl = await loadSHACLData("cids");
+	// 	const cidsResult = await validateFn(jsonData, cidsTtl, intl);
+
+	// 	// Detect if SFF module properties are present
+	// 	const hasSFF = (obj) => {
+	// 		if (Array.isArray(obj)) return obj.some(hasSFF);
+	// 		if (obj && typeof obj === "object") {
+	// 			for (const key of Object.keys(obj)) {
+	// 				if (key.startsWith("sff:")) return true;
+	// 				if (typeof obj[key] === "object" && hasSFF(obj[key])) return true;
+	// 			}
+	// 			if (obj["@context"]) {
+	// 				if (typeof obj["@context"] === "string" && obj["@context"].includes("sff")) return true;
+	// 				if (
+	// 					Array.isArray(obj["@context"]) &&
+	// 					obj["@context"].some((c) => typeof c === "string" && c.includes("sff"))
+	// 				)
+	// 					return true;
+	// 			}
+	// 		}
+	// 		return false;
+	// 	};
+
+	// 	let sffResult;
+	// 	if (hasSFF(jsonData)) {
+	// 		const sffTtl = await loadSHACLData("sff");
+	// 		sffResult = await validateFn(jsonData, sffTtl, intl);
+	// 	}
+
+	// 	// Always process CIDS result
+	// 	if (cidsResult && !cidsResult.conforms) {
+	// 		const shaclWarnings = formatSHACLValidationResults(cidsResult, intl);
+	// 		warnings.push(...shaclWarnings);
+	// 	}
+	// 	// If SFF result exists, process it too
+	// 	if (sffResult && !sffResult.conforms) {
+	// 		const shaclWarnings = formatSHACLValidationResults(sffResult, intl);
+	// 		warnings.push(...shaclWarnings);
+	// 	}
+	// 	if (cidsResult && cidsResult.conforms && (!sffResult || sffResult.conforms)) {
+	// 		// Show success message briefly
+	// 		console.log("✅ SHACL validation passed");
+	// 	}
+	// } catch (shaclError: any) {
+	// 	// If SHACL validation fails, add it as a warning rather than blocking import
+	// 	console.warn("SHACL validation error:", shaclError.message);
+	// 	const errorWarning = intl.formatMessage(
+	// 		{
+	// 			id: "validation.shacl.warning",
+	// 			defaultMessage: "SHACL validation could not be performed: {error}",
+	// 		},
+	// 		{ error: shaclError.message }
+	// 	);
+	// 	warnings.push(String(errorWarning));
+	// }
 
 	allErrors = errors.join("<hr/>");
 	allWarnings = warnings.join("<hr/>");
@@ -312,6 +415,15 @@ async function writeTable(base: Base, tableData: TableInterface[]): Promise<void
 							newValue = null;
 						}
 					}
+					// Handle number type
+					if (field.type === "number") {
+						if (newValue !== null && newValue !== undefined && newValue !== "") {
+							const parsed = Number(newValue);
+							newValue = isNaN(parsed) ? null : parsed;
+						} else {
+							newValue = null;
+						}
+					}
 					if (field.type === "boolean") {
 						if (newValue && (newValue === true || (newValue as string).toLowerCase() === "true")) {
 							newValue = true;
@@ -323,6 +435,7 @@ async function writeTable(base: Base, tableData: TableInterface[]): Promise<void
 						field.type !== "boolean" &&
 						field.type !== "select" &&
 						field.type !== "multiselect" &&
+						field.type !== "number" &&
 						newValue
 					) {
 						newValue = newValue ? newValue.toString() : null;

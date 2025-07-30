@@ -1,3 +1,79 @@
+/**
+ * Checks if a string starts with a BOM (Byte Order Mark).
+ * @param text - The input string
+ * @returns true if BOM is present, false otherwise
+ */
+export function hasBOM(text: string): boolean {
+	return text.charCodeAt(0) === 0xfeff;
+}
+/**
+ * Removes BOM (Byte Order Mark) from the start of a string if present.
+ * @param text - The input string
+ * @returns The string without BOM
+ */
+export function stripBOM(text: string): string {
+	return text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+}
+/**
+ * Converts an old ic:Address object to the new schema:PostalAddress/cids:Address format.
+ * Returns a new object with PostalAddress fields, or the original if not an old address.
+ * If the object is not an Address, recursively checks its fields for address objects.
+ */
+export function convertIcAddressToPostalAddress(obj: any): any {
+	if (!obj || typeof obj !== "object") return obj;
+
+	// If this object is an Address (by @type or by having ic:hasStreet* fields), convert it
+	const isAddressType =
+		(typeof obj["@type"] === "string" && obj["@type"].toLowerCase().includes("address")) ||
+		(Array.isArray(obj["@type"]) &&
+			obj["@type"].some((t: string) => t.toLowerCase().includes("address")));
+	const hasOldFields =
+		obj["ic:hasStreet"] ||
+		obj["ic:hasStreetNumber"] ||
+		obj["ic:hasStreetType"] ||
+		obj["ic:hasStreetDirection"];
+
+	if (isAddressType && hasOldFields) {
+		// Compose streetAddress
+		const streetNumber = obj["ic:hasStreetNumber"] || "";
+		const street = obj["ic:hasStreet"] || "";
+		const streetType = obj["ic:hasStreetType"] ? obj["ic:hasStreetType"].replace(/^ic:/, "") : "";
+		const streetDirection = obj["ic:hasStreetDirection"]
+			? obj["ic:hasStreetDirection"].replace(/^ic:/, "")
+			: "";
+		const streetParts = [streetNumber, street, streetType, streetDirection].filter(Boolean);
+		const streetAddress = streetParts.join(" ").trim();
+
+		// Compose extendedAddress (unit number)
+		const extendedAddress = obj["ic:hasUnitNumber"] || undefined;
+		// Map other fields
+		const addressLocality = obj["ic:hasCity"] || undefined;
+		const addressRegion = obj["ic:hasState"] || undefined;
+		const postalCode = obj["ic:hasPostalCode"] || undefined;
+		const addressCountry = obj["ic:hasCountry"] || undefined;
+		const postOfficeBoxNumber = obj["ic:hasPostOfficeBoxNumber"] || undefined;
+
+		// Compose new address object
+		const newAddress: any = { streetAddress };
+		if (extendedAddress) newAddress.extendedAddress = extendedAddress;
+		if (addressLocality) newAddress.addressLocality = addressLocality;
+		if (addressRegion) newAddress.addressRegion = addressRegion;
+		if (postalCode) newAddress.postalCode = postalCode;
+		if (addressCountry) newAddress.addressCountry = addressCountry;
+		if (postOfficeBoxNumber) newAddress.postOfficeBoxNumber = postOfficeBoxNumber;
+		if (obj["@id"]) newAddress["@id"] = obj["@id"];
+		if (obj["@type"]) newAddress["@type"] = obj["@type"];
+		return newAddress;
+	}
+
+	// Otherwise, recursively check all fields for address objects
+	for (const key of Object.keys(obj)) {
+		if (obj[key] && typeof obj[key] === "object") {
+			obj[key] = convertIcAddressToPostalAddress(obj[key]);
+		}
+	}
+	return obj;
+}
 import { FieldType } from "@airtable/blocks/models";
 import * as jsonld from "jsonld";
 import { Options } from "jsonld";
@@ -116,6 +192,8 @@ export function getActualFieldType(type: string): FieldType {
 			return FieldType.SINGLE_SELECT;
 		case "multiselect":
 			return FieldType.MULTIPLE_SELECTS;
+		case "number":
+			return FieldType.NUMBER;
 		default:
 			return FieldType.SINGLE_LINE_TEXT;
 	}
@@ -398,4 +476,49 @@ function findFirstRecognizedType(types: string | string[]): string {
 
 	// If no recognized type is found, return the first one
 	return types[0];
+}
+
+/**
+ * Loads SHACL data from a file or URL, with multiple fallback strategies.
+ * Loads SHACL Turtle data from the local shacl.ttl file
+ * Tries multiple possible paths for different deployment scenarios
+ * @returns Promise<string> The content of the SHACL file
+ */
+
+/**
+ * Loads SHACL data from a local file in the frontend directory.
+ * @param which - 'cids' or 'sff'
+ * @returns Promise<string> The content of the SHACL file
+ */
+export async function loadSHACLData(which: "cids" | "sff" = "cids"): Promise<string> {
+	const fileMap = {
+		cids: "/frontend/cids.shacl.ttl",
+		sff: "/frontend/sff.shacl.ttl",
+	};
+	const path = fileMap[which];
+	try {
+		const response = await fetch(path);
+		if (response.ok) {
+			let content = await response.text();
+			if (hasBOM(content)) {
+				console.warn(`[SHACL] BOM detected in ${path} before strip.`);
+			}
+			content = stripBOM(content);
+			if (hasBOM(content)) {
+				console.error(`[SHACL] BOM still present in ${path} after strip!`);
+			}
+			// Log the first 20 characters for debugging
+			console.log(`[SHACL] First 20 chars:`, JSON.stringify(content.slice(0, 20)));
+			console.log(
+				`[SHACL] Loaded ${which} SHACL file from: ${path} (${content.length} characters)`
+			);
+			return content;
+		} else {
+			throw new Error(
+				`[SHACL] Failed to load ${which} SHACL from ${path}: ${response.status} ${response.statusText}`
+			);
+		}
+	} catch (error: any) {
+		throw new Error(`[SHACL] Error loading ${which} SHACL from ${path}: ${error.message}`);
+	}
 }

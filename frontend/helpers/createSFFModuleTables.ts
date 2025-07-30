@@ -175,6 +175,11 @@ async function createFields(tableName: string, fields: LocalFiledType[], intl: I
 			case FieldType.CHECKBOX:
 				options = { icon: "check", color: "greenBright" };
 				break;
+			case FieldType.NUMBER:
+				options = {
+					precision: 0,
+				};
+				break;
 			default:
 				break;
 		}

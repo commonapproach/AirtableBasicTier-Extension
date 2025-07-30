@@ -51,7 +51,7 @@ export const contextUrl = [
 
 export const ignoredFields = {
 	Organization: ["hasOrganizationProfile", "hasFundingStatus", "hasReportInfo"],
-	Theme: ["hasOutcome", "From field: relatesTo"],
+	Theme: ["hasOutcome", "hasIndicator", "From field: relatesTo"],
 	Address: ["forOrganization"],
 	Person: ["forOrganizationProfile"],
 	TeamProfile: ["forOrganizationProfileManagementTeam", "forOrganizationProfileBoard"],

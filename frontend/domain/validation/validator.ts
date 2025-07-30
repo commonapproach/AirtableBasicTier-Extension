@@ -230,6 +230,31 @@ async function validateRecords(tableData: TableInterface[], operation: Operation
 			}
 
 			if (fieldProps.type !== "object") {
+				// Warn if a field with type 'number' is not a valid number
+				if (
+					fieldProps.type === "number" &&
+					fieldValue !== null &&
+					fieldValue !== undefined &&
+					fieldValue !== ""
+				) {
+					const parsed = Number(fieldValue);
+					if (isNaN(parsed)) {
+						validatorWarnings.add(
+							intl.formatMessage(
+								{
+									id: "validation.messages.warning.invalidNumberTypeModel",
+									defaultMessage:
+										"Field <b>{fieldName}</b> in <b>{tableName}</b> must be a number.",
+								},
+								{
+									fieldName: fieldDisplayName,
+									tableName,
+									b: (str) => `<b>${str}</b>`,
+								}
+							)
+						);
+					}
+				}
 				// Validate unique fields
 				if (fieldProps?.unique) {
 					const uniqueResult = validateUnique(

@@ -10,6 +10,8 @@ import { validate } from "../domain/validation/validator";
 import { checkPrimaryField } from "../helpers/checkPrimaryField";
 import { downloadJSONLD, getActualFieldType } from "../utils";
 
+import { formatSHACLValidationResults } from "../domain/validation/shaclValidator";
+
 export async function exportData(
 	base: Base,
 	setDialogContent: (
@@ -128,7 +130,7 @@ export async function exportData(
 
 			let row = {
 				"@context": contextUrl,
-				"@type": table.name === "Address" ? `ic:${table.name}` : `cids:${table.name}`,
+				"@type": `cids:${table.name}`,
 			};
 
 			let isEmpty = true; // Flag to check if the row is empty
@@ -309,6 +311,14 @@ export async function exportData(
 						exportValue = fieldValue;
 					} else if (!Array.isArray(fieldValue) && field.representedType === "array") {
 						exportValue = fieldValue ? [fieldValue] : field.defaultValue;
+					} else if (field.type === "number") {
+						// Export as number (integer/float), not string
+						if (fieldValue !== null && fieldValue !== undefined && fieldValue !== "") {
+							const parsed = Number(fieldValue);
+							exportValue = isNaN(parsed) ? null : parsed;
+						} else {
+							exportValue = null;
+						}
 					} else {
 						exportValue = fieldValue ? fieldValue.toString() : field.defaultValue;
 					}
@@ -323,13 +333,40 @@ export async function exportData(
 
 	const { errors, warnings } = await validate(data, "export", intl);
 
+	// SHACL validation (always with cids, and with sff if SFF properties present)
+	let shaclResults = null;
+	// try {
+	// 	shaclResults = await validateWithSHACL(data, "export", intl);
+	// } catch (e) {
+	// 	// If SHACL validation fails, treat as warning, not error
+	// 	shaclResults = {
+	// 		errors: [],
+	// 		warnings: [
+	// 			intl.formatMessage(
+	// 				{
+	// 					id: "export.messages.warning.shaclValidationFailed",
+	// 					defaultMessage: "SHACL validation could not be performed: {error}",
+	// 				},
+	// 				{ error: e.message || e.toString() }
+	// 			),
+	// 		],
+	// 	};
+	// }
+	const shaclWarnings =
+		shaclResults && (shaclResults.errors.length > 0 || shaclResults.warnings.length > 0)
+			? formatSHACLValidationResults(shaclResults, intl)
+			: [];
+
 	const emptyTableWarning = await checkForEmptyTables(base, intl);
 	const allWarnings = [
 		...checkForNotExportedFields(base, intl),
 		...warnings,
 		...emptyTableWarning,
 		...changeOnDefaultCodeListsWarning,
-	].join("<hr/>");
+		...(Array.isArray(shaclWarnings) ? shaclWarnings : [shaclWarnings]),
+	]
+		.filter(Boolean)
+		.join("<hr/>");
 
 	if (errors.length > 0) {
 		setDialogContent(
@@ -411,15 +448,14 @@ function checkForNotExportedFields(base: Base, intl: IntlShape) {
 				warnings.push(
 					intl.formatMessage(
 						{
-							id: "export.messages.warning.fieldWillNotBeExported",
-							defaultMessage: `Field <b>{fieldName}</b> on table <b>{tableName}</b> will not be exported`,
+							id: Object.keys(map).includes(table.name)
+								? "export.messages.warning.fieldWillNotBeExported"
+								: "export.messages.warning.notExported",
+							defaultMessage:
+								"Field <b>{fieldName}</b> on table <b>{tableName}</b> will not be exported",
 						},
-						{
-							fieldName: field,
-							tableName: table.name,
-							b: (str) => `<b>${str}</b>`,
-						}
-					)
+						{ fieldName: field, tableName: table.name, b: (str: string) => `<b>${str}</b>` }
+					) as string
 				);
 			}
 		}

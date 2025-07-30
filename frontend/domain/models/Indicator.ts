@@ -2,6 +2,7 @@ import { Base } from "./Base";
 import { IndicatorReport } from "./IndicatorReport";
 import { Organization } from "./Organization";
 import { Outcome } from "./Outcome";
+import { Theme } from "./Theme";
 
 export class Indicator extends Base {
 	static className: string = "Indicator";
@@ -20,7 +21,8 @@ export class Indicator extends Base {
 				semiRequired: false,
 			},
 			{
-				name: "hasName",
+				name: "org:hasName",
+				displayName: "hasName",
 				type: "string",
 				representedType: "string",
 				unique: true,
@@ -66,6 +68,17 @@ export class Indicator extends Base {
 				representedType: "string",
 				defaultValue: "",
 				link: { table: Outcome, field: "hasIndicator" },
+				unique: false,
+				notNull: false,
+				required: false,
+				semiRequired: true,
+			},
+			{
+				name: "forTheme",
+				type: "link",
+				representedType: "array",
+				defaultValue: [],
+				link: { table: Theme, field: "hasIndicator" },
 				unique: false,
 				notNull: false,
 				required: false,
