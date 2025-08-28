@@ -16,17 +16,16 @@ export class FundingState extends Base {
 				required: false,
 				semiRequired: true,
 			},
-			// Do be decided if this field is needed
-			// {
-			// 	name: "hasIdentifier",
-			// 	type: "string",
-			// 	representedType: "string",
-			// 	defaultValue: "",
-			// 	unique: false,
-			// 	notNull: true,
-			// 	required: false,
-			// 	semiRequired: true,
-			// },
+			{
+				name: "hasIdentifier",
+				type: "string",
+				representedType: "string",
+				defaultValue: "",
+				unique: false,
+				notNull: false,
+				required: false,
+				semiRequired: false,
+			},
 			{
 				name: "org:hasName",
 				displayName: "hasName",

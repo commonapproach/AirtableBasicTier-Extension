@@ -1,3 +1,119 @@
+import { FieldType } from "@airtable/blocks/models";
+import * as jsonld from "jsonld";
+import { Options } from "jsonld";
+import { IntlShape } from "react-intl";
+import { getContext } from "./domain/fetchServer/getContext";
+import { contextUrl, map, mapSFFModel } from "./domain/models";
+
+/**
+ * Recursively converts any i72:numerical_value or numerical_value (with or without prefix)
+ * to i72:hasNumericalValue in imported data, for backward compatibility.
+ * @param obj - The object or array to process
+ * @returns The object with updated property names
+ */
+export function convertNumericalValueToHasNumericalValue(obj: any): any {
+	if (Array.isArray(obj)) {
+		return obj.map(convertNumericalValueToHasNumericalValue);
+	} else if (obj && typeof obj === "object") {
+		// If this is the i72:value object, check for old keys
+		if (
+			Object.prototype.hasOwnProperty.call(obj, "i72:numerical_value") ||
+			Object.prototype.hasOwnProperty.call(obj, "numerical_value")
+		) {
+			const value = obj["i72:numerical_value"] ?? obj["numerical_value"];
+			// Remove old keys
+			delete obj["i72:numerical_value"];
+			delete obj["numerical_value"];
+			// Set new key
+			obj["i72:hasNumericalValue"] = value;
+		}
+		// Recursively process all properties
+		for (const key of Object.keys(obj)) {
+			obj[key] = convertNumericalValueToHasNumericalValue(obj[key]);
+		}
+		return obj;
+	}
+	return obj;
+}
+
+/**
+ * Converts unknown unit_of_measure values to unitDescription for backward compatibility.
+ * This is used when importing Indicator objects with unknown unit values that are not
+ * in our unit of measure list. The unknown value is copied to unitDescription field
+ * so users can see and fix it manually, but only if unitDescription is not already set.
+ * @param obj - The object or array to process
+ * @param validUnitIds - Array of valid unit IDs from getUnitOptions()
+ * @returns Object with converted data and conversion flag
+ */
+export async function convertUnknownUnitToDescription(
+	obj: any,
+	validUnitIds?: string[]
+): Promise<{
+	data: any;
+	converted: boolean;
+}> {
+	let converted = false;
+
+	// Lazy load valid unit IDs if not provided
+	if (!validUnitIds) {
+		try {
+			const { getUnitOptions } = await import("./domain/fetchServer/getUnitsOfMeasure");
+			const unitOptions = await getUnitOptions();
+			validUnitIds = unitOptions.map((option) => option.id);
+		} catch (error) {
+			console.warn("Failed to load unit options for validation:", error);
+			return { data: obj, converted: false }; // Return unchanged if we can't validate
+		}
+	}
+
+	async function processItem(item: any): Promise<any> {
+		if (Array.isArray(item)) {
+			const results = await Promise.all(item.map(processItem));
+			return results;
+		} else if (item && typeof item === "object") {
+			// Check if this is an Indicator object (by @type)
+			const isIndicator =
+				item["@type"] &&
+				((typeof item["@type"] === "string" &&
+					(item["@type"] === "cids:Indicator" || item["@type"] === "Indicator")) ||
+					(Array.isArray(item["@type"]) &&
+						item["@type"].some((t: string) => t === "cids:Indicator" || t === "Indicator")));
+
+			if (isIndicator) {
+				const unitOfMeasure = item["i72:unit_of_measure"];
+				const unitDescription = item["unitDescription"];
+
+				// Only process if:
+				// 1. There's a unit_of_measure value
+				// 2. The unit_of_measure is not in our valid list
+				// 3. There's no existing unitDescription (indicating old format)
+				if (
+					unitOfMeasure &&
+					!validUnitIds.includes(unitOfMeasure) &&
+					(!unitDescription || unitDescription === "")
+				) {
+					// Copy the unknown unit value to unitDescription
+					item["unitDescription"] = unitOfMeasure;
+					converted = true;
+
+					// Optionally remove the invalid unit_of_measure to prevent validation errors
+					// Or keep it for further processing - keeping it for now so validation can warn about it
+				}
+			}
+
+			// Recursively process all properties
+			const processedItem = { ...item };
+			for (const key of Object.keys(processedItem)) {
+				processedItem[key] = await processItem(processedItem[key]);
+			}
+			return processedItem;
+		}
+		return item;
+	}
+
+	const processedData = await processItem(obj);
+	return { data: processedData, converted };
+}
 /**
  * Checks if a string starts with a BOM (Byte Order Mark).
  * @param text - The input string
@@ -33,37 +149,66 @@ export function convertIcAddressToPostalAddress(obj: any): any {
 		obj["ic:hasStreetType"] ||
 		obj["ic:hasStreetDirection"];
 
-	if (isAddressType && hasOldFields) {
-		// Compose streetAddress
-		const streetNumber = obj["ic:hasStreetNumber"] || "";
-		const street = obj["ic:hasStreet"] || "";
-		const streetType = obj["ic:hasStreetType"] ? obj["ic:hasStreetType"].replace(/^ic:/, "") : "";
-		const streetDirection = obj["ic:hasStreetDirection"]
-			? obj["ic:hasStreetDirection"].replace(/^ic:/, "")
-			: "";
-		const streetParts = [streetNumber, street, streetType, streetDirection].filter(Boolean);
-		const streetAddress = streetParts.join(" ").trim();
+	// If it's an address type, we need to convert it
+	if (isAddressType) {
+		// If it has old fields, convert them to new format
+		if (hasOldFields) {
+			// Compose streetAddress
+			const streetNumber = obj["ic:hasStreetNumber"] || "";
+			const street = obj["ic:hasStreet"] || "";
+			const streetType = obj["ic:hasStreetType"] ? obj["ic:hasStreetType"].replace(/^ic:/, "") : "";
+			const streetDirection = obj["ic:hasStreetDirection"]
+				? obj["ic:hasStreetDirection"].replace(/^ic:/, "")
+				: "";
+			const streetParts = [streetNumber, street, streetType, streetDirection].filter(Boolean);
+			const streetAddress = streetParts.join(" ").trim();
 
-		// Compose extendedAddress (unit number)
-		const extendedAddress = obj["ic:hasUnitNumber"] || undefined;
-		// Map other fields
-		const addressLocality = obj["ic:hasCity"] || undefined;
-		const addressRegion = obj["ic:hasState"] || undefined;
-		const postalCode = obj["ic:hasPostalCode"] || undefined;
-		const addressCountry = obj["ic:hasCountry"] || undefined;
-		const postOfficeBoxNumber = obj["ic:hasPostOfficeBoxNumber"] || undefined;
+			// Compose extendedAddress (unit number)
+			const extendedAddress = obj["ic:hasUnitNumber"] || undefined;
+			// Map other fields
+			const addressLocality = obj["ic:hasCity"] || undefined;
+			const addressRegion = obj["ic:hasState"] || undefined;
+			const postalCode = obj["ic:hasPostalCode"] || undefined;
+			const addressCountry = obj["ic:hasCountry"] || undefined;
+			const postOfficeBoxNumber = obj["ic:hasPostOfficeBoxNumber"] || undefined;
 
-		// Compose new address object
-		const newAddress: any = { streetAddress };
-		if (extendedAddress) newAddress.extendedAddress = extendedAddress;
-		if (addressLocality) newAddress.addressLocality = addressLocality;
-		if (addressRegion) newAddress.addressRegion = addressRegion;
-		if (postalCode) newAddress.postalCode = postalCode;
-		if (addressCountry) newAddress.addressCountry = addressCountry;
-		if (postOfficeBoxNumber) newAddress.postOfficeBoxNumber = postOfficeBoxNumber;
-		if (obj["@id"]) newAddress["@id"] = obj["@id"];
-		if (obj["@type"]) newAddress["@type"] = obj["@type"];
-		return newAddress;
+			// Compose new address object
+			const newAddress: any = { streetAddress };
+			if (extendedAddress) newAddress.extendedAddress = extendedAddress;
+			if (addressLocality) newAddress.addressLocality = addressLocality;
+			if (addressRegion) newAddress.addressRegion = addressRegion;
+			if (postalCode) newAddress.postalCode = postalCode;
+			if (addressCountry) newAddress.addressCountry = addressCountry;
+			if (postOfficeBoxNumber) newAddress.postOfficeBoxNumber = postOfficeBoxNumber;
+			if (obj["@id"]) newAddress["@id"] = obj["@id"];
+
+			// Update @type: convert ic:Address to cids:Address
+			if (obj["@type"]) {
+				if (typeof obj["@type"] === "string") {
+					newAddress["@type"] = obj["@type"].replace(/^ic:Address$/i, "cids:Address");
+				} else if (Array.isArray(obj["@type"])) {
+					newAddress["@type"] = obj["@type"].map((type: string) =>
+						type.replace(/^ic:Address$/i, "cids:Address")
+					);
+				} else {
+					newAddress["@type"] = obj["@type"];
+				}
+			}
+			return newAddress;
+		} else {
+			// If it has no old fields but is an address type, just convert the type
+			const newAddress = { ...obj };
+			if (obj["@type"]) {
+				if (typeof obj["@type"] === "string") {
+					newAddress["@type"] = obj["@type"].replace(/^ic:Address$/i, "cids:Address");
+				} else if (Array.isArray(obj["@type"])) {
+					newAddress["@type"] = obj["@type"].map((type: string) =>
+						type.replace(/^ic:Address$/i, "cids:Address")
+					);
+				}
+			}
+			return newAddress;
+		}
 	}
 
 	// Otherwise, recursively check all fields for address objects
@@ -74,12 +219,60 @@ export function convertIcAddressToPostalAddress(obj: any): any {
 	}
 	return obj;
 }
-import { FieldType } from "@airtable/blocks/models";
-import * as jsonld from "jsonld";
-import { Options } from "jsonld";
-import { IntlShape } from "react-intl";
-import { getContext } from "./domain/fetchServer/getContext";
-import { contextUrl, map, mapSFFModel } from "./domain/models";
+
+/**
+ * Converts ic:hasAddress property to hasAddress in Organization objects and other objects.
+ * This handles backward compatibility for the property name change.
+ */
+export function convertIcHasAddressToHasAddress(obj: any): any {
+	if (!obj || typeof obj !== "object") return obj;
+
+	// Handle arrays
+	if (Array.isArray(obj)) {
+		return obj.map(convertIcHasAddressToHasAddress);
+	}
+
+	// Create a new object to avoid mutating the original
+	const newObj = { ...obj };
+
+	// Convert ic:hasAddress to hasAddress if it exists
+	if (newObj["ic:hasAddress"]) {
+		newObj["hasAddress"] = newObj["ic:hasAddress"];
+		delete newObj["ic:hasAddress"];
+	}
+
+	// Recursively process nested objects
+	for (const key of Object.keys(newObj)) {
+		if (newObj[key] && typeof newObj[key] === "object") {
+			newObj[key] = convertIcHasAddressToHasAddress(newObj[key]);
+		}
+	}
+
+	return newObj;
+}
+
+// Accept both describesPopulation (cids alias) and i72:cardinality_of (ontology);
+// prefer describesPopulation in stored/processed objects and remove i72:cardinality_of after aliasing.
+export function harmonizeCardinalityProperty(data: any): any {
+	const sync = (obj: any) => {
+		if (!obj || typeof obj !== "object") return;
+		const hasCard = Object.prototype.hasOwnProperty.call(obj, "i72:cardinality_of");
+		const hasDesc = Object.prototype.hasOwnProperty.call(obj, "describesPopulation");
+		if (hasCard && !hasDesc) {
+			obj.describesPopulation = obj["i72:cardinality_of"]; // adopt user-friendly alias
+			delete obj["i72:cardinality_of"]; // drop ontology property to standardize internal representation
+		} else if (hasCard && hasDesc) {
+			// Both present: keep describesPopulation canonical, drop cardinality_of to avoid duplication
+			delete obj["i72:cardinality_of"];
+		} // If only describesPopulation present, leave as-is
+	};
+	if (Array.isArray(data)) {
+		data.forEach((item) => sync(item));
+	} else if (data && typeof data === "object") {
+		sync(data);
+	}
+	return data;
+}
 
 /**
  * Handles the change event of a file input element.
@@ -476,49 +669,4 @@ function findFirstRecognizedType(types: string | string[]): string {
 
 	// If no recognized type is found, return the first one
 	return types[0];
-}
-
-/**
- * Loads SHACL data from a file or URL, with multiple fallback strategies.
- * Loads SHACL Turtle data from the local shacl.ttl file
- * Tries multiple possible paths for different deployment scenarios
- * @returns Promise<string> The content of the SHACL file
- */
-
-/**
- * Loads SHACL data from a local file in the frontend directory.
- * @param which - 'cids' or 'sff'
- * @returns Promise<string> The content of the SHACL file
- */
-export async function loadSHACLData(which: "cids" | "sff" = "cids"): Promise<string> {
-	const fileMap = {
-		cids: "/frontend/cids.shacl.ttl",
-		sff: "/frontend/sff.shacl.ttl",
-	};
-	const path = fileMap[which];
-	try {
-		const response = await fetch(path);
-		if (response.ok) {
-			let content = await response.text();
-			if (hasBOM(content)) {
-				console.warn(`[SHACL] BOM detected in ${path} before strip.`);
-			}
-			content = stripBOM(content);
-			if (hasBOM(content)) {
-				console.error(`[SHACL] BOM still present in ${path} after strip!`);
-			}
-			// Log the first 20 characters for debugging
-			console.log(`[SHACL] First 20 chars:`, JSON.stringify(content.slice(0, 20)));
-			console.log(
-				`[SHACL] Loaded ${which} SHACL file from: ${path} (${content.length} characters)`
-			);
-			return content;
-		} else {
-			throw new Error(
-				`[SHACL] Failed to load ${which} SHACL from ${path}: ${response.status} ${response.statusText}`
-			);
-		}
-	} catch (error: any) {
-		throw new Error(`[SHACL] Error loading ${which} SHACL from ${path}: ${error.message}`);
-	}
 }

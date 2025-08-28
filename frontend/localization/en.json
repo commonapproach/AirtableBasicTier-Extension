@@ -1,5 +1,5 @@
 {
-	"app.description": "Compliant with Common Impact Data Standard Version 3.0",
+	"app.description": "Compliant with Common Impact Data Standard Version 3.2",
 	"app.standardTier": "Basic Tier",
 	"app.getSampleData": "New user? Try importing a",
 	"app.link.sampleData": "Basic Tier sample data file",
@@ -31,6 +31,9 @@
 	"import.messages.error.notJson": "File is not a JSON/JSON-LD file.",
 	"import.messages.error.downloadingSampleData": "Error downloading sample data",
 	"import.messages.warning.continue": "<p>Do you want to import anyway?</p>",
+	"import.messages.warning.addressConverted": "Some addresses were converted from the old format to the new format.",
+	"import.messages.warning.propertyNamesConverted": "Some property names were converted from old format (ic:hasAddress to hasAddress).",
+	"import.messages.warning.unknownUnitsConverted": "Some unknown unit_of_measure values were copied to unitDescription field. Please review and select the correct unit from the dropdown.",
 	"import.messages.warning.unrecognizedField": "Field <b>{fieldName}</b> in table <b>{tableName}</b> is inconsistent with the Basic Tier of the Common Impact Data Standard. This field will not be imported.",
 	"import.messages.success": "Your data has been successfully imported.",
 	"export.button.export": "Export",

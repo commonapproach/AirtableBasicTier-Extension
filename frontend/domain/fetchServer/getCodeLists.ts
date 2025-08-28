@@ -16,6 +16,68 @@ interface CacheItem {
 const inMemoryCache: { [key: string]: CodeList[] } = {};
 const CACHE_EXPIRATION_TIME = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
+// GitHub fallback URLs mapping
+const GITHUB_FALLBACK_URLS: { [key: string]: string } = {
+	"https://codelist.commonapproach.org/ICNPOsector/ICNPOsector.owl":
+		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/ICNPOsector/ICNPOsector.owl",
+	"https://codelist.commonapproach.org/StatsCanSector/StatsCanSector.owl":
+		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/StatsCanSector/StatsCanSector.owl",
+	"https://codelist.commonapproach.org/PopulationServed/PopulationServed.owl":
+		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/PopulationServed/PopulationServed.owl",
+	"https://codelist.commonapproach.org/ProvinceTerritory/ProvinceTerritory.owl":
+		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/ProvinceTerritory/ProvinceTerritory.owl",
+	"https://codelist.commonapproach.org/OrgTypeGOC/OrgTypeGOC.owl":
+		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/OrgTypeGOC/OrgTypeGOC.owl",
+	"https://codelist.commonapproach.org/Locality/LocalityStatsCan.owl":
+		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/Locality/LocalityStatsCan.owl",
+};
+
+function parseXmlToCodeList(xmlData: string): CodeList[] {
+	const options = {
+		ignoreAttributes: false,
+	};
+
+	const parser = new XMLParser(options);
+	const jsonData = parser.parse(xmlData);
+
+	const codeList: CodeList[] = [];
+	const descriptions = jsonData["rdf:RDF"]["rdf:Description"] || [];
+	let baseIdUrl = "";
+
+	for (let desc of descriptions) {
+		if (desc["vann:preferredNamespacePrefix"]) {
+			baseIdUrl = desc["@_rdf:about"].replace("#dataset", "");
+			continue;
+		}
+
+		if (!desc["cids:hasIdentifier"] && !desc["cids:hasName"]) {
+			continue;
+		}
+
+		const sector: CodeList = {
+			"@id": desc["@_rdf:about"].includes(baseIdUrl)
+				? desc["@_rdf:about"]
+				: baseIdUrl + desc["@_rdf:about"],
+			hasIdentifier: desc["cids:hasIdentifier"] ? desc["cids:hasIdentifier"].toString() : "",
+			hasName: desc["cids:hasName"]["#text"] ? desc["cids:hasName"]["#text"].toString() : "",
+		};
+
+		if (desc["cids:hasDescription"]) {
+			sector.hasDescription = desc["cids:hasDescription"]["#text"]
+				? desc["cids:hasDescription"]["#text"].toString()
+				: "";
+		} else if (desc["cids:hasDefinition"]) {
+			sector.hasDescription = desc["cids:hasDefinition"]["#text"]
+				? desc["cids:hasDefinition"]["#text"].toString()
+				: "";
+		}
+
+		codeList.push(sector);
+	}
+
+	return codeList;
+}
+
 async function fetchAndParseCodeList(url: string): Promise<CodeList[]> {
 	try {
 		// Check if the data is already in the cache
@@ -52,51 +114,50 @@ async function fetchAndParseCodeList(url: string): Promise<CodeList[]> {
 			}
 		}
 
-		const response = await fetch(url);
+		let xmlData: string;
+		let codeList: CodeList[] = [];
 
-		// Extract the XML data from the response
-		const xmlData = await response.text();
+		// Try to fetch from primary URL first
+		try {
+			console.log(`Attempting to fetch from primary URL: ${url}`);
+			const response = await fetch(url);
 
-		const options = {
-			ignoreAttributes: false,
-		};
-
-		const parser = new XMLParser(options);
-		const jsonData = parser.parse(xmlData);
-
-		const codeList: CodeList[] = [];
-		const descriptions = jsonData["rdf:RDF"]["rdf:Description"] || [];
-		let baseIdUrl = "";
-
-		for (let desc of descriptions) {
-			if (desc["vann:preferredNamespacePrefix"]) {
-				baseIdUrl = desc["@_rdf:about"].replace("#dataset", "");
-				continue;
+			if (!response.ok) {
+				throw new Error(`Primary fetch failed with status: ${response.status}`);
 			}
 
-			if (!desc["cids:hasIdentifier"] && !desc["cids:hasName"]) {
-				continue;
+			xmlData = await response.text();
+			codeList = parseXmlToCodeList(xmlData);
+
+			console.log(`Successfully fetched ${codeList.length} items from primary URL`);
+		} catch (primaryError) {
+			console.warn(`Primary fetch failed for ${url}:`, primaryError);
+
+			// Try GitHub fallback if available and no cached data exists
+			const fallbackUrl = GITHUB_FALLBACK_URLS[url];
+			if (fallbackUrl) {
+				try {
+					console.log(`Attempting fallback from GitHub: ${fallbackUrl}`);
+					const fallbackResponse = await fetch(fallbackUrl);
+
+					if (!fallbackResponse.ok) {
+						throw new Error(`Fallback fetch failed with status: ${fallbackResponse.status}`);
+					}
+
+					xmlData = await fallbackResponse.text();
+					codeList = parseXmlToCodeList(xmlData);
+
+					console.log(`Successfully fetched ${codeList.length} items from GitHub fallback`);
+				} catch (fallbackError) {
+					console.error(`Both primary and fallback fetch failed for ${url}:`, fallbackError);
+					throw new Error(
+						`All fetch attempts failed. Primary: ${primaryError.message}, Fallback: ${fallbackError.message}`
+					);
+				}
+			} else {
+				console.error(`No fallback URL available for ${url}`);
+				throw primaryError;
 			}
-
-			const sector: CodeList = {
-				"@id": desc["@_rdf:about"].includes(baseIdUrl)
-					? desc["@_rdf:about"]
-					: baseIdUrl + desc["@_rdf:about"],
-				hasIdentifier: desc["cids:hasIdentifier"] ? desc["cids:hasIdentifier"].toString() : "",
-				hasName: desc["cids:hasName"]["#text"] ? desc["cids:hasName"]["#text"].toString() : "",
-			};
-
-			if (desc["cids:hasDescription"]) {
-				sector.hasDescription = desc["cids:hasDescription"]["#text"]
-					? desc["cids:hasDescription"]["#text"].toString()
-					: "";
-			} else if (desc["cids:hasDefinition"]) {
-				sector.hasDescription = desc["cids:hasDefinition"]["#text"]
-					? desc["cids:hasDefinition"]["#text"].toString()
-					: "";
-			}
-
-			codeList.push(sector);
 		}
 
 		inMemoryCache[url] = codeList;
@@ -118,6 +179,21 @@ async function fetchAndParseCodeList(url: string): Promise<CodeList[]> {
 		return codeList;
 	} catch (error) {
 		console.error(`Error fetching or parsing ${url}:`, error);
+
+		// As a last resort, check if we have any cached data (even if expired)
+		const lastResortCache = localStorage.getItem(url);
+		if (lastResortCache) {
+			try {
+				const parsedData = JSON.parse(lastResortCache);
+				if (parsedData.data && Array.isArray(parsedData.data)) {
+					console.warn(`Using expired cached data for ${url} as fallback`);
+					return parsedData.data;
+				}
+			} catch (cacheError) {
+				console.error(`Failed to parse last resort cache for ${url}:`, cacheError);
+			}
+		}
+
 		return [];
 	}
 }
@@ -150,10 +226,10 @@ export async function getCodeListByTableName(tableName: string): Promise<CodeLis
 export async function getAllSectors(): Promise<CodeList[]> {
 	try {
 		const icnpoSectors = await fetchAndParseCodeList(
-			"https://codelist.commonapproach.org/codeLists/ICNPOsector.owl"
+			"https://codelist.commonapproach.org/ICNPOsector/ICNPOsector.owl"
 		);
 		const statsCanSectors = await fetchAndParseCodeList(
-			"https://codelist.commonapproach.org/codeLists/StatsCanSector.owl"
+			"https://codelist.commonapproach.org/StatsCanSector/StatsCanSector.owl"
 		);
 
 		return [...icnpoSectors, ...statsCanSectors];
@@ -166,7 +242,7 @@ export async function getAllSectors(): Promise<CodeList[]> {
 export async function getAllPopulationServed(): Promise<CodeList[]> {
 	try {
 		const populationServed = await fetchAndParseCodeList(
-			"https://codelist.commonapproach.org/codeLists/PopulationServed.owl"
+			"https://codelist.commonapproach.org/PopulationServed/PopulationServed.owl"
 		);
 
 		return populationServed;
@@ -179,7 +255,7 @@ export async function getAllPopulationServed(): Promise<CodeList[]> {
 export async function getAllProvinceTerritory(): Promise<CodeList[]> {
 	try {
 		const provinceTerritory = await fetchAndParseCodeList(
-			"https://codelist.commonapproach.org/codeLists/ProvinceTerritory.owl"
+			"https://codelist.commonapproach.org/ProvinceTerritory/ProvinceTerritory.owl"
 		);
 
 		return provinceTerritory;
@@ -192,7 +268,7 @@ export async function getAllProvinceTerritory(): Promise<CodeList[]> {
 export async function getAllOrganizationType(): Promise<CodeList[]> {
 	try {
 		const organizationType = await fetchAndParseCodeList(
-			"https://codelist.commonapproach.org/codeLists/OrgTypeGOC.owl"
+			"https://codelist.commonapproach.org/OrgTypeGOC/OrgTypeGOC.owl"
 		);
 
 		return organizationType;
@@ -205,7 +281,7 @@ export async function getAllOrganizationType(): Promise<CodeList[]> {
 export async function getAllLocalities(): Promise<CodeList[]> {
 	try {
 		const localities = await fetchAndParseCodeList(
-			"https://codelist.commonapproach.org/codeLists/LocalityStatsCan.owl"
+			"https://codelist.commonapproach.org/Locality/LocalityStatsCan.owl"
 		);
 
 		return localities;

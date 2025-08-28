@@ -5,15 +5,41 @@ import { IntlShape } from "react-intl";
 import { TableInterface } from "../domain/interfaces/table.interface";
 import { map, mapSFFModel, ModelType, SFFModelType } from "../domain/models";
 import { FieldType } from "../domain/models/Base";
-// import {
-// 	formatSHACLValidationResults,
-// 	validateWithSHACL as validateFn,
-// } from "../domain/validation/shaclValidator";
 import { validate } from "../domain/validation/validator";
 import { checkPrimaryField } from "../helpers/checkPrimaryField";
 import { createSFFModuleTables } from "../helpers/createSFFModuleTables";
 import { createTables } from "../helpers/createTables";
-import { convertIcAddressToPostalAddress, executeInBatches, parseJsonLd } from "../utils";
+import {
+	convertIcAddressToPostalAddress,
+	convertIcHasAddressToHasAddress,
+	convertNumericalValueToHasNumericalValue,
+	convertUnknownUnitToDescription,
+	executeInBatches,
+	harmonizeCardinalityProperty,
+	parseJsonLd,
+} from "../utils";
+
+// Helper: extract a primary standard type (cids: or sff:) from @type which may be string or array
+function getPrimaryStandardType(typeVal: any): string | null {
+	if (!typeVal) return null;
+	const isTarget = (t: string) => t.startsWith("cids:") || t.startsWith("sff:");
+	if (typeof typeVal === "string") return isTarget(typeVal) ? typeVal : null;
+	if (Array.isArray(typeVal)) {
+		const found = typeVal.find((t) => typeof t === "string" && isTarget(t));
+		return found || null;
+	}
+	return null;
+}
+
+// Helper: get the table name suffix from @type, preferring cids:/sff: namespace first
+function getCidsTableSuffix(typeVal: any): string | null {
+	const main = getPrimaryStandardType(typeVal);
+	if (main) return main.split(":")[1];
+	if (typeof typeVal === "string") {
+		return typeVal.includes(":") ? typeVal.split(":")[1] : typeVal;
+	}
+	return null;
+}
 
 export async function importData(
 	jsonData: any,
@@ -89,21 +115,46 @@ export async function importData(
 
 	jsonData = await parseJsonLd(jsonData);
 
+	// Convert old i72:numerical_value/numerical_value to i72:hasNumericalValue before any validation
+	jsonData = convertNumericalValueToHasNumericalValue(jsonData);
+
+	// Convert unknown unit_of_measure to unitDescription for backward compatibility
+	const unitConversionResult = await convertUnknownUnitToDescription(jsonData);
+	jsonData = unitConversionResult.data;
+	const convertedUnknownUnits = unitConversionResult.converted;
+
+	// Convert ic:hasAddress to hasAddress for backward compatibility
+	const originalData = JSON.stringify(jsonData);
+	jsonData = convertIcHasAddressToHasAddress(jsonData);
+	const convertedPropertyNames = JSON.stringify(jsonData) !== originalData;
+
+	// Harmonize population cardinality property names (legacy describesPopulation vs ontology i72:cardinality_of)
+	jsonData = harmonizeCardinalityProperty(jsonData);
+
 	// After parsing, convert all Address objects (by @type) in the array
+	let convertedAddress = false;
+	function convertAndTrack(obj: any) {
+		if (
+			obj &&
+			typeof obj === "object" &&
+			obj["@type"] &&
+			((typeof obj["@type"] === "string" && obj["@type"].toLowerCase().includes("address")) ||
+				(Array.isArray(obj["@type"]) &&
+					obj["@type"].some((t: string) => t.toLowerCase().includes("address"))))
+		) {
+			const original = JSON.stringify(obj); // Capture original state
+			const converted = convertIcAddressToPostalAddress(obj);
+
+			// Check if conversion happened by comparing original vs converted
+			const conversionHappened = JSON.stringify(converted) !== original;
+			if (conversionHappened) convertedAddress = true;
+
+			return converted;
+		}
+		return obj;
+	}
 	if (Array.isArray(jsonData)) {
-		jsonData = jsonData.map((obj) => {
-			if (
-				obj &&
-				typeof obj === "object" &&
-				obj["@type"] &&
-				((typeof obj["@type"] === "string" && obj["@type"].toLowerCase().includes("address")) ||
-					(Array.isArray(obj["@type"]) &&
-						obj["@type"].some((t: string) => t.toLowerCase().includes("address"))))
-			) {
-				return convertIcAddressToPostalAddress(obj);
-			}
-			return obj;
-		});
+		jsonData = jsonData.map(convertAndTrack);
 	} else if (
 		jsonData &&
 		typeof jsonData === "object" &&
@@ -113,7 +164,7 @@ export async function importData(
 			(Array.isArray(jsonData["@type"]) &&
 				jsonData["@type"].some((t: string) => t.toLowerCase().includes("address"))))
 	) {
-		jsonData = convertIcAddressToPostalAddress(jsonData);
+		jsonData = convertAndTrack(jsonData);
 	}
 
 	jsonData = removeDuplicatedLinks(jsonData);
@@ -143,79 +194,39 @@ export async function importData(
 	// Validate JSON
 	let { errors, warnings } = await validate(jsonData, "import", intl);
 
+	// Add address conversion warning if needed
+	if (convertedAddress) {
+		warnings.push(
+			intl.formatMessage({
+				id: "import.messages.warning.addressConverted",
+				defaultMessage: "Some addresses were converted from the old format to the new format.",
+			})
+		);
+	}
+
+	// Add property name conversion warning if needed
+	if (convertedPropertyNames) {
+		warnings.push(
+			intl.formatMessage({
+				id: "import.messages.warning.propertyNamesConverted",
+				defaultMessage:
+					"Some property names were converted from old format (ic:hasAddress to hasAddress).",
+			})
+		);
+	}
+
+	// Add unknown unit conversion warning if needed
+	if (convertedUnknownUnits) {
+		warnings.push(
+			intl.formatMessage({
+				id: "import.messages.warning.unknownUnitsConverted",
+				defaultMessage:
+					"Some unknown unit_of_measure values were copied to unitDescription field. Please review and select the correct unit from the dropdown.",
+			})
+		);
+	}
+
 	warnings = [...warnings, ...warnIfUnrecognizedFieldsWillBeIgnored(jsonData, intl)];
-
-	// // Perform SHACL validation (CIDS always, SFF if needed)
-	// try {
-	// 	setDialogContent(
-	// 		intl.formatMessage({
-	// 			id: "import.messages.validating.shacl",
-	// 			defaultMessage: "Validating data against SHACL shapes...",
-	// 		}),
-	// 		intl.formatMessage({
-	// 			id: "import.messages.validating.shacl.description",
-	// 			defaultMessage: "Checking if the data conforms to the required shapes and constraints.",
-	// 		}),
-	// 		true
-	// 	);
-
-	// 	// Always validate with cids.shacl.ttl
-	// 	const { loadSHACLData } = await import("../utils");
-	// 	const cidsTtl = await loadSHACLData("cids");
-	// 	const cidsResult = await validateFn(jsonData, cidsTtl, intl);
-
-	// 	// Detect if SFF module properties are present
-	// 	const hasSFF = (obj) => {
-	// 		if (Array.isArray(obj)) return obj.some(hasSFF);
-	// 		if (obj && typeof obj === "object") {
-	// 			for (const key of Object.keys(obj)) {
-	// 				if (key.startsWith("sff:")) return true;
-	// 				if (typeof obj[key] === "object" && hasSFF(obj[key])) return true;
-	// 			}
-	// 			if (obj["@context"]) {
-	// 				if (typeof obj["@context"] === "string" && obj["@context"].includes("sff")) return true;
-	// 				if (
-	// 					Array.isArray(obj["@context"]) &&
-	// 					obj["@context"].some((c) => typeof c === "string" && c.includes("sff"))
-	// 				)
-	// 					return true;
-	// 			}
-	// 		}
-	// 		return false;
-	// 	};
-
-	// 	let sffResult;
-	// 	if (hasSFF(jsonData)) {
-	// 		const sffTtl = await loadSHACLData("sff");
-	// 		sffResult = await validateFn(jsonData, sffTtl, intl);
-	// 	}
-
-	// 	// Always process CIDS result
-	// 	if (cidsResult && !cidsResult.conforms) {
-	// 		const shaclWarnings = formatSHACLValidationResults(cidsResult, intl);
-	// 		warnings.push(...shaclWarnings);
-	// 	}
-	// 	// If SFF result exists, process it too
-	// 	if (sffResult && !sffResult.conforms) {
-	// 		const shaclWarnings = formatSHACLValidationResults(sffResult, intl);
-	// 		warnings.push(...shaclWarnings);
-	// 	}
-	// 	if (cidsResult && cidsResult.conforms && (!sffResult || sffResult.conforms)) {
-	// 		// Show success message briefly
-	// 		console.log("✅ SHACL validation passed");
-	// 	}
-	// } catch (shaclError: any) {
-	// 	// If SHACL validation fails, add it as a warning rather than blocking import
-	// 	console.warn("SHACL validation error:", shaclError.message);
-	// 	const errorWarning = intl.formatMessage(
-	// 		{
-	// 			id: "validation.shacl.warning",
-	// 			defaultMessage: "SHACL validation could not be performed: {error}",
-	// 		},
-	// 		{ error: shaclError.message }
-	// 	);
-	// 	warnings.push(String(errorWarning));
-	// }
 
 	allErrors = errors.join("<hr/>");
 	allWarnings = warnings.join("<hr/>");
@@ -283,7 +294,10 @@ async function importFileData(base: Base, jsonData: any, setDialogContent: any, 
 		// Ignore types/classes that are not recognized
 		const fullMap = { ...map, ...mapSFFModel };
 		const filteredItems = Array.isArray(jsonData)
-			? jsonData.filter((data) => Object.keys(fullMap).includes(data["@type"].split(":")[1]))
+			? jsonData.filter((data) => {
+					const suffix = getCidsTableSuffix(data["@type"]);
+					return suffix ? Object.keys(fullMap).includes(suffix) : false;
+			})
 			: jsonData;
 		await importByData(base, filteredItems, intl);
 	} catch (error) {
@@ -322,11 +336,13 @@ async function importByData(base: Base, jsonData: any, intl: IntlShape) {
 	for (const data of jsonData) {
 		if (
 			!data["@type"] ||
-			(!Object.keys(map).includes(data["@type"].split(":")[1]) &&
-				!Object.keys(mapSFFModel).includes(data["@type"].split(":")[1]))
+			(() => {
+				const s = getCidsTableSuffix(data["@type"]);
+				return !(s && (Object.keys(map).includes(s) || Object.keys(mapSFFModel).includes(s)));
+			})()
 		) {
 			continue;
-		} else if (Object.keys(mapSFFModel).includes(data["@type"].split(":")[1])) {
+		} else if (Object.keys(mapSFFModel).includes(getCidsTableSuffix(data["@type"]) || "")) {
 			await createSFFModuleTables(intl);
 			break;
 		}
@@ -346,7 +362,14 @@ async function writeTable(base: Base, tableData: TableInterface[]): Promise<void
 	}[] = [];
 
 	for (const data of tableData) {
-		const tableName = data["@type"].split(":")[1];
+		const tableName = getCidsTableSuffix(data["@type"]) || "";
+		// Skip items with no recognized CIDS table type
+		if (
+			!tableName ||
+			(!Object.keys(map).includes(tableName) && !Object.keys(mapSFFModel).includes(tableName))
+		) {
+			continue;
+		}
 
 		let record: { [key: string]: unknown } = {};
 		Object.entries(data).forEach(async ([key, value]) => {
@@ -357,8 +380,11 @@ async function writeTable(base: Base, tableData: TableInterface[]): Promise<void
 			let cid;
 			if (Object.keys(map).includes(tableName)) {
 				cid = new map[tableName as ModelType]();
-			} else {
+			} else if (Object.keys(mapSFFModel).includes(tableName)) {
 				cid = new mapSFFModel[tableName as SFFModelType]();
+			} else {
+				// Unknown class; skip
+				return;
 			}
 
 			for (const field of cid.getAllFields()) {
@@ -584,14 +610,22 @@ async function writeTableLinked(base: Base, tableData: TableInterface[]): Promis
 	}[] = [];
 
 	for (const data of tableData) {
-		const tableName = data["@type"].split(":")[1];
+		const tableName = getCidsTableSuffix(data["@type"]) || "";
+		if (
+			!tableName ||
+			(!Object.keys(map).includes(tableName) && !Object.keys(mapSFFModel).includes(tableName))
+		) {
+			continue;
+		}
 
 		for (let [key, value] of Object.entries(data)) {
 			let cid;
 			if (Object.keys(map).includes(tableName)) {
 				cid = new map[tableName as ModelType]();
-			} else {
+			} else if (Object.keys(mapSFFModel).includes(tableName)) {
 				cid = new mapSFFModel[tableName as SFFModelType]();
+			} else {
+				continue;
 			}
 
 			if (key !== "@type" && key !== "@context" && checkIfFieldIsRecognized(tableName, key)) {
@@ -657,13 +691,15 @@ function warnIfUnrecognizedFieldsWillBeIgnored(tableData: TableInterface[], intl
 	for (const data of tableData) {
 		if (
 			!data["@type"] ||
-			(!Object.keys(map).includes(data["@type"].split(":")[1]) &&
-				!Object.keys(mapSFFModel).includes(data["@type"].split(":")[1]))
+			(() => {
+				const s = getCidsTableSuffix(data["@type"]);
+				return !(s && (Object.keys(map).includes(s) || Object.keys(mapSFFModel).includes(s)));
+			})()
 		) {
 			continue;
 		}
 
-		const tableName = data["@type"].split(":")[1];
+		const tableName = getCidsTableSuffix(data["@type"]) || "";
 		if (classesSet.has(tableName)) {
 			continue;
 		}
@@ -741,8 +777,10 @@ function transformObjectFieldIfWrongFormat(jsonData: TableInterface[]) {
 		for (const [key, value] of Object.entries(data)) {
 			if (
 				!data["@type"] ||
-				(!Object.keys(map).includes(data["@type"].split(":")[1]) &&
-					!Object.keys(mapSFFModel).includes(data["@type"].split(":")[1]))
+				(() => {
+					const s = getCidsTableSuffix(data["@type"]);
+					return !(s && (Object.keys(map).includes(s) || Object.keys(mapSFFModel).includes(s)));
+				})()
 			) {
 				continue;
 			}
@@ -751,16 +789,16 @@ function transformObjectFieldIfWrongFormat(jsonData: TableInterface[]) {
 				key === "@type" ||
 				key === "@context" ||
 				key === "@id" ||
-				!checkIfFieldIsRecognized(data["@type"].split(":")[1], key)
+				!checkIfFieldIsRecognized(getCidsTableSuffix(data["@type"]) || "", key)
 			) {
 				continue;
 			}
 
 			let cid;
-			if (Object.keys(map).includes(data["@type"].split(":")[1])) {
-				cid = new map[data["@type"].split(":")[1] as ModelType]();
+			if (Object.keys(map).includes(getCidsTableSuffix(data["@type"]) || "")) {
+				cid = new map[getCidsTableSuffix(data["@type"]) as string as ModelType]();
 			} else {
-				cid = new mapSFFModel[data["@type"].split(":")[1] as SFFModelType]();
+				cid = new mapSFFModel[getCidsTableSuffix(data["@type"]) as string as SFFModelType]();
 			}
 
 			const field = cid.getFieldByName(key);
@@ -770,16 +808,110 @@ function transformObjectFieldIfWrongFormat(jsonData: TableInterface[]) {
 					data[key] = fieldValue;
 				}
 			} else if (field?.type === "link" && typeof value === "object" && !Array.isArray(value)) {
-				let id = value["@id"];
+				// Allow link fields provided as an object, e.g., {"@id": "..."}
+				// Always normalize the record field to the string @id value
+				let id = value["@id"] as string | undefined;
 				if (!id) {
-					id =
-						data["@id"] +
-						"/" +
-						(value["@type"].includes(":") ? value["@type"].split(":")[1] : value["@type"]);
+					// If there is no explicit @id, try to derive one only when a @type exists
+					const typeSuffix =
+						getCidsTableSuffix(value["@type"]) ||
+						(typeof value["@type"] === "string" ? (value["@type"] as string) : "");
+					if (typeSuffix) {
+						id = (data["@id"] as string).replace(/\/$/, "") + "/" + typeSuffix;
+						value["@id"] = id;
+					}
 				}
-				value["@id"] = id;
-				jsonData.push(value);
-				data[key] = id;
+				if (id) {
+					data[key] = id;
+				} else {
+					// If we still don't have an id, drop the value to avoid invalid data
+					data[key] = undefined;
+				}
+
+				// Only add the nested object to the dataset when it has a @type (to avoid
+				// introducing objects that fail validation due to missing @type), and avoid duplicates
+				if (value && value["@type"] && id) {
+					const alreadyExists = jsonData.some((d) => d && d["@id"] === id);
+					if (!alreadyExists) {
+						jsonData.push(value);
+					}
+				}
+			} else if (field?.type === "link" && Array.isArray(value)) {
+				// Handle arrays of objects for link fields, e.g., [{"@id": "..."}, {"@id": "..."}]
+				const processedIds: string[] = [];
+
+				for (const item of value) {
+					if (typeof item === "object" && item !== null) {
+						const obj = item as any; // Type assertion since we know item is not null
+						let id = obj["@id"] as string | undefined;
+						if (!id) {
+							// If there is no explicit @id, try to derive one only when a @type exists
+							const typeSuffix =
+								getCidsTableSuffix(obj["@type"]) ||
+								(typeof obj["@type"] === "string" ? (obj["@type"] as string) : "");
+							if (typeSuffix) {
+								id = (data["@id"] as string).replace(/\/$/, "") + "/" + typeSuffix;
+								obj["@id"] = id;
+							}
+						}
+
+						if (id) {
+							processedIds.push(id);
+
+							// Only add the nested object to the dataset when it has a @type and avoid duplicates
+							if (obj["@type"]) {
+								const alreadyExists = jsonData.some((d) => d && d["@id"] === id);
+								if (!alreadyExists) {
+									jsonData.push(obj);
+								}
+							}
+						}
+					} else if (typeof item === "string") {
+						// Already a string ID, keep it as is
+						processedIds.push(item);
+					}
+				}
+
+				// Replace the field value with the array of IDs
+				data[key] = processedIds;
+			} else if (
+				(field?.type === "select" || field?.type === "multiselect") &&
+				typeof value === "object" &&
+				!Array.isArray(value)
+			) {
+				// Handle select/multiselect fields provided as an object, e.g., {"@id": "..."}
+				// Extract the @id and use it as the select option value
+				const id = value["@id"] as string | undefined;
+				if (id) {
+					data[key] = id;
+				} else {
+					// If no @id, drop the value to avoid invalid data
+					data[key] = undefined;
+				}
+				// Note: We don't create new objects for select/multiselect since they only handle predefined options
+			} else if (
+				(field?.type === "select" || field?.type === "multiselect") &&
+				Array.isArray(value)
+			) {
+				// Handle arrays of objects for select/multiselect fields, e.g., [{"@id": "..."}, {"@id": "..."}]
+				const processedIds: string[] = [];
+
+				for (const item of value) {
+					if (typeof item === "object" && item !== null) {
+						const obj = item as any;
+						const id = obj["@id"] as string | undefined;
+						if (id) {
+							processedIds.push(id);
+						}
+						// Note: We don't create new objects for select/multiselect since they only handle predefined options
+					} else if (typeof item === "string") {
+						// Already a string ID, keep it as is
+						processedIds.push(item);
+					}
+				}
+
+				// Replace the field value with the array of IDs
+				data[key] = processedIds;
 			}
 		}
 	}

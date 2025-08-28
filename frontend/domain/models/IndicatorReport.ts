@@ -44,7 +44,7 @@ export class IndicatorReport extends Base {
 				representedType: "object",
 				properties: [
 					{
-						name: "i72:numerical_value",
+						name: "i72:hasNumericalValue",
 						displayName: "value",
 						type: "string",
 						representedType: "string",
@@ -56,23 +56,13 @@ export class IndicatorReport extends Base {
 					},
 				],
 				defaultValue: {
-					"i72:numerical_value": "",
+					"i72:hasNumericalValue": "",
+					"i72:unit_of_measure": "",
 				},
 				unique: false,
 				notNull: true,
 				required: true,
 				semiRequired: false,
-			},
-			{
-				name: "i72:unit_of_measure",
-				displayName: "unit_of_measure",
-				type: "string",
-				representedType: "string",
-				defaultValue: "",
-				unique: false,
-				notNull: true,
-				required: false,
-				semiRequired: true,
 			},
 			{
 				name: "prov:startedAtTime",

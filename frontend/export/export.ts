@@ -3,6 +3,11 @@ import { Record } from "@airtable/blocks/models";
 import moment from "moment-timezone";
 import { IntlShape } from "react-intl";
 import { CodeList, getCodeListByTableName } from "../domain/fetchServer/getCodeLists";
+import {
+	UNIT_DEFINITIONS,
+	UNIT_IRI,
+	getUnitDefinition,
+} from "../domain/fetchServer/getUnitsOfMeasure";
 import { LinkedCellInterface } from "../domain/interfaces/cell.interface";
 import { contextUrl, ignoredFields, map, mapSFFModel, predefinedCodeLists } from "../domain/models";
 import { FieldType } from "../domain/models/Base";
@@ -10,7 +15,12 @@ import { validate } from "../domain/validation/validator";
 import { checkPrimaryField } from "../helpers/checkPrimaryField";
 import { downloadJSONLD, getActualFieldType } from "../utils";
 
-import { formatSHACLValidationResults } from "../domain/validation/shaclValidator";
+// Resolve the Airtable field name for a model field: prefer displayName; otherwise, strip prefix before ':'
+function getAirtableFieldName(field: FieldType): string {
+	if (field.displayName && field.displayName.length > 0) return field.displayName;
+	const n = field.name || "";
+	return n.includes(":") ? n.split(":")[1] : n;
+}
 
 export async function exportData(
 	base: Base,
@@ -77,7 +87,8 @@ export async function exportData(
 
 		const cid = new fullMap[table.name]();
 		for (const field of cid.getAllFields()) {
-			const airtableField = table.fields.find((f) => f.name === (field.displayName || field.name));
+			const airtableName = getAirtableFieldName(field);
+			const airtableField = table.fields.find((f) => f.name === airtableName);
 			if (airtableField) {
 				const expectedType = getActualFieldType(field.type);
 				if (airtableField.type !== expectedType) {
@@ -128,9 +139,19 @@ export async function exportData(
 				continue;
 			}
 
-			let row = {
+			// Determine the correct @type namespace.
+			// Previously everything (except Population) was exported as cids:ClassName which was incorrect for SFF module tables.
+			// Customer request: SFF tables (those only in mapSFFModel) must use the sff: namespace.
+			const isSFFTable = Object.prototype.hasOwnProperty.call(mapSFFModel, table.name);
+			const baseType =
+				table.name === "Population"
+					? "i72:Population"
+					: isSFFTable
+					? `sff:${table.name}`
+					: `cids:${table.name}`;
+			let row: any = {
 				"@context": contextUrl,
-				"@type": `cids:${table.name}`,
+				"@type": baseType,
 			};
 
 			let isEmpty = true; // Flag to check if the row is empty
@@ -208,9 +229,13 @@ export async function exportData(
 				}
 			}
 
+			// Helper state when exporting Indicators
+			// for potential multi-typing e.g., i72:Cardinality (no direct use variable required)
+
 			for (const field of cid.getTopLevelFields()) {
+				const airtableName = getAirtableFieldName(field);
 				if (field.type === "link") {
-					const value: any = record.getCellValue(field.displayName || field.name);
+					const value: any = record.getCellValue(airtableName);
 					if (field.representedType === "array") {
 						const fieldValue =
 							value?.map((item: LinkedCellInterface) => item.name) ?? field?.defaultValue;
@@ -222,15 +247,28 @@ export async function exportData(
 						const fieldValue = value ? value[0]?.name : field?.defaultValue;
 						if (fieldValue) {
 							isEmpty = false;
+							// If this is the Indicator's cardinality_of link, add multi-typing i72:Cardinality
+							if (field.name === "i72:cardinality_of") {
+								const currentType = row["@type"];
+								const types = Array.isArray(currentType) ? currentType : [currentType];
+								if (!types.includes("i72:Cardinality")) {
+									row["@type"] = [...types, "i72:Cardinality"];
+								}
+								row[field.name] = fieldValue.toString();
+							} else {
+								row[field.name] = fieldValue.toString();
+							}
+						} else {
+							// No value
+							row[field.name] = field?.defaultValue ?? "";
 						}
-						row[field.name] = fieldValue.toString();
 					}
 				} else if (field.type === "object") {
 					const [newRow, newIsEmpty] = getObjectFieldsRecursively(record, field, row, isEmpty);
 					row = { ...row, ...newRow };
 					isEmpty = newIsEmpty;
 				} else if (field.type === "select") {
-					const fieldValue = record.getCellValue(field.displayName || field.name) ?? "";
+					const fieldValue = record.getCellValue(airtableName) ?? "";
 					if (fieldValue && fieldValue["name"]) {
 						isEmpty = false;
 					}
@@ -248,7 +286,7 @@ export async function exportData(
 							field.representedType === "array" ? [fieldValue["name"]] : fieldValue["name"];
 					}
 				} else if (field.type === "multiselect") {
-					const fieldValue = record.getCellValue(field.displayName || field.name) ?? [];
+					const fieldValue = record.getCellValue(airtableName) ?? [];
 					if (fieldValue && (fieldValue as { name: string }[]).length > 0) {
 						isEmpty = false;
 					}
@@ -272,7 +310,7 @@ export async function exportData(
 							? [...recognizedOptionIds, ...unrecognizedOptionNames]
 							: [...recognizedOptionIds, ...unrecognizedOptionNames].join(", ");
 				} else if (field.type === "datetime") {
-					const fieldValue = record.getCellValueAsString(field.displayName || field.name) ?? "";
+					const fieldValue = record.getCellValueAsString(airtableName) ?? "";
 					if (fieldValue && typeof fieldValue === "string") {
 						isEmpty = false;
 
@@ -285,7 +323,7 @@ export async function exportData(
 						row[field.name] = "";
 					}
 				} else if (field.type === "date") {
-					const fieldValue = record.getCellValueAsString(field.displayName || field.name) ?? "";
+					const fieldValue = record.getCellValueAsString(airtableName) ?? "";
 					if (fieldValue && typeof fieldValue === "string") {
 						isEmpty = false;
 
@@ -298,11 +336,10 @@ export async function exportData(
 						row[field.name] = "";
 					}
 				} else if (field.type === "boolean") {
-					const fieldValue = record.getCellValue(field.displayName || field.name) ?? false;
+					const fieldValue = record.getCellValue(airtableName) ?? false;
 					row[field.name] = fieldValue ? true : false;
 				} else {
-					const fieldValue =
-						record.getCellValue(field.displayName || field.name) ?? field.defaultValue;
+					const fieldValue = record.getCellValue(airtableName) ?? field.defaultValue;
 					if (fieldValue) {
 						isEmpty = false;
 					}
@@ -325,37 +362,94 @@ export async function exportData(
 					row[field.name] = exportValue;
 				}
 			}
+			// No automatic population or multi-typing logic beyond Indicator cardinality; Population exported only from Population table.
+
 			if (!isEmpty) {
-				data.push(row);
+				// Remove empty string/null/empty array properties; exception: preserve empty Measure numerical value (i72:hasNumericalValue)
+				const cleaned = Object.fromEntries(
+					Object.entries(row).filter((entry) => {
+						const v = entry[1];
+						if (v === null || v === undefined) return false;
+						if (
+							typeof v === "string" &&
+							v.trim() === "" &&
+							entry[0] !== "i72:hasNumericalValue" // Keep as "" to distinguish missing vs zero/unknown
+						)
+							return false;
+						if (Array.isArray(v) && v.length === 0) return false;
+						return true;
+					})
+				);
+				data.push(cleaned);
+			}
+		}
+	}
+
+	// Ensure each IndicatorReport value has a unit_of_measure; default to Indicator's or unspecified
+	const indicatorUnitById: { [key: string]: string } = {};
+	const usedUnitIris: Set<string> = new Set();
+	for (const item of data) {
+		if (
+			Array.isArray(item?.["@type"])
+				? item["@type"].includes("cids:Indicator")
+				: item?.["@type"] === "cids:Indicator"
+		) {
+			if (item["@id"]) {
+				const existing = item["i72:unit_of_measure"];
+				const resolved =
+					existing && typeof existing === "string" && existing.trim().length > 0
+						? existing
+						: UNIT_IRI.UNSPECIFIED;
+				if (!existing) {
+					item["i72:unit_of_measure"] = resolved;
+				}
+				indicatorUnitById[item["@id"]] = resolved;
+				usedUnitIris.add(resolved);
+			}
+		}
+	}
+	for (const item of data) {
+		if (
+			Array.isArray(item?.["@type"])
+				? item["@type"].includes("cids:IndicatorReport")
+				: item?.["@type"] === "cids:IndicatorReport"
+		) {
+			const indicatorId = item["forIndicator"];
+			const valueObj = item?.["i72:value"]; // Some exports may embed object; our exporter currently emits objects via getObjectFieldsRecursively
+			if (valueObj && !valueObj["i72:unit_of_measure"]) {
+				const fallback =
+					(typeof indicatorId === "string" && indicatorUnitById[indicatorId]) ||
+					UNIT_IRI.UNSPECIFIED;
+				valueObj["i72:unit_of_measure"] = fallback;
+				usedUnitIris.add(fallback);
+			}
+		}
+	}
+
+	// Inject unit definition objects for any used units, plus related cids units referenced by those definitions
+	const queue: string[] = Array.from(usedUnitIris);
+	const seen: Set<string> = new Set();
+	while (queue.length > 0) {
+		const iri = queue.shift() as string;
+		if (seen.has(iri)) continue;
+		seen.add(iri);
+		const def = (await getUnitDefinition(iri)) || UNIT_DEFINITIONS[iri];
+		if (def) {
+			const already = data.some((d) => d && d["@id"] === iri);
+			if (!already) data.push({ "@context": contextUrl, ...def });
+			// Enqueue related cids unit IRIs referenced by this definition
+			for (const val of Object.values(def)) {
+				if (
+					typeof val === "string" &&
+					val.startsWith("https://ontology.commonapproach.org/cids#")
+				) {
+					queue.push(val);
+				}
 			}
 		}
 	}
 
 	const { errors, warnings } = await validate(data, "export", intl);
-
-	// SHACL validation (always with cids, and with sff if SFF properties present)
-	let shaclResults = null;
-	// try {
-	// 	shaclResults = await validateWithSHACL(data, "export", intl);
-	// } catch (e) {
-	// 	// If SHACL validation fails, treat as warning, not error
-	// 	shaclResults = {
-	// 		errors: [],
-	// 		warnings: [
-	// 			intl.formatMessage(
-	// 				{
-	// 					id: "export.messages.warning.shaclValidationFailed",
-	// 					defaultMessage: "SHACL validation could not be performed: {error}",
-	// 				},
-	// 				{ error: e.message || e.toString() }
-	// 			),
-	// 		],
-	// 	};
-	// }
-	const shaclWarnings =
-		shaclResults && (shaclResults.errors.length > 0 || shaclResults.warnings.length > 0)
-			? formatSHACLValidationResults(shaclResults, intl)
-			: [];
 
 	const emptyTableWarning = await checkForEmptyTables(base, intl);
 	const allWarnings = [
@@ -363,7 +457,6 @@ export async function exportData(
 		...warnings,
 		...emptyTableWarning,
 		...changeOnDefaultCodeListsWarning,
-		...(Array.isArray(shaclWarnings) ? shaclWarnings : [shaclWarnings]),
 	]
 		.filter(Boolean)
 		.join("<hr/>");
@@ -389,6 +482,8 @@ export async function exportData(
 			allWarnings,
 			true,
 			() => {
+				// Final deep clean before download (after user confirms warnings)
+				const cleanedData = deepCleanExportObjects(data);
 				setDialogContent(
 					intl.formatMessage({
 						id: "generics.warning",
@@ -400,7 +495,7 @@ export async function exportData(
 					}),
 					true,
 					() => {
-						downloadJSONLD(data, `${getFileName(orgName)}.json`);
+						downloadJSONLD(cleanedData, `${getFileName(orgName)}.json`);
 						setDialogContent("", "", false);
 					}
 				);
@@ -408,7 +503,8 @@ export async function exportData(
 		);
 		return;
 	}
-	downloadJSONLD(data, `${getFileName(orgName)}.json`);
+	const cleanedDataNoWarnings = deepCleanExportObjects(data);
+	downloadJSONLD(cleanedDataNoWarnings, `${getFileName(orgName)}.json`);
 }
 
 function getFileName(orgName: string): string {
@@ -427,6 +523,52 @@ function getFileName(orgName: string): string {
 	const timestamp = `${year}${monthFormatted}${dayFormatted}`;
 
 	return `CIDSBasic${orgName}${timestamp}`;
+}
+
+// Recursively remove empty string, null, undefined, and empty arrays/objects from export objects.
+// Preserve i72:hasNumericalValue when it's an empty string (intentional signal).
+function deepCleanExportObjects(items: any[]): any[] {
+	const shouldKeepEmptyStringKey = (key: string) => key === "i72:hasNumericalValue";
+	function clean(value: any, parentKey?: string): any {
+		if (Array.isArray(value)) {
+			const cleanedArr = value
+				.map((v) => clean(v))
+				.filter(
+					(v) =>
+						!(
+							v === null ||
+							v === undefined ||
+							(Array.isArray(v) && v.length === 0) ||
+							(typeof v === "object" && !Array.isArray(v) && Object.keys(v).length === 0)
+						)
+				);
+			return cleanedArr;
+		}
+		if (value && typeof value === "object") {
+			const entries = Object.entries(value)
+				.map(([k, v]) => [k, clean(v, k)] as [string, any])
+				.filter(([k, v]) => {
+					if (v === null || v === undefined) return false;
+					if (typeof v === "string") {
+						if (v.trim() === "" && !shouldKeepEmptyStringKey(k)) return false;
+					}
+					if (Array.isArray(v) && v.length === 0) return false;
+					if (typeof v === "object" && !Array.isArray(v) && Object.keys(v).length === 0)
+						return false;
+					return true;
+				});
+			return Object.fromEntries(entries);
+		}
+		if (
+			typeof value === "string" &&
+			value.trim() === "" &&
+			!shouldKeepEmptyStringKey(parentKey || "")
+		) {
+			return undefined;
+		}
+		return value;
+	}
+	return items.map((item) => clean(item)).filter((x) => x && Object.keys(x).length > 0);
 }
 
 function checkForNotExportedFields(base: Base, intl: IntlShape) {
@@ -491,7 +633,8 @@ async function checkForEmptyTables(base: Base, intl: IntlShape) {
 
 function getObjectFieldsRecursively(record: Record, field: FieldType, row: any, isEmpty: boolean) {
 	if (field.type !== "object") {
-		const value = record.getCellValue(field.displayName || field.name) ?? field.defaultValue;
+		const airtableName = getAirtableFieldName(field);
+		const value = record.getCellValue(airtableName) ?? field.defaultValue;
 
 		if (field.type === "link") {
 			if (field.representedType === "array") {
