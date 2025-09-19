@@ -1,5 +1,6 @@
 import { Base } from "./Base";
 import { Indicator } from "./Indicator";
+import { Organization } from "./Organization";
 
 export class IndicatorReport extends Base {
 	static className: string = "IndicatorReport";
@@ -96,6 +97,17 @@ export class IndicatorReport extends Base {
 				notNull: false,
 				required: false,
 				semiRequired: true,
+			},
+			{
+				name: "forOrganization",
+				type: "link",
+				representedType: "string",
+				defaultValue: "",
+				link: { table: Organization, field: "hasIndicatorReport" },
+				unique: false,
+				notNull: false,
+				required: true, 
+				semiRequired: false,
 			},
 		];
 	}
