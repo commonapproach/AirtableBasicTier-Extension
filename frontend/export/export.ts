@@ -146,6 +146,8 @@ export async function exportData(
 			const baseType =
 				table.name === "Population"
 					? "i72:Population"
+					:table.name === "Person"
+					? "cids:Person"
 					: isSFFTable
 					? `sff:${table.name}`
 					: `cids:${table.name}`;
