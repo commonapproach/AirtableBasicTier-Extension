@@ -1,5 +1,6 @@
 import { Address } from "./Address";
 import { Characteristic } from "./Characteristic";
+import { CorporateRegistrar } from "./CorporateRegistrar";
 import { EDGProfile } from "./EDGProfile";
 import { EquityDeservingGroup } from "./EquityDeservingGroup";
 import { FundingState } from "./FundingState";
@@ -7,6 +8,7 @@ import { FundingStatus } from "./FundingStatus";
 import { Indicator } from "./Indicator";
 import { IndicatorReport } from "./IndicatorReport";
 import { Organization } from "./Organization";
+import { OrganizationID } from "./OrganizationID";
 import { OrganizationProfile } from "./OrganizationProfile";
 import { Outcome } from "./Outcome";
 import { Person } from "./Person";
@@ -25,6 +27,8 @@ export const map = {
 	IndicatorReport: IndicatorReport,
 	Address: Address,
 	Population: Population,
+	OrganizationID: OrganizationID,
+	CorporateRegistrar: CorporateRegistrar,
 };
 
 export const mapSFFModel = {
@@ -52,7 +56,7 @@ export const contextUrl = [
 ];
 
 export const ignoredFields = {
-	Organization: ["hasOrganizationProfile", "hasFundingStatus", "hasReportInfo"],
+	Organization: ["hasOrganizationProfile", "hasFundingStatus", "hasReportInfo", "hasID"],
 	Theme: ["hasOutcome", "hasIndicator", "From field: relatesTo"],
 	Address: ["forOrganization"],
 	Person: ["forOrganizationProfile"],
@@ -65,6 +69,8 @@ export const ignoredFields = {
 	Sector: ["forOrganizationProfile"],
 	PopulationServed: ["forOrganizationProfile", "forCharacteristic"],
 	Population: ["forIndicator", "cardinalityForIndicator"],
+	CorporateRegistrar: ["issuedOrganizationID"],
+	OrganizationID: ["forOrganization"],
 };
 
 export const predefinedCodeLists = [
@@ -73,6 +79,8 @@ export const predefinedCodeLists = [
 	"Locality",
 	"ProvinceTerritory",
 	"OrganizationType",
+	"CorporateRegistrar",
+	"EquityDeservingGroup", 
 ];
 
 export * from "./Address";
@@ -85,10 +93,12 @@ export * from "./Theme";
 
 // Export SFF module classes
 export * from "./Characteristic";
+export * from "./CorporateRegistrar";
 export * from "./EDGProfile";
 export * from "./EquityDeservingGroup";
 export * from "./FundingState";
 export * from "./FundingStatus";
+export * from "./OrganizationID";
 export * from "./OrganizationProfile";
 export * from "./Person";
 export * from "./PopulationServed";

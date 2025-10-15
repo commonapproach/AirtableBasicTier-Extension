@@ -18,6 +18,16 @@ export class EquityDeservingGroup extends Base {
 				semiRequired: true,
 			},
 			{
+				name: "hasIdentifier",
+				type: "string",
+				representedType: "string",
+				defaultValue: "",
+				unique: false,
+				notNull: false,
+				required: false,
+				semiRequired: false,
+			},
+			{
 				name: "org:hasName",
 				displayName: "hasName",
 				type: "string",

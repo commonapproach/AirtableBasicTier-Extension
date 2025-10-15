@@ -30,15 +30,21 @@ const GITHUB_FALLBACK_URLS: { [key: string]: string } = {
 		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/OrgTypeGOC/OrgTypeGOC.owl",
 	"https://codelist.commonapproach.org/Locality/LocalityStatsCan.owl":
 		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/Locality/LocalityStatsCan.owl",
+	"https://codelist.commonapproach.org/CanadianCorporateRegistries/CanadianCorporateRegistries.ttl":
+		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/CanadianCorporateRegistries/CanadianCorporateRegistries.ttl",
+	"https://codelist.commonapproach.org/IRISImpactThemes/IRISImpactCategories.ttl":
+		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/IRISImpactCategories/IRISImpactCategories.ttl",
+	"https://codelist.commonapproach.org/EquityDeservingGroupsESDC/EquityDeservingGroupsESDC.ttl":
+		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/EquityDeservingGroupsESDC/EquityDeservingGroupsESDC.ttl",
 };
 
-function parseXmlToCodeList(xmlData: string): CodeList[] {
+function parseXmlToCodeList(data: string): CodeList[] {
 	const options = {
 		ignoreAttributes: false,
 	};
 
 	const parser = new XMLParser(options);
-	const jsonData = parser.parse(xmlData);
+	const jsonData = parser.parse(data);
 
 	const codeList: CodeList[] = [];
 	const descriptions = jsonData["rdf:RDF"]["rdf:Description"] || [];
@@ -73,6 +79,77 @@ function parseXmlToCodeList(xmlData: string): CodeList[] {
 		}
 
 		codeList.push(sector);
+	}
+
+	return codeList;
+}
+
+function parseTurtleToCodeList(ttlData: string): CodeList[] {
+	const codeList: CodeList[] = [];
+	
+	// Extract base URI from @prefix :
+	let baseUri = "";
+	const baseUriMatch = ttlData.match(/@prefix\s*:\s*<([^>]+)>/m);
+	if (baseUriMatch) {
+		baseUri = baseUriMatch[1];
+	}
+
+	// Parse subject blocks that have cids:Code type
+	// Pattern 1: :id a ... cids:Code ... ; properties ...
+	// Pattern 2: <full-url> a ... cids:Code ... ; properties ...
+	const subjectBlockRegex = /(?::(\w+)|<([^>]+)>)\s+a\s+[^;]*cids:Code[^;]*;([\s\S]*?)(?=\n(?::|\<)\S+\s+a\s+|$)/g;
+	let match;
+	
+	while ((match = subjectBlockRegex.exec(ttlData))) {
+		const shortId = match[1];  // :id format
+		const fullUrl = match[2];   // <url> format
+		const propsBlock = match[3];
+		
+		// Skip 'dataset' entries
+		if (shortId === 'dataset') {
+			continue;
+		}
+		
+		// Determine the full @id
+		let fullId;
+		if (fullUrl) {
+			fullId = fullUrl;
+		} else if (shortId && baseUri) {
+			fullId = baseUri + shortId;
+		} else {
+			continue; // Skip if we can't determine ID
+		}
+		
+		const entry: CodeList = {
+			"@id": fullId,
+			hasIdentifier: "",
+			hasName: "",
+		};
+
+		// Extract cids:hasName
+		const nameMatch = propsBlock.match(/cids:hasName\s+"([^"]+)"(?:@\w+)?/);
+		if (nameMatch) {
+			entry.hasName = nameMatch[1];
+		}
+
+		// Extract cids:hasIdentifier (optional)
+		const identifierMatch = propsBlock.match(/cids:hasIdentifier\s+"([^"]+)"/);
+		if (identifierMatch) {
+			entry.hasIdentifier = identifierMatch[1];
+		}
+
+		// Extract cids:hasDescription or cids:hasDefinition
+		const descMatch = propsBlock.match(/cids:hasDescription\s+"([^"]+)"(?:@\w+)?/);
+		const defMatch = propsBlock.match(/cids:hasDefinition\s+"([^"]+)"(?:@\w+)?/);
+		if (descMatch) {
+			entry.hasDescription = descMatch[1];
+		} else if (defMatch) {
+			entry.hasDescription = defMatch[1];
+		}
+
+		if (entry.hasName) {
+			codeList.push(entry);
+		}
 	}
 
 	return codeList;
@@ -114,7 +191,7 @@ async function fetchAndParseCodeList(url: string): Promise<CodeList[]> {
 			}
 		}
 
-		let xmlData: string;
+		let data: string;
 		let codeList: CodeList[] = [];
 
 		// Try to fetch from primary URL first
@@ -126,8 +203,12 @@ async function fetchAndParseCodeList(url: string): Promise<CodeList[]> {
 				throw new Error(`Primary fetch failed with status: ${response.status}`);
 			}
 
-			xmlData = await response.text();
-			codeList = parseXmlToCodeList(xmlData);
+			data = await response.text();
+			if (url.endsWith('.ttl')) {
+				codeList = parseTurtleToCodeList(data);
+			} else {
+				codeList = parseXmlToCodeList(data);
+			}
 
 			console.log(`Successfully fetched ${codeList.length} items from primary URL`);
 		} catch (primaryError) {
@@ -144,8 +225,12 @@ async function fetchAndParseCodeList(url: string): Promise<CodeList[]> {
 						throw new Error(`Fallback fetch failed with status: ${fallbackResponse.status}`);
 					}
 
-					xmlData = await fallbackResponse.text();
-					codeList = parseXmlToCodeList(xmlData);
+					data = await fallbackResponse.text();
+					if (url.endsWith('.ttl')) {
+						codeList = parseTurtleToCodeList(data);
+					} else {
+						codeList = parseXmlToCodeList(data);
+					}
 
 					console.log(`Successfully fetched ${codeList.length} items from GitHub fallback`);
 				} catch (fallbackError) {
@@ -216,6 +301,12 @@ export async function getCodeListByTableName(tableName: string): Promise<CodeLis
 		case "Locality":
 			codeList = await getAllLocalities();
 			break;
+		case "CorporateRegistrar":
+			codeList = await getAllCorporateRegistrars();
+			break;
+		case "EquityDeservingGroup":
+			codeList = await getAllEquityDeservingGroups();
+			break;
 		default:
 			throw new Error(`Table ${tableName} not found`);
 	}
@@ -231,8 +322,9 @@ export async function getAllSectors(): Promise<CodeList[]> {
 		const statsCanSectors = await fetchAndParseCodeList(
 			"https://codelist.commonapproach.org/StatsCanSector/StatsCanSector.owl"
 		);
+		const irisSectors = await getAllIRISImpactCategories();
 
-		return [...icnpoSectors, ...statsCanSectors];
+		return [...icnpoSectors, ...statsCanSectors, ...irisSectors];
 	} catch (error) {
 		console.error("Error fetching sectors code list:", error);
 		return [];
@@ -287,6 +379,45 @@ export async function getAllLocalities(): Promise<CodeList[]> {
 		return localities;
 	} catch (error) {
 		console.error("Error fetching Locality code list:", error);
+		return [];
+	}
+}
+
+export async function getAllCorporateRegistrars(): Promise<CodeList[]> {
+	try {
+		const corporateRegistrars = await fetchAndParseCodeList(
+			"https://codelist.commonapproach.org/CanadianCorporateRegistries/CanadianCorporateRegistries.ttl"
+		);
+
+		return corporateRegistrars;
+	} catch (error) {
+		console.error("Error fetching CorporateRegistrar code list:", error);
+		return [];
+	}
+}
+
+export async function getAllIRISImpactCategories(): Promise<CodeList[]> {
+	try {
+		const irisCategories = await fetchAndParseCodeList(
+			"https://codelist.commonapproach.org/IRISImpactThemes/IRISImpactCategories.ttl"
+		);
+
+		return irisCategories;
+	} catch (error) {
+		console.error("Error fetching IRIS+ Impact Categories code list:", error);
+		return [];
+	}
+}
+
+export async function getAllEquityDeservingGroups(): Promise<CodeList[]> {
+	try {
+		const edgGroups = await fetchAndParseCodeList(
+			"https://codelist.commonapproach.org/EquityDeservingGroupsESDC/EquityDeservingGroupsESDC.ttl"
+		);
+
+		return edgGroups;
+	} catch (error) {
+		console.error("Error fetching Equity Deserving Groups code list:", error);
 		return [];
 	}
 }

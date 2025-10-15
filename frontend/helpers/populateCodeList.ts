@@ -1,6 +1,8 @@
 import { Base, FieldType, Table } from "@airtable/blocks/models";
 import {
 	CodeList,
+	getAllCorporateRegistrars,
+	getAllEquityDeservingGroups, 
 	getAllLocalities,
 	getAllOrganizationType,
 	getAllPopulationServed,
@@ -30,6 +32,14 @@ export const populateCodeList = async (base: Base, tableName: string) => {
 		case "Locality":
 			data = await getAllLocalities();
 			await updateSelectFieldOptionsOnOrganizationProfile(base, "localityServed", data);
+			break;
+		case "CorporateRegistrar":
+			data = await getAllCorporateRegistrars();
+			await populateTables(base, tableName, data);
+			break;
+		case "EquityDeservingGroup":
+			data = await getAllEquityDeservingGroups();
+			await populateTables(base, tableName, data);
 			break;
 		default:
 			throw new Error(`Table ${tableName} not found`);
@@ -61,9 +71,21 @@ const populateTables = async (base: Base, tableName: string, data: CodeList[]) =
 		(d) => !records.records.some((record) => d["@id"] === record.getCellValueAsString("@id"))
 	);
 
-	await updateRecords(table, recordsToUpdate);
-
-	await createRecords(table, recordsToCreate);
+	try {
+		await updateRecords(table, recordsToUpdate);
+		await createRecords(table, recordsToCreate);
+	} catch (error) {
+		// Check if error is about missing field
+		if (error.message && error.message.includes("does not exist in table")) {
+			// Extract field name from error message
+			const fieldMatch = error.message.match(/Field '(.+?)' does not exist/);
+			const missingField = fieldMatch ? fieldMatch[1] : "unknown";
+			throw new Error(
+				`The required field "${missingField}" is missing from the "${tableName}" table. Use 'Create Tables' to restore it.`
+			);
+		}
+		throw error;
+	}
 };
 
 const updateRecords = async (table: Table, data: { id: string; fields: any }[]) => {

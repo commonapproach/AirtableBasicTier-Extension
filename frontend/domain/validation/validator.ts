@@ -195,7 +195,6 @@ async function validateRecords(tableData: TableInterface[], operation: Operation
 			}
 		}
 
-		// check if notNull fields are not null
 		for (const field of cid.getAllFields()) {
 			if (
 				field.notNull &&
@@ -217,6 +216,17 @@ async function validateRecords(tableData: TableInterface[], operation: Operation
 						}
 					)
 					.toString();
+				
+				// Special handling for number fields that can be zero (EDGProfile.hasSize, TeamProfile.hasTeamSize)
+				const fieldValue = data[field.name] || data[field.name.split(":")[1]];
+				const isNumberFieldWithZero = field.type === "number" && fieldValue === 0;
+				
+				// Allow zero values for hasSize and hasTeamSize - treat as warning instead of error
+				if (isNumberFieldWithZero && (field.displayName === "hasSize" || field.displayName === "hasTeamSize")) {
+					// Skip validation - zero is valid for these fields
+					continue;
+				}
+				// For other null/empty values in notNull fields, add as error
 				validatorErrors.add(msg);
 			}
 		}
@@ -954,6 +964,10 @@ function validateIfEmptyFile(tableData: TableInterface[], intl: IntlShape) {
 }
 
 function isFieldValueNullOrEmpty(value: any) {
+	// Zero is a valid value for number fields
+	if (typeof value === "number") {
+		return false;
+	}
 	if (typeof value === "string") {
 		return value.trim().length === 0;
 	}
