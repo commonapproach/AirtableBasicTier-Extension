@@ -23,7 +23,7 @@ export class TeamProfile extends Base {
 				representedType: "number",
 				defaultValue: 0,
 				unique: false,
-				notNull: true,
+				notNull: false,
 				required: false,
 				semiRequired: true,
 			},
