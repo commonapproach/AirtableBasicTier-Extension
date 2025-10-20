@@ -46,7 +46,7 @@ export async function exportData(
 	}
 
 	const tableNames = tables.map((item) => item.name);
-	for (const [key] of Object.entries(fullMap)) {
+	for (const [key] of Object.entries(map)) {
 		if (!tableNames.includes(key)) {
 			setDialogContent(
 				intl.formatMessage({
@@ -170,10 +170,21 @@ export async function exportData(
 						const recordValue = record.getCellValue(fieldName);
 						const existingValue = existingItem[fieldName];
 
-						if (recordValue !== existingValue) {
+						const normalizeValue = (val: any): string => {
+							if (val === null || val === undefined) return '';
+							// Handle Airtable cell values that are objects with 'name' property
+							if (typeof val === 'object' && val.name) return String(val.name).trim();
+							if (typeof val === 'object') return JSON.stringify(val);
+							return String(val).trim();
+						  };
+						  
+						  const recordValueNormalized = normalizeValue(recordValue);
+						  const existingValueNormalized = normalizeValue(existingValue);
+						  
+						  if (recordValueNormalized !== existingValueNormalized) {
 							hasChanges = true;
 							break;
-						}
+						  }
 					}
 					if (hasChanges) {
 						changeOnDefaultCodeListsWarning.push(
@@ -207,10 +218,21 @@ export async function exportData(
 						const recordValue = record.getCellValue(fieldName);
 						const existingValue = existingItem[fieldName];
 
-						if (recordValue !== existingValue) {
+						const normalizeValue = (val: any): string => {
+							if (val === null || val === undefined) return '';
+							// Handle Airtable cell values that are objects with 'name' property
+							if (typeof val === 'object' && val.name) return String(val.name).trim();
+							if (typeof val === 'object') return JSON.stringify(val);
+							return String(val).trim();
+						  };
+						  
+						  const recordValueNormalized = normalizeValue(recordValue);
+						  const existingValueNormalized = normalizeValue(existingValue);
+						  
+						  if (recordValueNormalized !== existingValueNormalized) {
 							hasChanges = true;
 							break;
-						}
+						  }
 					}
 					if (hasChanges) {
 						changeOnDefaultCodeListsWarning.push(
@@ -585,6 +607,11 @@ function checkForNotExportedFields(base: Base, intl: IntlShape) {
 		const externalFields = table.fields.map((item) => item.name);
 
 		for (const field of externalFields) {
+			if (table.name === "Organization") {
+				console.log("External field being checked:", field);
+				console.log("Ignored fields for Organization:", ignoredFields["Organization"]);
+				console.log("Will skip this field?", ignoredFields["Organization"]?.includes(field));
+			}
 			if (Object.keys(fullMap).includes(field) || ignoredFields[table.name]?.includes(field)) {
 				continue;
 			}

@@ -22,9 +22,9 @@ export class Sector extends Base {
 				representedType: "string",
 				defaultValue: "",
 				unique: false,
-				notNull: true,
+				notNull: false,
 				required: false,
-				semiRequired: true,
+				semiRequired: false,
 			},
 			{
 				name: "org:hasName",

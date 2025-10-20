@@ -2,7 +2,6 @@ import { Address } from "./Address";
 import { Base } from "./Base";
 import { Indicator } from "./Indicator";
 import { Outcome } from "./Outcome";
-import { OrganizationID } from "./OrganizationID";
 
 export class Organization extends Base {
 	static className = "Organization";
@@ -40,17 +39,6 @@ export class Organization extends Base {
 				notNull: false,
 				required: false,
 				semiRequired: true,
-			},
-			{
-				name: "hasID",
-				type: "link",
-				representedType: "array",
-				defaultValue: [],
-				link: { table: OrganizationID, field: "forOrganization" },
-				unique: false,
-				notNull: false,
-				required: false,
-				semiRequired: false,
 			},
 			{
 				name: "hasIndicator",

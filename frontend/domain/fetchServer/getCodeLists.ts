@@ -31,7 +31,7 @@ const GITHUB_FALLBACK_URLS: { [key: string]: string } = {
 	"https://codelist.commonapproach.org/Locality/LocalityStatsCan.owl":
 		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/Locality/LocalityStatsCan.owl",
 	"https://codelist.commonapproach.org/CanadianCorporateRegistries/CanadianCorporateRegistries.ttl":
-		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/CanadianCorporateRegistries/CanadianCorporateRegistries.ttl",
+		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/CanadianCorporateRegistries/CanadianCorporateRegistries.ttl",	
 	"https://codelist.commonapproach.org/IRISImpactThemes/IRISImpactCategories.ttl":
 		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/IRISImpactCategories/IRISImpactCategories.ttl",
 	"https://codelist.commonapproach.org/EquityDeservingGroupsESDC/EquityDeservingGroupsESDC.ttl":
@@ -87,74 +87,57 @@ function parseXmlToCodeList(data: string): CodeList[] {
 function parseTurtleToCodeList(ttlData: string): CodeList[] {
 	const codeList: CodeList[] = [];
 	
-	// Extract base URI from @prefix :
-	let baseUri = "";
+	// Extract base URI from @prefix
+	let baseUri = "https://codelist.commonapproach.org/codeLists/CanadianCorporateRegistries/";
 	const baseUriMatch = ttlData.match(/@prefix\s*:\s*<([^>]+)>/m);
 	if (baseUriMatch) {
-		baseUri = baseUriMatch[1];
+	  baseUri = baseUriMatch[1];
 	}
-
+  
 	// Parse subject blocks that have cids:Code type
-	// Pattern 1: :id a ... cids:Code ... ; properties ...
-	// Pattern 2: <full-url> a ... cids:Code ... ; properties ...
-	const subjectBlockRegex = /(?::(\w+)|<([^>]+)>)\s+a\s+[^;]*cids:Code[^;]*;([\s\S]*?)(?=\n(?::|\<)\S+\s+a\s+|$)/g;
+	const subjectBlockRegex = /:([\w\d]+)\s+a\s+(?:skos:Concept|cids:Code)[^;]*;([\s\S]*?)(?=\n\s*:[\w\d]+\s+a\s+|$)/g;
 	let match;
 	
 	while ((match = subjectBlockRegex.exec(ttlData))) {
-		const shortId = match[1];  // :id format
-		const fullUrl = match[2];   // <url> format
-		const propsBlock = match[3];
-		
-		// Skip 'dataset' entries
-		if (shortId === 'dataset') {
-			continue;
-		}
-		
-		// Determine the full @id
-		let fullId;
-		if (fullUrl) {
-			fullId = fullUrl;
-		} else if (shortId && baseUri) {
-			fullId = baseUri + shortId;
-		} else {
-			continue; // Skip if we can't determine ID
-		}
-		
-		const entry: CodeList = {
-			"@id": fullId,
-			hasIdentifier: "",
-			hasName: "",
-		};
-
-		// Extract cids:hasName
-		const nameMatch = propsBlock.match(/cids:hasName\s+"([^"]+)"(?:@\w+)?/);
-		if (nameMatch) {
-			entry.hasName = nameMatch[1];
-		}
-
-		// Extract cids:hasIdentifier (optional)
-		const identifierMatch = propsBlock.match(/cids:hasIdentifier\s+"([^"]+)"/);
-		if (identifierMatch) {
-			entry.hasIdentifier = identifierMatch[1];
-		}
-
-		// Extract cids:hasDescription or cids:hasDefinition
-		const descMatch = propsBlock.match(/cids:hasDescription\s+"([^"]+)"(?:@\w+)?/);
-		const defMatch = propsBlock.match(/cids:hasDefinition\s+"([^"]+)"(?:@\w+)?/);
-		if (descMatch) {
-			entry.hasDescription = descMatch[1];
-		} else if (defMatch) {
-			entry.hasDescription = defMatch[1];
-		}
-
-		if (entry.hasName) {
-			codeList.push(entry);
-		}
+	  const id = match[1];
+	  const propsBlock = match[2];
+	  
+	  // Skip the 'dataset' entry
+	  if (id === 'dataset') {
+		continue;
+	  }
+	  
+	  const entry: CodeList = {
+		"@id": baseUri + id,
+		hasIdentifier: "",
+		hasName: "",
+	  };
+  
+	  // Extract cids:hasIdentifier (if present)
+	  const identifierMatch = propsBlock.match(/cids:hasIdentifier\s+"([^"]+)"/);
+	  if (identifierMatch) {
+		entry.hasIdentifier = identifierMatch[1];
+	  }
+  
+	  // Extract cids:hasName (if present)
+	  const nameMatch = propsBlock.match(/cids:hasName\s+"([^"]+)"/);
+	  if (nameMatch) {
+		entry.hasName = nameMatch[1];
+	  }
+  
+	  // Extract cids:hasDescription (if present)
+	  const descMatch = propsBlock.match(/cids:hasDescription\s+"([^"]+)"/);
+	  if (descMatch) {
+		entry.hasDescription = descMatch[1];
+	  }
+  
+	  if (entry.hasName) {
+		codeList.push(entry);
+	  }
 	}
-
+  
 	return codeList;
-}
-
+  }
 async function fetchAndParseCodeList(url: string): Promise<CodeList[]> {
 	try {
 		// Check if the data is already in the cache

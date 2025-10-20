@@ -27,8 +27,6 @@ export const map = {
 	IndicatorReport: IndicatorReport,
 	Address: Address,
 	Population: Population,
-	OrganizationID: OrganizationID,
-	CorporateRegistrar: CorporateRegistrar,
 };
 
 export const mapSFFModel = {
@@ -43,6 +41,8 @@ export const mapSFFModel = {
 	Sector: Sector,
 	PopulationServed: PopulationServed,
 	ReportInfo: ReportInfo,
+	OrganizationID: OrganizationID,
+	CorporateRegistrar: CorporateRegistrar,
 };
 
 export type ModelType = keyof typeof map;
@@ -56,7 +56,7 @@ export const contextUrl = [
 ];
 
 export const ignoredFields = {
-	Organization: ["hasOrganizationProfile", "hasFundingStatus", "hasReportInfo", "hasID"],
+	Organization: ["hasOrganizationProfile", "hasFundingStatus", "hasReportInfo", "hasIndicatorReport", "hasID"],
 	Theme: ["hasOutcome", "hasIndicator", "From field: relatesTo"],
 	Address: ["forOrganization"],
 	Person: ["forOrganizationProfile"],
@@ -69,7 +69,7 @@ export const ignoredFields = {
 	Sector: ["forOrganizationProfile"],
 	PopulationServed: ["forOrganizationProfile", "forCharacteristic"],
 	Population: ["forIndicator", "cardinalityForIndicator"],
-	CorporateRegistrar: ["issuedOrganizationID"],
+	CorporateRegistrar: ["forOrganizationID", "issuedOrganizationID"],
 	OrganizationID: ["forOrganization"],
 };
 
