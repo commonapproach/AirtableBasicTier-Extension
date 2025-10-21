@@ -88,54 +88,95 @@ function parseTurtleToCodeList(ttlData: string): CodeList[] {
 	const codeList: CodeList[] = [];
 	
 	// Extract base URI from @prefix
-	let baseUri = "https://codelist.commonapproach.org/codeLists/CanadianCorporateRegistries/";
+	let baseUri = "https://codelist.commonapproach.org/codeLists/";
 	const baseUriMatch = ttlData.match(/@prefix\s*:\s*<([^>]+)>/m);
 	if (baseUriMatch) {
 	  baseUri = baseUriMatch[1];
 	}
   
-	// Parse subject blocks that have cids:Code type
-	const subjectBlockRegex = /:([\w\d]+)\s+a\s+(?:skos:Concept|cids:Code)[^;]*;([\s\S]*?)(?=\n\s*:[\w\d]+\s+a\s+|$)/g;
+	console.log("=== PARSING TURTLE ===");
+	console.log("Base URI:", baseUri);
+	console.log("Data length:", ttlData.length);
+	console.log("First 1000 chars:", ttlData.substring(0, 1000));
+	
+	const fullUrlRegex = /<([^>]+)>\s+a\s+(?:skos:Concept|cids:Code)[^;]*;?\s*([\s\S]*?)(?=<[^>]+>\s+a\s+|$)/g;
 	let match;
 	
-	while ((match = subjectBlockRegex.exec(ttlData))) {
-	  const id = match[1];
+	while ((match = fullUrlRegex.exec(ttlData)) !== null) {
+	  const fullUrl = match[1];
 	  const propsBlock = match[2];
 	  
-	  // Skip the 'dataset' entry
-	  if (id === 'dataset') {
-		continue;
-	  }
-	  
 	  const entry: CodeList = {
-		"@id": baseUri + id,
+		"@id": fullUrl,
 		hasIdentifier: "",
 		hasName: "",
 	  };
   
-	  // Extract cids:hasIdentifier (if present)
+	  // Extract properties
 	  const identifierMatch = propsBlock.match(/cids:hasIdentifier\s+"([^"]+)"/);
 	  if (identifierMatch) {
 		entry.hasIdentifier = identifierMatch[1];
 	  }
   
-	  // Extract cids:hasName (if present)
-	  const nameMatch = propsBlock.match(/cids:hasName\s+"([^"]+)"/);
+	  const nameMatch = propsBlock.match(/(?:cids:hasName|rdfs:label)\s+"([^"]+)"(?:@[a-z]+)?/);
 	  if (nameMatch) {
 		entry.hasName = nameMatch[1];
 	  }
   
-	  // Extract cids:hasDescription (if present)
-	  const descMatch = propsBlock.match(/cids:hasDescription\s+"([^"]+)"/);
+	  const descMatch = propsBlock.match(/(?:cids:hasDescription|skos:definition)\s+"([^"]+)"(?:@[a-z]+)?/);
 	  if (descMatch) {
 		entry.hasDescription = descMatch[1];
 	  }
   
 	  if (entry.hasName) {
 		codeList.push(entry);
+		console.log("Parsed entry (full URL):", fullUrl.split('/').pop(), "->", entry.hasName);
 	  }
 	}
   
+	// If we didn't find any full URL entries, try prefix notation (for CorporateRegistrar, EDG)
+	if (codeList.length === 0) {
+	  const prefixRegex = /:([a-zA-Z0-9_-]+)\s*\n?\s*a\s+(?:skos:Concept|cids:Code)[^;]*;?\s*([\s\S]*?)(?=\n\s*:[a-zA-Z0-9_-]+\s*\n?\s*a\s+|$)/g;
+	  
+	  while ((match = prefixRegex.exec(ttlData)) !== null) {
+		const id = match[1];
+		const propsBlock = match[2];
+		
+		if (id === 'dataset') {
+		  continue;
+		}
+  
+		const entry: CodeList = {
+		  "@id": baseUri + id,
+		  hasIdentifier: "",
+		  hasName: "",
+		};
+  
+		const identifierMatch = propsBlock.match(/cids:hasIdentifier\s+"([^"]+)"/);
+		if (identifierMatch) {
+		  entry.hasIdentifier = identifierMatch[1];
+		}
+  
+		const nameMatch = propsBlock.match(/(?:cids:hasName|rdfs:label)\s+"([^"]+)"(?:@[a-z]+)?/);
+		if (nameMatch) {
+		  entry.hasName = nameMatch[1];
+		}
+  
+		const descMatch = propsBlock.match(/(?:cids:hasDescription|skos:definition)\s+"([^"]+)"(?:@[a-z]+)?/);
+		if (descMatch) {
+		  entry.hasDescription = descMatch[1];
+		}
+  
+		if (entry.hasName) {
+		  codeList.push(entry);
+		  console.log("Parsed entry (prefix):", id, "->", entry.hasName);
+		}
+	  }
+	}
+  
+	console.log("Total entries parsed:", codeList.length);
+	console.log("======================");
+	
 	return codeList;
   }
 async function fetchAndParseCodeList(url: string): Promise<CodeList[]> {
@@ -299,20 +340,22 @@ export async function getCodeListByTableName(tableName: string): Promise<CodeLis
 
 export async function getAllSectors(): Promise<CodeList[]> {
 	try {
-		const icnpoSectors = await fetchAndParseCodeList(
-			"https://codelist.commonapproach.org/ICNPOsector/ICNPOsector.owl"
-		);
-		const statsCanSectors = await fetchAndParseCodeList(
-			"https://codelist.commonapproach.org/StatsCanSector/StatsCanSector.owl"
-		);
-		const irisSectors = await getAllIRISImpactCategories();
-
-		return [...icnpoSectors, ...statsCanSectors, ...irisSectors];
+	  const icnpoSectors = await fetchAndParseCodeList(
+		"https://codelist.commonapproach.org/ICNPOsector/ICNPOsector.owl"
+	  );
+	  const statsCanSectors = await fetchAndParseCodeList(
+		"https://codelist.commonapproach.org/StatsCanSector/StatsCanSector.owl"
+	  );
+	  const irisSectors = await fetchAndParseCodeList(
+		"https://codelist.commonapproach.org/IRISImpactThemes/IRISImpactCategories.ttl" 
+	  );
+  
+	  return [...icnpoSectors, ...statsCanSectors, ...irisSectors];
 	} catch (error) {
-		console.error("Error fetching sectors code list:", error);
-		return [];
+	  console.error("Error fetching sectors code list:", error);
+	  return [];
 	}
-}
+  }
 
 export async function getAllPopulationServed(): Promise<CodeList[]> {
 	try {
