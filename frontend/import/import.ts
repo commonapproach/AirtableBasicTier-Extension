@@ -3,12 +3,13 @@
 import Base from "@airtable/blocks/dist/types/src/models/base";
 import { IntlShape } from "react-intl";
 import { TableInterface } from "../domain/interfaces/table.interface";
-import { map, mapSFFModel, ModelType, SFFModelType } from "../domain/models";
+import { map, mapSFFModel, ModelType, SFFModelType, ignoredFields } from "../domain/models";
 import { FieldType } from "../domain/models/Base";
 import { validate } from "../domain/validation/validator";
 import { checkPrimaryField } from "../helpers/checkPrimaryField";
 import { createSFFModuleTables } from "../helpers/createSFFModuleTables";
 import { createTables } from "../helpers/createTables";
+import { getCodeListByTableName } from "../domain/fetchServer/getCodeLists";
 import {
 	convertIcAddressToPostalAddress,
 	convertIcHasAddressToHasAddress,
@@ -18,6 +19,14 @@ import {
 	harmonizeCardinalityProperty,
 	parseJsonLd,
 } from "../utils";
+
+
+function normalizeValue(val: any): string {
+	if (val === null || val === undefined) return '';
+	if (typeof val === 'object' && val.name) return String(val.name).trim();
+	if (typeof val === 'object') return JSON.stringify(val);
+	return String(val).trim();
+  }
 
 // Helper: extract a primary standard type (cids: or sff:) from @type which may be string or array
 function getPrimaryStandardType(typeVal: any): string | null {
@@ -227,6 +236,9 @@ export async function importData(
 	}
 
 	warnings = [...warnings, ...warnIfUnrecognizedFieldsWillBeIgnored(jsonData, intl)];
+	
+	const codeListWarnings = await warnIfCodeListItemsModified(jsonData, intl);
+	warnings = [...warnings, ...codeListWarnings];
 
 	allErrors = errors.join("<hr/>");
 	allWarnings = warnings.join("<hr/>");
@@ -373,6 +385,14 @@ async function writeTable(base: Base, tableData: TableInterface[]): Promise<void
 
 		let record: { [key: string]: unknown } = {};
 		Object.entries(data).forEach(async ([key, value]) => {
+			if (key.includes(':') && !key.startsWith('@')) {
+				const originalKey = key;
+				key = key.split(':')[1]; 
+				if (!data[key]) {
+					data[key] = data[originalKey];
+				}
+			}
+			
 			if (key === "@type" || key === "@context" || !checkIfFieldIsRecognized(tableName, key)) {
 				return;
 			}
@@ -684,10 +704,18 @@ function doAllRecordsHaveId(tableData: TableInterface[]) {
 	}
 	return true;
 }
-
 function warnIfUnrecognizedFieldsWillBeIgnored(tableData: TableInterface[], intl: IntlShape) {
 	const warnings = [];
 	const classesSet = new Set();
+	
+	// Auto-created fields that Airtable creates for reciprocal links
+	const autoCreatedFields = [
+		'hasIndicatorReport',    // Auto-created by IndicatorReport→forOrganization
+		'hasID',                 // Auto-created by OrganizationID→forOrganization  
+		'issuedOrganizationID',  // Auto-created by OrganizationID→issuedBy
+		'forOrganizationID',     // Auto-created by CorporateRegistrar
+	];
+	
 	for (const data of tableData) {
 		if (
 			!data["@type"] ||
@@ -705,12 +733,28 @@ function warnIfUnrecognizedFieldsWillBeIgnored(tableData: TableInterface[], intl
 		}
 
 		for (const key in data) {
-			if (key !== "@type" && key !== "@context" && !checkIfFieldIsRecognized(tableName, key)) {
+			// Skip @type and @context
+			if (key === "@type" || key === "@context") {
+				continue;
+			}
+			
+			// Skip auto-created fields silently (no warnings for these)
+			if (autoCreatedFields.includes(key)) {
+				continue;
+			}
+			
+			// Skip fields in ignoredFields list (intentionally ignored)
+			if (ignoredFields[tableName]?.includes(key)) {
+				continue;
+			}
+			
+			// Only warn for truly unrecognized fields
+			if (!checkIfFieldIsRecognized(tableName, key)) {
 				warnings.push(
 					`${intl.formatMessage(
 						{
 							id: "import.messages.warning.unrecognizedField",
-							defaultMessage: `Table <b>{tableName}</b> has unrecognized field <b>{fieldName}</b>. This field will be ignored.`,
+							defaultMessage: `Field <b>{fieldName}</b> in table <b>{tableName}</b> is inconsistent with the Basic Tier of the Common Impact Data Standard. This field will not be imported.`,
 						},
 						{ tableName, fieldName: key, b: (str) => `<b>${str}</b>` }
 					)}`
@@ -719,6 +763,67 @@ function warnIfUnrecognizedFieldsWillBeIgnored(tableData: TableInterface[], intl
 			}
 		}
 	}
+	return warnings;
+}
+async function warnIfCodeListItemsModified(tableData: TableInterface[], intl: IntlShape) {
+	const warnings = [];
+	const predefinedCodeLists = ["Sector", "PopulationServed", "Locality", "ProvinceTerritory", "OrganizationType", "CorporateRegistrar"];
+	
+	for (const data of tableData) {
+		const tableName = getCidsTableSuffix(data["@type"]) || "";
+		
+		// Only check predefined code list tables
+		if (!predefinedCodeLists.includes(tableName)) {
+			continue;
+		}
+		
+		// Skip if no @id (validation will catch this elsewhere)
+		if (!data["@id"]) {
+			continue;
+		}
+		
+		try {
+			// Get the predefined code list for this table
+			const codeList = await getCodeListByTableName(tableName);
+			
+			if (codeList && codeList.length > 0) {
+				const existingItem = codeList.find(item => item["@id"] === data["@id"]);
+				
+				if (existingItem) {
+					// Check if imported data differs from predefined code list
+					let hasChanges = false;
+					
+					for (const fieldName of Object.keys(existingItem)) {
+						if (fieldName === "@id") continue; // Skip ID comparison
+						
+						const importedValue = normalizeValue(data[fieldName]);
+						const codeListValue = normalizeValue(existingItem[fieldName]);
+						
+						if (importedValue !== codeListValue) {
+							hasChanges = true;
+							break;
+						}
+					}
+					
+					if (hasChanges) {
+						warnings.push(
+							intl.formatMessage(
+								{
+									id: "import.messages.warning.codeListModified",
+									defaultMessage: `Record with @id <b>{id}</b> in table <b>{tableName}</b> differs from the predefined code list item. The imported version will be used, which may cause inconsistencies.`,
+								},
+								{ id: data["@id"], tableName: tableName, b: (str) => `<b>${str}</b>` }
+							)
+						);
+					}
+				}
+			}
+		} catch (error) {
+			// If we can't fetch the code list, just skip this check
+			console.warn(`Could not check code list for ${tableName}:`, error);
+		}
+	}
+	
 	return warnings;
 }
 

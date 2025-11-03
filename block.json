@@ -1,4 +1,11 @@
 {
     "version": "1.0",
-    "frontendEntry": "./frontend/index.tsx"
+    "frontendEntry": "./frontend/index.tsx",
+    "networkDomains": [
+        "airtable.com",
+        "*.airtable.com",
+        "codelist.commonapproach.org",
+        "ontology.commonapproach.org",
+        "raw.githubusercontent.com"
+    ]
 }
