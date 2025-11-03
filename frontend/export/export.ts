@@ -22,6 +22,17 @@ function getAirtableFieldName(field: FieldType): string {
 	return n.includes(":") ? n.split(":")[1] : n;
 }
 
+function getExportFieldName(field: FieldType): string {
+	const fieldName = field.name || "";
+	if (fieldName.startsWith('@')) {
+		return fieldName;
+	}
+	if (fieldName.includes(':')) {
+		return fieldName.split(':')[1];
+	}
+	return fieldName;
+}
+
 export async function exportData(
 	base: Base,
 	setDialogContent: (
@@ -258,6 +269,7 @@ export async function exportData(
 
 			for (const field of cid.getTopLevelFields()) {
 				const airtableName = getAirtableFieldName(field);
+				const exportFieldName = getExportFieldName(field); 
 				if (field.type === "link") {
 					const value: any = record.getCellValue(airtableName);
 					if (field.representedType === "array") {
@@ -266,7 +278,7 @@ export async function exportData(
 						if (fieldValue && fieldValue.length > 0) {
 							isEmpty = false;
 						}
-						row[field.name] = fieldValue;
+						row[exportFieldName] = fieldValue;
 					} else if (field.representedType === "string") {
 						const fieldValue = value ? value[0]?.name : field?.defaultValue;
 						if (fieldValue) {
@@ -278,13 +290,13 @@ export async function exportData(
 								if (!types.includes("i72:Cardinality")) {
 									row["@type"] = [...types, "i72:Cardinality"];
 								}
-								row[field.name] = fieldValue.toString();
+								row[exportFieldName] = fieldValue.toString();
 							} else {
-								row[field.name] = fieldValue.toString();
+								row[exportFieldName] = fieldValue.toString();
 							}
 						} else {
 							// No value
-							row[field.name] = field?.defaultValue ?? "";
+							row[exportFieldName] = field?.defaultValue ?? "";
 						}
 					}
 				} else if (field.type === "object") {
@@ -304,9 +316,9 @@ export async function exportData(
 						optionField = field.selectOptions.find((opt) => opt.name === fieldValue["name"]);
 					}
 					if (optionField) {
-						row[field.name] = field.representedType === "array" ? [optionField.id] : optionField.id;
+						row[exportFieldName] = field.representedType === "array" ? [optionField.id] : optionField.id;
 					} else {
-						row[field.name] =
+						row[exportFieldName] =
 							field.representedType === "array" ? [fieldValue["name"]] : fieldValue["name"];
 					}
 				} else if (field.type === "multiselect") {
@@ -329,7 +341,7 @@ export async function exportData(
 					const unrecognizedOptionNames = (fieldValue as { name: string }[])
 						.filter((item) => !optionField.map((opt) => opt.name).includes(item.name))
 						.map((item) => item.name);
-					row[field.name] =
+					row[exportFieldName] =
 						field.representedType === "array"
 							? [...recognizedOptionIds, ...unrecognizedOptionNames]
 							: [...recognizedOptionIds, ...unrecognizedOptionNames].join(", ");
@@ -342,9 +354,9 @@ export async function exportData(
 						const localTimezone = moment.tz.guess();
 						const date = moment(fieldValue).tz(localTimezone).format("YYYY-MM-DDTHH:mm:ssZ");
 
-						row[field.name] = date;
+						row[exportFieldName] = date;
 					} else {
-						row[field.name] = "";
+						row[exportFieldName] = "";
 					}
 				} else if (field.type === "date") {
 					const fieldValue = record.getCellValueAsString(airtableName) ?? "";
@@ -355,13 +367,13 @@ export async function exportData(
 						const localTimezone = moment.tz.guess();
 						const date = moment(fieldValue).tz(localTimezone).format("YYYY-MM-DD");
 
-						row[field.name] = date;
+						row[exportFieldName] = date;
 					} else {
-						row[field.name] = "";
+						row[exportFieldName] = "";
 					}
 				} else if (field.type === "boolean") {
 					const fieldValue = record.getCellValue(airtableName) ?? false;
-					row[field.name] = fieldValue ? true : false;
+					row[exportFieldName] = fieldValue ? true : false;
 				} else {
 					const fieldValue = record.getCellValue(airtableName) ?? field.defaultValue;
 					if (fieldValue) {
@@ -383,7 +395,7 @@ export async function exportData(
 					} else {
 						exportValue = fieldValue ? fieldValue.toString() : field.defaultValue;
 					}
-					row[field.name] = exportValue;
+					row[exportFieldName] = exportValue;
 				}
 			}
 			// No automatic population or multi-typing logic beyond Indicator cardinality; Population exported only from Population table.
@@ -397,7 +409,7 @@ export async function exportData(
 						if (
 							typeof v === "string" &&
 							v.trim() === "" &&
-							entry[0] !== "i72:hasNumericalValue" // Keep as "" to distinguish missing vs zero/unknown
+							entry[0] !== "hasNumericalValue" // Keep as "" to distinguish missing vs zero/unknown
 						)
 							return false;
 						if (Array.isArray(v) && v.length === 0) return false;
@@ -419,13 +431,13 @@ export async function exportData(
 				: item?.["@type"] === "cids:Indicator"
 		) {
 			if (item["@id"]) {
-				const existing = item["i72:unit_of_measure"];
+				const existing = item["unit_of_measure"];
 				const resolved =
 					existing && typeof existing === "string" && existing.trim().length > 0
 						? existing
 						: UNIT_IRI.UNSPECIFIED;
 				if (!existing) {
-					item["i72:unit_of_measure"] = resolved;
+					item["unit_of_measure"] = resolved;
 				}
 				indicatorUnitById[item["@id"]] = resolved;
 				usedUnitIris.add(resolved);
@@ -552,7 +564,7 @@ function getFileName(orgName: string): string {
 // Recursively remove empty string, null, undefined, and empty arrays/objects from export objects.
 // Preserve i72:hasNumericalValue when it's an empty string (intentional signal).
 function deepCleanExportObjects(items: any[]): any[] {
-	const shouldKeepEmptyStringKey = (key: string) => key === "i72:hasNumericalValue";
+	const shouldKeepEmptyStringKey = (key: string) => key === "hasNumericalValue";
 	function clean(value: any, parentKey?: string): any {
 		if (Array.isArray(value)) {
 			const cleanedArr = value
@@ -663,6 +675,7 @@ async function checkForEmptyTables(base: Base, intl: IntlShape) {
 function getObjectFieldsRecursively(record: Record, field: FieldType, row: any, isEmpty: boolean) {
 	if (field.type !== "object") {
 		const airtableName = getAirtableFieldName(field);
+		const exportFieldName = getExportFieldName(field);
 		const value = record.getCellValue(airtableName) ?? field.defaultValue;
 
 		if (field.type === "link") {
@@ -672,13 +685,13 @@ function getObjectFieldsRecursively(record: Record, field: FieldType, row: any, 
 				if (fieldValue && fieldValue.length > 0) {
 					isEmpty = false;
 				}
-				row[field.name] = fieldValue;
+				row[exportFieldName]= fieldValue;
 			} else if (field.representedType === "string") {
 				const fieldValue = value ? value[0]?.name : field?.defaultValue;
 				if (fieldValue) {
 					isEmpty = false;
 				}
-				row[field.name] = fieldValue.toString();
+				row[exportFieldName]= fieldValue.toString();
 			}
 		} else if (field.type === "datetime") {
 			if (value && typeof value === "string") {
@@ -688,9 +701,9 @@ function getObjectFieldsRecursively(record: Record, field: FieldType, row: any, 
 				const localTimezone = moment.tz.guess();
 				const date = moment(value).tz(localTimezone).format("YYYY-MM-DDTHH:mm:ssZ");
 
-				row[field.name] = date;
+				row[exportFieldName]= date;
 			} else {
-				row[field.name] = "";
+				row[exportFieldName]= "";
 			}
 		} else if (field.type === "date") {
 			if (value && typeof value === "string") {
@@ -700,12 +713,12 @@ function getObjectFieldsRecursively(record: Record, field: FieldType, row: any, 
 				const localTimezone = moment.tz.guess();
 				const date = moment(value).tz(localTimezone).format("YYYY-MM-DD");
 
-				row[field.name] = date;
+				row[exportFieldName]= date;
 			} else {
-				row[field.name] = "";
+				row[exportFieldName]= "";
 			}
 		} else if (field.type === "boolean") {
-			row[field.name] = value ? true : false;
+			row[exportFieldName]= value ? true : false;
 		} else {
 			if (value) {
 				isEmpty = false;
@@ -718,7 +731,7 @@ function getObjectFieldsRecursively(record: Record, field: FieldType, row: any, 
 			} else {
 				exportValue = value ? value.toString() : field.defaultValue;
 			}
-			row[field.name] = exportValue;
+			row[exportFieldName]= exportValue;
 		}
 		return [row, isEmpty];
 	}

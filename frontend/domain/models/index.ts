@@ -70,7 +70,7 @@ export const ignoredFields = {
 	PopulationServed: ["forOrganizationProfile", "forCharacteristic"],
 	Population: ["forIndicator", "cardinalityForIndicator"],
 	CorporateRegistrar: ["forOrganizationID", "issuedOrganizationID"],
-	OrganizationID: ["forOrganization"],
+	OrganizationID: ["forOrganization", "hasID"],
 };
 
 export const predefinedCodeLists = [
