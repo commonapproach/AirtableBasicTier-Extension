@@ -26,7 +26,7 @@ function normalizeValue(val: any): string {
 	if (typeof val === 'object' && val.name) return String(val.name).trim();
 	if (typeof val === 'object') return JSON.stringify(val);
 	return String(val).trim();
-  }
+}
 
 // Helper: extract a primary standard type (cids: or sff:) from @type which may be string or array
 function getPrimaryStandardType(typeVal: any): string | null {
@@ -704,6 +704,7 @@ function doAllRecordsHaveId(tableData: TableInterface[]) {
 	}
 	return true;
 }
+
 function warnIfUnrecognizedFieldsWillBeIgnored(tableData: TableInterface[], intl: IntlShape) {
 	const warnings = [];
 	const classesSet = new Set();
@@ -765,6 +766,7 @@ function warnIfUnrecognizedFieldsWillBeIgnored(tableData: TableInterface[], intl
 	}
 	return warnings;
 }
+
 async function warnIfCodeListItemsModified(tableData: TableInterface[], intl: IntlShape) {
 	const warnings = [];
 	const predefinedCodeLists = ["Sector", "PopulationServed", "Locality", "ProvinceTerritory", "OrganizationType", "CorporateRegistrar"];
@@ -947,7 +949,7 @@ function transformObjectFieldIfWrongFormat(jsonData: TableInterface[]) {
 
 				for (const item of value) {
 					if (typeof item === "object" && item !== null) {
-						const obj = item as any; // Type assertion since we know item is not null
+						const obj = item as any;
 						let id = obj["@id"] as string | undefined;
 						if (!id) {
 							// If there is no explicit @id, try to derive one only when a @type exists
@@ -993,12 +995,11 @@ function transformObjectFieldIfWrongFormat(jsonData: TableInterface[]) {
 					// If no @id, drop the value to avoid invalid data
 					data[key] = undefined;
 				}
-				// Note: We don't create new objects for select/multiselect since they only handle predefined options
 			} else if (
 				(field?.type === "select" || field?.type === "multiselect") &&
 				Array.isArray(value)
 			) {
-				// Handle arrays of objects for select/multiselect fields, e.g., [{"@id": "..."}, {"@id": "..."}]
+				// Handle arrays of objects for select/multiselect fields
 				const processedIds: string[] = [];
 
 				for (const item of value) {
@@ -1008,16 +1009,14 @@ function transformObjectFieldIfWrongFormat(jsonData: TableInterface[]) {
 						if (id) {
 							processedIds.push(id);
 						}
-						// Note: We don't create new objects for select/multiselect since they only handle predefined options
 					} else if (typeof item === "string") {
-						// Already a string ID, keep it as is
 						processedIds.push(item);
 					}
 				}
 
-				// Replace the field value with the array of IDs
 				data[key] = processedIds;
 			}
+			// No else clause - original behavior: don't normalize other fields
 		}
 	}
 	return jsonData;

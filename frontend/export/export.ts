@@ -157,7 +157,7 @@ export async function exportData(
 			const baseType =
 				table.name === "Population"
 					? "i72:Population"
-					:table.name === "Person"
+					: table.name === "Person"
 					? "cids:Person"
 					: isSFFTable
 					? `sff:${table.name}`
@@ -187,15 +187,15 @@ export async function exportData(
 							if (typeof val === 'object' && val.name) return String(val.name).trim();
 							if (typeof val === 'object') return JSON.stringify(val);
 							return String(val).trim();
-						  };
-						  
-						  const recordValueNormalized = normalizeValue(recordValue);
-						  const existingValueNormalized = normalizeValue(existingValue);
-						  
-						  if (recordValueNormalized !== existingValueNormalized) {
+						};
+						
+						const recordValueNormalized = normalizeValue(recordValue);
+						const existingValueNormalized = normalizeValue(existingValue);
+						
+						if (recordValueNormalized !== existingValueNormalized) {
 							hasChanges = true;
 							break;
-						  }
+						}
 					}
 					if (hasChanges) {
 						changeOnDefaultCodeListsWarning.push(
@@ -235,15 +235,15 @@ export async function exportData(
 							if (typeof val === 'object' && val.name) return String(val.name).trim();
 							if (typeof val === 'object') return JSON.stringify(val);
 							return String(val).trim();
-						  };
-						  
-						  const recordValueNormalized = normalizeValue(recordValue);
-						  const existingValueNormalized = normalizeValue(existingValue);
-						  
-						  if (recordValueNormalized !== existingValueNormalized) {
+						};
+						
+						const recordValueNormalized = normalizeValue(recordValue);
+						const existingValueNormalized = normalizeValue(existingValue);
+						
+						if (recordValueNormalized !== existingValueNormalized) {
 							hasChanges = true;
 							break;
-						  }
+						}
 					}
 					if (hasChanges) {
 						changeOnDefaultCodeListsWarning.push(
@@ -269,12 +269,12 @@ export async function exportData(
 
 			for (const field of cid.getTopLevelFields()) {
 				const airtableName = getAirtableFieldName(field);
-				const exportFieldName = getExportFieldName(field); 
+				const exportFieldName = getExportFieldName(field);
 				if (field.type === "link") {
 					const value: any = record.getCellValue(airtableName);
 					if (field.representedType === "array") {
 						const fieldValue =
-							value?.map((item: LinkedCellInterface) => item.name) ?? field?.defaultValue;
+							value?.map((item: LinkedCellInterface) => item.name) ?? [];
 						if (fieldValue && fieldValue.length > 0) {
 							isEmpty = false;
 						}
@@ -384,14 +384,6 @@ export async function exportData(
 						exportValue = fieldValue;
 					} else if (!Array.isArray(fieldValue) && field.representedType === "array") {
 						exportValue = fieldValue ? [fieldValue] : field.defaultValue;
-					} else if (field.type === "number") {
-						// Export as number (integer/float), not string
-						if (fieldValue !== null && fieldValue !== undefined && fieldValue !== "") {
-							const parsed = Number(fieldValue);
-							exportValue = isNaN(parsed) ? null : parsed;
-						} else {
-							exportValue = null;
-						}
 					} else {
 						exportValue = fieldValue ? fieldValue.toString() : field.defaultValue;
 					}
@@ -685,13 +677,13 @@ function getObjectFieldsRecursively(record: Record, field: FieldType, row: any, 
 				if (fieldValue && fieldValue.length > 0) {
 					isEmpty = false;
 				}
-				row[exportFieldName]= fieldValue;
+				row[exportFieldName] = fieldValue;
 			} else if (field.representedType === "string") {
 				const fieldValue = value ? value[0]?.name : field?.defaultValue;
 				if (fieldValue) {
 					isEmpty = false;
 				}
-				row[exportFieldName]= fieldValue.toString();
+				row[exportFieldName] = fieldValue.toString();
 			}
 		} else if (field.type === "datetime") {
 			if (value && typeof value === "string") {
@@ -701,9 +693,9 @@ function getObjectFieldsRecursively(record: Record, field: FieldType, row: any, 
 				const localTimezone = moment.tz.guess();
 				const date = moment(value).tz(localTimezone).format("YYYY-MM-DDTHH:mm:ssZ");
 
-				row[exportFieldName]= date;
+				row[exportFieldName] = date;
 			} else {
-				row[exportFieldName]= "";
+				row[exportFieldName] = "";
 			}
 		} else if (field.type === "date") {
 			if (value && typeof value === "string") {
@@ -713,12 +705,12 @@ function getObjectFieldsRecursively(record: Record, field: FieldType, row: any, 
 				const localTimezone = moment.tz.guess();
 				const date = moment(value).tz(localTimezone).format("YYYY-MM-DD");
 
-				row[exportFieldName]= date;
+				row[exportFieldName] = date;
 			} else {
-				row[exportFieldName]= "";
+				row[exportFieldName] = "";
 			}
 		} else if (field.type === "boolean") {
-			row[exportFieldName]= value ? true : false;
+			row[exportFieldName] = value ? true : false;
 		} else {
 			if (value) {
 				isEmpty = false;
@@ -731,7 +723,7 @@ function getObjectFieldsRecursively(record: Record, field: FieldType, row: any, 
 			} else {
 				exportValue = value ? value.toString() : field.defaultValue;
 			}
-			row[exportFieldName]= exportValue;
+			row[exportFieldName] = exportValue;
 		}
 		return [row, isEmpty];
 	}
