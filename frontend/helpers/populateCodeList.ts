@@ -2,7 +2,6 @@ import { Base, FieldType, Table } from "@airtable/blocks/models";
 import {
 	CodeList,
 	getAllCorporateRegistrars,
-	getAllEquityDeservingGroups,
 	getAllLocalities,
 	getAllOrganizationType,
 	getAllPopulationServed,
@@ -33,13 +32,8 @@ export const populateCodeList = async (base: Base, tableName: string) => {
 			data = await getAllLocalities();
 			await updateSelectFieldOptionsOnOrganizationProfile(base, "localityServed", data);
 			break;
-		// ✅ ADD THESE TWO CASES:
 		case "CorporateRegistrar":
 			data = await getAllCorporateRegistrars();
-			await populateTables(base, tableName, data);
-			break;
-		case "EquityDeservingGroup":
-			data = await getAllEquityDeservingGroups();
 			await populateTables(base, tableName, data);
 			break;
 		default:

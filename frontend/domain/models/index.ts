@@ -2,7 +2,6 @@ import { Address } from "./Address";
 import { Characteristic } from "./Characteristic";
 import { CorporateRegistrar } from "./CorporateRegistrar";
 import { EDGProfile } from "./EDGProfile";
-import { EquityDeservingGroup } from "./EquityDeservingGroup";
 import { FundingState } from "./FundingState";
 import { FundingStatus } from "./FundingStatus";
 import { Indicator } from "./Indicator";
@@ -33,7 +32,6 @@ export const mapSFFModel = {
 	OrganizationProfile: OrganizationProfile,
 	TeamProfile: TeamProfile,
 	EDGProfile: EDGProfile,
-	EquityDeservingGroup: EquityDeservingGroup,
 	Person: Person,
 	Characteristic: Characteristic,
 	FundingStatus: FundingStatus,
@@ -61,9 +59,8 @@ export const ignoredFields = {
 	Address: ["forOrganization"],
 	Person: ["forOrganizationProfile"],
 	TeamProfile: ["forOrganizationProfileManagementTeam", "forOrganizationProfileBoard"],
-	EquityDeservingGroup: ["forOrganizationProfile", "hasEDGProfile"],
 	FundingStatus: ["forOrganizationProfile"],
-	Characteristic: ["forEquityDeservingGroup"],
+	Characteristic: ["forOrganizationProfile", "hasEDGProfile"],
 	EDGProfile: ["forTeamProfile"],
 	FundingState: ["forFundingStatus"],
 	Sector: ["forOrganizationProfile"],
@@ -80,7 +77,6 @@ export const predefinedCodeLists = [
 	"ProvinceTerritory",
 	"OrganizationType",
 	"CorporateRegistrar",
-	"EquityDeservingGroup", 
 ];
 
 export * from "./Address";
@@ -95,7 +91,6 @@ export * from "./Theme";
 export * from "./Characteristic";
 export * from "./CorporateRegistrar";
 export * from "./EDGProfile";
-export * from "./EquityDeservingGroup";
 export * from "./FundingState";
 export * from "./FundingStatus";
 export * from "./OrganizationID";

@@ -6,6 +6,7 @@ import { XMLParser } from "fast-xml-parser";
 
 export interface CodeList {
 	"@id": string;
+	"@type"?: string;
 	hasIdentifier: string;
 	hasName: string;
 	hasDescription?: string;
@@ -33,7 +34,7 @@ const CODELIST_URLS = {
 	Locality: "https://codelist.commonapproach.org/Locality/LocalityStatsCan.owl",
 	CorporateRegistrar: "https://codelist.commonapproach.org/CanadianCorporateRegistries/CanadianCorporateRegistries.ttl",
 	IRISImpactCategory: "https://codelist.commonapproach.org/IRISImpactThemes/IRISImpactCategories.ttl",
-	EquityDeservingGroup: "https://codelist.commonapproach.org/EquityDeservingGroupsESDC/EquityDeservingGroupsESDC.ttl",
+	
 } as const;
 
 /** GitHub fallback URLs for redundancy */
@@ -54,8 +55,7 @@ const GITHUB_FALLBACK_URLS: Record<string, string> = {
 		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/CanadianCorporateRegistries/CanadianCorporateRegistries.ttl",
 	[CODELIST_URLS.IRISImpactCategory]: 
 		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/IRISImpactCategories/IRISImpactCategories.ttl",
-	[CODELIST_URLS.EquityDeservingGroup]: 
-		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/EquityDeservingGroupsESDC/EquityDeservingGroupsESDC.ttl",
+	
 };
 
 /** Metadata identifiers to skip during parsing */
@@ -63,7 +63,6 @@ const METADATA_IDENTIFIERS = new Set([
 	'dataset',
 	'IRISImpactCategories',
 	'CanadianCorporateRegistries',
-	'EquityDeservingGroupsESDC',
 	'ICNPOsector',
 	'StatsCanSector',
 	'PopulationServed',
@@ -167,7 +166,6 @@ export function clearCodeListCache(tableName?: string): void {
 			OrganizationType: CODELIST_URLS.OrganizationType,
 			CorporateRegistrar: CODELIST_URLS.CorporateRegistrar,
 			IRISImpactCategory: CODELIST_URLS.IRISImpactCategory,
-			EquityDeservingGroup: CODELIST_URLS.EquityDeservingGroup,
 		};
 
 		const url = urlMap[tableName];
@@ -188,14 +186,6 @@ export function clearCodeListCache(tableName?: string): void {
 	}
 }
 
-// ============================================================================
-// XML PARSER (for .owl files)
-// ============================================================================
-
-/**
- * Parses OWL/RDF XML format to CodeList array
- * Used for: ICNPO, StatsCan, PopulationServed, ProvinceTerritory, OrganizationType, Locality
- */
 function parseXmlToCodeList(xmlData: string): CodeList[] {
 	const parser = new XMLParser({ ignoreAttributes: false });
 	const jsonData = parser.parse(xmlData);
@@ -260,17 +250,6 @@ function isMetadataEntry(identifier: string, name: string): boolean {
 	return METADATA_KEYWORDS.some(keyword => name.includes(keyword));
 }
 
-/**
- * Enhanced Turtle parser supporting multiple formats:
- * 1. Full URLs: <https://iris.thegiin.org/theme/5.3/Agriculture/> (IRIS)
- * 2. Prefix notation: :identifier (CorporateRegistrar, EDG)
- * 
- * Handles multiple description predicates:
- * - cids:hasDescription
- * - cids:hasDefinition
- * - cids:hasCharacteristic (EDG)
- * - skos:definition (IRIS)
- */
 function parseTurtleToCodeList(ttlData: string, sourceUrl: string): CodeList[] {
 	const codeList: CodeList[] = [];
 	
@@ -545,23 +524,8 @@ export async function getAllIRISImpactCategories(): Promise<CodeList[]> {
 	}
 }
 
-export async function getAllEquityDeservingGroups(): Promise<CodeList[]> {
-	try {
-		return await fetchAndParseCodeList(CODELIST_URLS.EquityDeservingGroup);
-	} catch (error) {
-		console.error("❌ Error fetching Equity Deserving Groups:", error);
-		return [];
-	}
-}
 
-// ============================================================================
-// PUBLIC API - Generic Fetcher by Table Name
-// ============================================================================
 
-/**
- * Fetches codelist data by table name
- * Special handling: "Sector" combines ICNPO, StatsCan, and IRIS
- */
 export async function getCodeListByTableName(tableName: string): Promise<CodeList[]> {
 	// Special case: Sector combines three codelists
 	if (tableName === "Sector") {
@@ -576,7 +540,7 @@ export async function getCodeListByTableName(tableName: string): Promise<CodeLis
 		OrganizationType: CODELIST_URLS.OrganizationType,
 		CorporateRegistrar: CODELIST_URLS.CorporateRegistrar,
 		IRISImpactCategory: CODELIST_URLS.IRISImpactCategory,
-		EquityDeservingGroup: CODELIST_URLS.EquityDeservingGroup,
+		
 	};
 
 	const url = urlMap[tableName];

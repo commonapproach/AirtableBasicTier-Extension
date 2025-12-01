@@ -4,7 +4,7 @@ import {
 	getAllProvinceTerritory,
 } from "../fetchServer/getCodeLists";
 import { Base } from "./Base";
-import { EquityDeservingGroup } from "./EquityDeservingGroup";
+import { Characteristic } from "./Characteristic";
 import { FundingStatus } from "./FundingStatus";
 import { Organization } from "./Organization";
 import { Person } from "./Person";
@@ -118,7 +118,7 @@ export class OrganizationProfile extends Base {
 				type: "link",
 				representedType: "array",
 				defaultValue: [],
-				link: { table: PopulationServed, field: "forOrganizationProfile" },
+				link: { table: Characteristic, field: "forOrganizationProfile" },
 				unique: false,
 				notNull: false,
 				required: false,
@@ -134,17 +134,6 @@ export class OrganizationProfile extends Base {
 					const codeList = await getAllOrganizationType();
 					return codeList.map((item) => ({ id: item["@id"], name: item.hasName }));
 				},
-				unique: false,
-				notNull: false,
-				required: false,
-				semiRequired: true,
-			},
-			{
-				name: "servesEDG",
-				type: "link",
-				representedType: "array",
-				defaultValue: [],
-				link: { table: EquityDeservingGroup, field: "forOrganizationProfile" },
 				unique: false,
 				notNull: false,
 				required: false,
