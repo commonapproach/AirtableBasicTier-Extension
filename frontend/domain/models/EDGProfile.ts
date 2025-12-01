@@ -1,5 +1,5 @@
 import { Base } from "./Base";
-import { EquityDeservingGroup } from "./EquityDeservingGroup";
+import { Characteristic } from "./Characteristic";
 
 export class EDGProfile extends Base {
 	static className = "EDGProfile";
@@ -22,7 +22,7 @@ export class EDGProfile extends Base {
 				type: "link",
 				representedType: "string",
 				defaultValue: "",
-				link: { table: EquityDeservingGroup, field: "hasEDGProfile" },
+				link: { table: Characteristic, field: "hasEDGProfile" },
 				unique: false,
 				notNull: true,
 				required: false,
