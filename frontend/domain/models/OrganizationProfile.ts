@@ -8,7 +8,6 @@ import { Characteristic } from "./Characteristic";
 import { FundingStatus } from "./FundingStatus";
 import { Organization } from "./Organization";
 import { Person } from "./Person";
-import { PopulationServed } from "./PopulationServed";
 import { Sector } from "./Sector";
 import { TeamProfile } from "./TeamProfile";
 
@@ -152,7 +151,7 @@ export class OrganizationProfile extends Base {
 			},
 			{
 				name: "reportedDate",
-				type: "date",
+				type: "datetime",
 				representedType: "string",
 				defaultValue: "",
 				unique: false,

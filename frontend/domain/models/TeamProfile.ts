@@ -60,7 +60,7 @@ export class TeamProfile extends Base {
 			},
 			{
 				name: "reportedDate",
-				type: "date",
+				type: "datetime",
 				representedType: "string",
 				defaultValue: "",
 				unique: false,

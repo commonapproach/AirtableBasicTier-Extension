@@ -13,7 +13,7 @@ import { contextUrl, ignoredFields, map, mapSFFModel, predefinedCodeLists } from
 import { FieldType } from "../domain/models/Base";
 import { validate } from "../domain/validation/validator";
 import { checkPrimaryField } from "../helpers/checkPrimaryField";
-import { downloadJSONLD, getActualFieldType } from "../utils";
+import { downloadJSONLD, formatMessageToString, getActualFieldType } from "../utils";
 
 // Resolve the Airtable field name for a model field: prefer displayName; otherwise, strip prefix before ':'
 function getAirtableFieldName(field: FieldType): string {
@@ -24,11 +24,11 @@ function getAirtableFieldName(field: FieldType): string {
 
 function getExportFieldName(field: FieldType): string {
 	const fieldName = field.name || "";
-	if (fieldName.startsWith('@')) {
+	if (fieldName.startsWith("@")) {
 		return fieldName;
 	}
-	if (fieldName.includes(':')) {
-		return fieldName.split(':')[1];
+	if (fieldName.includes(":")) {
+		return fieldName.split(":")[1];
 	}
 	return fieldName;
 }
@@ -64,7 +64,8 @@ export async function exportData(
 					id: "generics.error",
 					defaultMessage: "Error",
 				}),
-				intl.formatMessage(
+				formatMessageToString(
+					intl,
 					{
 						id: "export.messages.error.missingTable",
 						defaultMessage: `Table <b>{tableName}</b> is missing. Please create the tables first.`,
@@ -102,13 +103,19 @@ export async function exportData(
 			const airtableField = table.fields.find((f) => f.name === airtableName);
 			if (airtableField) {
 				const expectedType = getActualFieldType(field.type);
-				if (airtableField.type !== expectedType) {
+				const isLinkField = expectedType === "multipleRecordLinks";
+				const isAllowedLinkType =
+					isLinkField &&
+					(airtableField.type === "formula" || airtableField.type === "multipleLookupValues");
+
+				if (airtableField.type !== expectedType && !isAllowedLinkType) {
 					setDialogContent(
 						intl.formatMessage({
 							id: "generics.error",
 							defaultMessage: "Error",
 						}),
-						intl.formatMessage(
+						formatMessageToString(
+							intl,
 							{
 								id: "export.messages.error.invalidFieldType",
 								defaultMessage: `Field <b>{fieldName}</b> in table <b>{tableName}</b> has an invalid type. Expected type: <b>{expectedType}</b>. Please change the field type.`,
@@ -178,20 +185,28 @@ export async function exportData(
 				if (existingItem) {
 					let hasChanges = false;
 					for (const fieldName of Object.keys(existingItem)) {
-						const recordValue = record.getCellValue(fieldName);
+						// Skip @type field as it might not exist in the table
+						if (fieldName === "@type") continue;
+
+						// Check if field exists in table before getting value
+						// Use getFieldByNameIfExists to safely check existence
+						const field = table.getFieldByNameIfExists(fieldName);
+						if (!field) continue;
+
+						const recordValue = record.getCellValue(field.id);
 						const existingValue = existingItem[fieldName];
 
 						const normalizeValue = (val: any): string => {
-							if (val === null || val === undefined) return '';
+							if (val === null || val === undefined) return "";
 							// Handle Airtable cell values that are objects with 'name' property
-							if (typeof val === 'object' && val.name) return String(val.name).trim();
-							if (typeof val === 'object') return JSON.stringify(val);
+							if (typeof val === "object" && val.name) return String(val.name).trim();
+							if (typeof val === "object") return JSON.stringify(val);
 							return String(val).trim();
 						};
-						
+
 						const recordValueNormalized = normalizeValue(recordValue);
 						const existingValueNormalized = normalizeValue(existingValue);
-						
+
 						if (recordValueNormalized !== existingValueNormalized) {
 							hasChanges = true;
 							break;
@@ -199,7 +214,8 @@ export async function exportData(
 					}
 					if (hasChanges) {
 						changeOnDefaultCodeListsWarning.push(
-							intl.formatMessage(
+							formatMessageToString(
+								intl,
 								{
 									id: "export.messages.warning.codeListChangesIgnored",
 									defaultMessage: `Changes made in the predefined code list item with @id <b>{id}</b> in table <b>{tableName}</b> will be ignored.`,
@@ -219,27 +235,37 @@ export async function exportData(
 			// If records has all values, except for the @id, equal to a code list item, warn the user
 			if (codeList) {
 				const existingItem = codeList.find((item) =>
-					Object.keys(item).every(
-						(key) => key === "@id" || record.getCellValueAsString(key) === item[key].toString()
-					)
+					Object.keys(item).every((key) => {
+						if (key === "@id" || key === "@type") return true;
+						// Check if field exists before accessing
+						if (!table.getFieldByNameIfExists(key)) return true;
+						return record.getCellValueAsString(key) === item[key].toString();
+					})
 				);
 				if (existingItem) {
 					let hasChanges = false;
 					for (const fieldName of Object.keys(existingItem)) {
-						const recordValue = record.getCellValue(fieldName);
+						// Skip @type field
+						if (fieldName === "@type") continue;
+
+						// Check if field exists in table before getting value
+						const field = table.getFieldByNameIfExists(fieldName);
+						if (!field) continue;
+
+						const recordValue = record.getCellValue(field.id);
 						const existingValue = existingItem[fieldName];
 
 						const normalizeValue = (val: any): string => {
-							if (val === null || val === undefined) return '';
+							if (val === null || val === undefined) return "";
 							// Handle Airtable cell values that are objects with 'name' property
-							if (typeof val === 'object' && val.name) return String(val.name).trim();
-							if (typeof val === 'object') return JSON.stringify(val);
+							if (typeof val === "object" && val.name) return String(val.name).trim();
+							if (typeof val === "object") return JSON.stringify(val);
 							return String(val).trim();
 						};
-						
+
 						const recordValueNormalized = normalizeValue(recordValue);
 						const existingValueNormalized = normalizeValue(existingValue);
-						
+
 						if (recordValueNormalized !== existingValueNormalized) {
 							hasChanges = true;
 							break;
@@ -247,7 +273,8 @@ export async function exportData(
 					}
 					if (hasChanges) {
 						changeOnDefaultCodeListsWarning.push(
-							intl.formatMessage(
+							formatMessageToString(
+								intl,
 								{
 									id: "export.messages.warning.codeListSimilarItem",
 									defaultMessage: `Record in table <b>{tableName}</b> with @id: <b>{recordId}</b> is similar to the predefined code list item with @id: <b>{codeListItemId}</b>.<br/>Please review the code list item before exporting, or a custom code list item will be exported.`,
@@ -273,14 +300,21 @@ export async function exportData(
 				if (field.type === "link") {
 					const value: any = record.getCellValue(airtableName);
 					if (field.representedType === "array") {
-						const fieldValue =
-							value?.map((item: LinkedCellInterface) => item.name) ?? [];
+						const fieldValue = value?.map((item: LinkedCellInterface) => item.name) ?? [];
 						if (fieldValue && fieldValue.length > 0) {
 							isEmpty = false;
 						}
 						row[exportFieldName] = fieldValue;
 					} else if (field.representedType === "string") {
-						const fieldValue = value ? value[0]?.name : field?.defaultValue;
+						let fieldValue;
+						if (Array.isArray(value) && value.length > 0 && value[0]?.name) {
+							fieldValue = value[0].name;
+						} else if (typeof value === "string") {
+							fieldValue = value;
+						} else {
+							fieldValue = field?.defaultValue;
+						}
+
 						if (fieldValue) {
 							isEmpty = false;
 							// If this is the Indicator's cardinality_of link, add multi-typing i72:Cardinality
@@ -316,7 +350,8 @@ export async function exportData(
 						optionField = field.selectOptions.find((opt) => opt.name === fieldValue["name"]);
 					}
 					if (optionField) {
-						row[exportFieldName] = field.representedType === "array" ? [optionField.id] : optionField.id;
+						row[exportFieldName] =
+							field.representedType === "array" ? [optionField.id] : optionField.id;
 					} else {
 						row[exportFieldName] =
 							field.representedType === "array" ? [fieldValue["name"]] : fieldValue["name"];
@@ -383,7 +418,15 @@ export async function exportData(
 					if (Array.isArray(fieldValue) && field.representedType === "array") {
 						exportValue = fieldValue;
 					} else if (!Array.isArray(fieldValue) && field.representedType === "array") {
-						exportValue = fieldValue ? [fieldValue] : field.defaultValue;
+						if (
+							field.name === "@type" &&
+							typeof fieldValue === "string" &&
+							fieldValue.includes(",")
+						) {
+							exportValue = fieldValue.split(",").map((s) => s.trim());
+						} else {
+							exportValue = fieldValue ? [fieldValue] : field.defaultValue;
+						}
 					} else {
 						exportValue = fieldValue ? fieldValue.toString() : field.defaultValue;
 					}
@@ -621,7 +664,8 @@ function checkForNotExportedFields(base: Base, intl: IntlShape) {
 			}
 			if (!internalFields.includes(field)) {
 				warnings.push(
-					intl.formatMessage(
+					formatMessageToString(
+						intl,
 						{
 							id: Object.keys(map).includes(table.name)
 								? "export.messages.warning.fieldWillNotBeExported"
@@ -630,7 +674,7 @@ function checkForNotExportedFields(base: Base, intl: IntlShape) {
 								"Field <b>{fieldName}</b> on table <b>{tableName}</b> will not be exported",
 						},
 						{ fieldName: field, tableName: table.name, b: (str: string) => `<b>${str}</b>` }
-					) as string
+					)
 				);
 			}
 		}

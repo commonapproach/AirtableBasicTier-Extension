@@ -2,11 +2,13 @@ import { Base, FieldType, Table } from "@airtable/blocks/models";
 import {
 	CodeList,
 	getAllCorporateRegistrars,
+	getAllFundingState,
 	getAllLocalities,
 	getAllOrganizationType,
 	getAllPopulationServed,
 	getAllProvinceTerritory,
 	getAllSectors,
+	getAllSDGImpacts,
 } from "../domain/fetchServer/getCodeLists";
 
 export const populateCodeList = async (base: Base, tableName: string) => {
@@ -16,6 +18,10 @@ export const populateCodeList = async (base: Base, tableName: string) => {
 			data = await getAllSectors();
 			await populateTables(base, tableName, data);
 			break;
+		case "SDGImpacts":
+			data = await getAllSDGImpacts();
+			await populateTables(base, "Theme", data);
+			break;
 		case "PopulationServed":
 			data = await getAllPopulationServed();
 			await populateTables(base, tableName, data);
@@ -23,6 +29,10 @@ export const populateCodeList = async (base: Base, tableName: string) => {
 		case "ProvinceTerritory":
 			data = await getAllProvinceTerritory();
 			await updateSelectFieldOptionsOnOrganizationProfile(base, "provinceTerritoryServed", data);
+			break;
+		case "FundingState":
+			data = await getAllFundingState();
+			await populateTables(base, tableName, data);
 			break;
 		case "OrganizationType":
 			data = await getAllOrganizationType();
@@ -46,6 +56,15 @@ const populateTables = async (base: Base, tableName: string, data: CodeList[]) =
 
 	if (!table) {
 		throw new Error(`Table ${tableName} not found`);
+	}
+
+	// Remove @type from data if the table is not PopulationServed
+	if (tableName !== "PopulationServed") {
+		data = data.map((d) => {
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
+			const { "@type": _, ...rest } = d;
+			return rest as CodeList;
+		});
 	}
 
 	// Check if the record already exists

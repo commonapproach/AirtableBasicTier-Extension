@@ -77,6 +77,8 @@ export const predefinedCodeLists = [
 	"ProvinceTerritory",
 	"OrganizationType",
 	"CorporateRegistrar",
+	"FundingState",
+	"SDGImpacts",
 ];
 
 export * from "./Address";

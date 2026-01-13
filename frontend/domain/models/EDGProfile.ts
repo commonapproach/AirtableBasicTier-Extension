@@ -40,7 +40,7 @@ export class EDGProfile extends Base {
 			},
 			{
 				name: "reportedDate",
-				type: "date",
+				type: "datetime",
 				representedType: "string",
 				defaultValue: "",
 				unique: false,
