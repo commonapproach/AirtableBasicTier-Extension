@@ -15,6 +15,7 @@ import {
 	convertIcAddressToPostalAddress,
 	convertIcHasAddressToHasAddress,
 	convertNumericalValueToHasNumericalValue,
+	convertOrganizationIDFields,
 	convertUnknownUnitToDescription,
 	executeInBatches,
 	harmonizeCardinalityProperty,
@@ -28,10 +29,10 @@ function normalizeValue(val: any): string {
 	return String(val).trim();
 }
 
-// Helper: extract a primary standard type (cids: or sff:) from @type which may be string or array
+// Helper: extract a primary standard type (cids:, sff:, or org:) from @type which may be string or array
 function getPrimaryStandardType(typeVal: any): string | null {
 	if (!typeVal) return null;
-	const isTarget = (t: string) => t.startsWith("cids:") || t.startsWith("sff:");
+	const isTarget = (t: string) => t.startsWith("cids:") || t.startsWith("sff:") || t.startsWith("org:");
 	if (typeof typeVal === "string") return isTarget(typeVal) ? typeVal : null;
 	if (Array.isArray(typeVal)) {
 		const found = typeVal.find((t) => typeof t === "string" && isTarget(t));
@@ -126,6 +127,9 @@ export async function importData(
 
 	// Convert old i72:numerical_value/numerical_value to i72:hasNumericalValue before any validation
 	jsonData = convertNumericalValueToHasNumericalValue(jsonData);
+
+	// Convert OrganizationID fields and normalize @type for backward compatibility
+	jsonData = convertOrganizationIDFields(jsonData);
 
 	// Convert unknown unit_of_measure to unitDescription for backward compatibility
 	const unitConversionResult = await convertUnknownUnitToDescription(jsonData);
@@ -858,6 +862,10 @@ function checkIfFieldIsRecognized(tableName: string, fieldName: string) {
 			acc.push(field.name);
 			if (field.name.includes(":")) {
 				acc.push(field.name.split(":")[1]);
+			}
+			// Also add displayName if different from name
+			if (field.displayName && field.displayName !== field.name) {
+				acc.push(field.displayName);
 			}
 			return acc;
 		}, [])
