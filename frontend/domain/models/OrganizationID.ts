@@ -19,7 +19,7 @@ export class OrganizationID extends Base {
 				semiRequired: false,
 			},
 			{
-				name: "cids:forOrganization",
+				name: "forOrganization",
 				displayName: "forOrganization",
 				type: "link",
 				representedType: "string",

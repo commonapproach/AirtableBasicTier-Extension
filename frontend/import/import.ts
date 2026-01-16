@@ -2,36 +2,37 @@
 /* eslint-disable no-prototype-builtins */
 import Base from "@airtable/blocks/dist/types/src/models/base";
 import { IntlShape } from "react-intl";
+import { getCodeListByTableName } from "../domain/fetchServer/getCodeLists";
 import { TableInterface } from "../domain/interfaces/table.interface";
-import { map, mapSFFModel, ModelType, SFFModelType, ignoredFields } from "../domain/models";
+import { ignoredFields, map, mapSFFModel, ModelType, SFFModelType } from "../domain/models";
 import { FieldType } from "../domain/models/Base";
 import { validate } from "../domain/validation/validator";
 import { checkPrimaryField } from "../helpers/checkPrimaryField";
 import { createSFFModuleTables } from "../helpers/createSFFModuleTables";
 import { createTables } from "../helpers/createTables";
-import { getCodeListByTableName } from "../domain/fetchServer/getCodeLists";
 import {
+	convertForFunderIdToForOrganization,
 	convertIcAddressToPostalAddress,
 	convertIcHasAddressToHasAddress,
 	convertNumericalValueToHasNumericalValue,
+	convertOrganizationIDFields,
 	convertUnknownUnitToDescription,
 	executeInBatches,
 	harmonizeCardinalityProperty,
 	parseJsonLd,
 } from "../utils";
 
-
 function normalizeValue(val: any): string {
-	if (val === null || val === undefined) return '';
-	if (typeof val === 'object' && val.name) return String(val.name).trim();
-	if (typeof val === 'object') return JSON.stringify(val);
+	if (val === null || val === undefined) return "";
+	if (typeof val === "object" && val.name) return String(val.name).trim();
+	if (typeof val === "object") return JSON.stringify(val);
 	return String(val).trim();
 }
 
-// Helper: extract a primary standard type (cids: or sff:) from @type which may be string or array
+// Helper: extract a primary standard type (cids:, sff:, or org:) from @type which may be string or array
 function getPrimaryStandardType(typeVal: any): string | null {
 	if (!typeVal) return null;
-	const isTarget = (t: string) => t.startsWith("cids:") || t.startsWith("sff:");
+	const isTarget = (t: string) => t.startsWith("cids:") || t.startsWith("sff:") || t.startsWith("org:");
 	if (typeof typeVal === "string") return isTarget(typeVal) ? typeVal : null;
 	if (Array.isArray(typeVal)) {
 		const found = typeVal.find((t) => typeof t === "string" && isTarget(t));
@@ -127,6 +128,9 @@ export async function importData(
 	// Convert old i72:numerical_value/numerical_value to i72:hasNumericalValue before any validation
 	jsonData = convertNumericalValueToHasNumericalValue(jsonData);
 
+	// Convert OrganizationID fields and normalize @type for backward compatibility
+	jsonData = convertOrganizationIDFields(jsonData);
+
 	// Convert unknown unit_of_measure to unitDescription for backward compatibility
 	const unitConversionResult = await convertUnknownUnitToDescription(jsonData);
 	jsonData = unitConversionResult.data;
@@ -136,6 +140,11 @@ export async function importData(
 	const originalData = JSON.stringify(jsonData);
 	jsonData = convertIcHasAddressToHasAddress(jsonData);
 	const convertedPropertyNames = JSON.stringify(jsonData) !== originalData;
+
+	// Convert forFunderId to forOrganization for backward compatibility
+	const originalDataFunding = JSON.stringify(jsonData);
+	jsonData = convertForFunderIdToForOrganization(jsonData);
+	const convertedFundingPropertyNames = JSON.stringify(jsonData) !== originalDataFunding;
 
 	// Harmonize population cardinality property names (legacy describesPopulation vs ontology i72:cardinality_of)
 	jsonData = harmonizeCardinalityProperty(jsonData);
@@ -214,7 +223,7 @@ export async function importData(
 	}
 
 	// Add property name conversion warning if needed
-	if (convertedPropertyNames) {
+	if (convertedPropertyNames || convertedFundingPropertyNames) {
 		warnings.push(
 			intl.formatMessage({
 				id: "import.messages.warning.propertyNamesConverted",
@@ -236,7 +245,7 @@ export async function importData(
 	}
 
 	warnings = [...warnings, ...warnIfUnrecognizedFieldsWillBeIgnored(jsonData, intl)];
-	
+
 	const codeListWarnings = await warnIfCodeListItemsModified(jsonData, intl);
 	warnings = [...warnings, ...codeListWarnings];
 
@@ -385,15 +394,15 @@ async function writeTable(base: Base, tableData: TableInterface[]): Promise<void
 
 		let record: { [key: string]: unknown } = {};
 		Object.entries(data).forEach(async ([key, value]) => {
-			if (key.includes(':') && !key.startsWith('@')) {
+			if (key.includes(":") && !key.startsWith("@")) {
 				const originalKey = key;
-				key = key.split(':')[1]; 
+				key = key.split(":")[1];
 				if (!data[key]) {
 					data[key] = data[originalKey];
 				}
 			}
-			
-			if (key === "@type" || key === "@context" || !checkIfFieldIsRecognized(tableName, key)) {
+
+			if (key === "@context" || !checkIfFieldIsRecognized(tableName, key)) {
 				return;
 			}
 
@@ -484,7 +493,11 @@ async function writeTable(base: Base, tableData: TableInterface[]): Promise<void
 						field.type !== "number" &&
 						newValue
 					) {
-						newValue = newValue ? newValue.toString() : null;
+						if (Array.isArray(newValue)) {
+							newValue = newValue.join(", ");
+						} else {
+							newValue = newValue ? newValue.toString() : null;
+						}
 					}
 					record[fieldName] = newValue;
 				}
@@ -708,15 +721,15 @@ function doAllRecordsHaveId(tableData: TableInterface[]) {
 function warnIfUnrecognizedFieldsWillBeIgnored(tableData: TableInterface[], intl: IntlShape) {
 	const warnings = [];
 	const classesSet = new Set();
-	
+
 	// Auto-created fields that Airtable creates for reciprocal links
 	const autoCreatedFields = [
-		'hasIndicatorReport',    // Auto-created by IndicatorReport→forOrganization
-		'hasID',                 // Auto-created by OrganizationID→forOrganization  
-		'issuedOrganizationID',  // Auto-created by OrganizationID→issuedBy
-		'forOrganizationID',     // Auto-created by CorporateRegistrar
+		"hasIndicatorReport", // Auto-created by IndicatorReport→forOrganization
+		"hasID", // Auto-created by OrganizationID→forOrganization
+		"issuedOrganizationID", // Auto-created by OrganizationID→issuedBy
+		"forOrganizationID", // Auto-created by CorporateRegistrar
 	];
-	
+
 	for (const data of tableData) {
 		if (
 			!data["@type"] ||
@@ -738,17 +751,17 @@ function warnIfUnrecognizedFieldsWillBeIgnored(tableData: TableInterface[], intl
 			if (key === "@type" || key === "@context") {
 				continue;
 			}
-			
+
 			// Skip auto-created fields silently (no warnings for these)
 			if (autoCreatedFields.includes(key)) {
 				continue;
 			}
-			
+
 			// Skip fields in ignoredFields list (intentionally ignored)
 			if (ignoredFields[tableName]?.includes(key)) {
 				continue;
 			}
-			
+
 			// Only warn for truly unrecognized fields
 			if (!checkIfFieldIsRecognized(tableName, key)) {
 				warnings.push(
@@ -769,44 +782,51 @@ function warnIfUnrecognizedFieldsWillBeIgnored(tableData: TableInterface[], intl
 
 async function warnIfCodeListItemsModified(tableData: TableInterface[], intl: IntlShape) {
 	const warnings = [];
-	const predefinedCodeLists = ["Sector", "PopulationServed", "Locality", "ProvinceTerritory", "OrganizationType", "CorporateRegistrar"];
-	
+	const predefinedCodeLists = [
+		"Sector",
+		"PopulationServed",
+		"Locality",
+		"ProvinceTerritory",
+		"OrganizationType",
+		"CorporateRegistrar",
+	];
+
 	for (const data of tableData) {
 		const tableName = getCidsTableSuffix(data["@type"]) || "";
-		
+
 		// Only check predefined code list tables
 		if (!predefinedCodeLists.includes(tableName)) {
 			continue;
 		}
-		
+
 		// Skip if no @id (validation will catch this elsewhere)
 		if (!data["@id"]) {
 			continue;
 		}
-		
+
 		try {
 			// Get the predefined code list for this table
 			const codeList = await getCodeListByTableName(tableName);
-			
+
 			if (codeList && codeList.length > 0) {
-				const existingItem = codeList.find(item => item["@id"] === data["@id"]);
-				
+				const existingItem = codeList.find((item) => item["@id"] === data["@id"]);
+
 				if (existingItem) {
 					// Check if imported data differs from predefined code list
 					let hasChanges = false;
-					
+
 					for (const fieldName of Object.keys(existingItem)) {
 						if (fieldName === "@id") continue; // Skip ID comparison
-						
+
 						const importedValue = normalizeValue(data[fieldName]);
 						const codeListValue = normalizeValue(existingItem[fieldName]);
-						
+
 						if (importedValue !== codeListValue) {
 							hasChanges = true;
 							break;
 						}
 					}
-					
+
 					if (hasChanges) {
 						warnings.push(
 							intl.formatMessage(
@@ -825,7 +845,7 @@ async function warnIfCodeListItemsModified(tableData: TableInterface[], intl: In
 			console.warn(`Could not check code list for ${tableName}:`, error);
 		}
 	}
-	
+
 	return warnings;
 }
 
@@ -842,6 +862,10 @@ function checkIfFieldIsRecognized(tableName: string, fieldName: string) {
 			acc.push(field.name);
 			if (field.name.includes(":")) {
 				acc.push(field.name.split(":")[1]);
+			}
+			// Also add displayName if different from name
+			if (field.displayName && field.displayName !== field.name) {
+				acc.push(field.displayName);
 			}
 			return acc;
 		}, [])

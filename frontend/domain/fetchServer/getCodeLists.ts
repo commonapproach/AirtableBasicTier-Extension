@@ -29,26 +29,52 @@ const CODELIST_URLS = {
 	ESDCSector: "https://codelist.commonapproach.org/ESDCSector.ttl",
 	PopulationServed: "https://codelist.commonapproach.org/PopulationServed.ttl",
 	ProvinceTerritory: "https://codelist.commonapproach.org/ProvinceTerritory.ttl",
+	FundingState: "https://codelist.commonapproach.org/FundingState.ttl",
+	SDGImpacts: "https://codelist.commonapproach.org/SDGImpacts.ttl",
 	OrganizationType: "https://codelist.commonapproach.org/OrgTypeGOC.ttl",
 	Locality: "https://codelist.commonapproach.org/LocalityStatsCan.ttl",
 	CorporateRegistrar: "https://codelist.commonapproach.org/CanadianCorporateRegistries.ttl",
+	IRISImpactCategory: "https://codelist.commonapproach.org/IRISImpactCategory.ttl",
 } as const;
 
 /** GitHub fallback URLs for redundancy */
 const GITHUB_FALLBACK_URLS: Record<string, string> = {
-	[CODELIST_URLS.ESDCSector]: 
-		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/ESDCSector.ttl",
-	[CODELIST_URLS.PopulationServed]: 
-		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/PopulationServed.ttl",
-	[CODELIST_URLS.ProvinceTerritory]: 
-		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/ProvinceTerritory.ttl",
-	[CODELIST_URLS.OrganizationType]: 
-		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/OrgTypeGOC.ttl",
-	[CODELIST_URLS.Locality]: 
-		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/LocalityStatsCan.ttl",
-	[CODELIST_URLS.CorporateRegistrar]: 
+	[CODELIST_URLS.ESDCSector]:
+		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/ESDCSector/ESDCSector.ttl",
+	[CODELIST_URLS.PopulationServed]:
+		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/PopulationServed/PopulationServed.ttl",
+	[CODELIST_URLS.ProvinceTerritory]:
+		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/ProvinceTerritory/ProvinceTerritory.ttl",
+	[CODELIST_URLS.FundingState]:
+		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/FundingState/FundingState.ttl",
+	[CODELIST_URLS.SDGImpacts]:
+		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/SDGImpacts/SDGImpacts.ttl",
+	[CODELIST_URLS.OrganizationType]:
+		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/OrgTypeGOC/OrgTypeGOC.ttl",
+	[CODELIST_URLS.Locality]:
+		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/Locality/LocalityStatsCan.ttl",
+	[CODELIST_URLS.CorporateRegistrar]:
 		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/CanadianCorporateRegistries.ttl",
+	[CODELIST_URLS.IRISImpactCategory]:
+		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/IRISImpactCategory.ttl",
 };
+
+/** Metadata identifiers to skip during parsing */
+const METADATA_IDENTIFIERS = new Set([
+	"dataset",
+	"IRISImpactCategories",
+	"CanadianCorporateRegistries",
+	"ESDCSector",
+	"PopulationServed",
+	"ProvinceTerritory",
+	"FundingState",
+	"SDGImpacts",
+	"OrgTypeGOC",
+	"LocalityStatsCan",
+]);
+
+/** Keywords that indicate a metadata entry */
+const METADATA_KEYWORDS = ["Codelist", "Code List", "Categories", "Registries", "Dataset"];
 
 // ============================================================================
 // CACHE MANAGEMENT
@@ -118,6 +144,8 @@ export function clearCodeListCache(tableName?: string): void {
 			PopulationServed: CODELIST_URLS.PopulationServed,
 			Locality: CODELIST_URLS.Locality,
 			ProvinceTerritory: CODELIST_URLS.ProvinceTerritory,
+			FundingState: CODELIST_URLS.FundingState,
+			SDGImpacts: CODELIST_URLS.SDGImpacts,
 			OrganizationType: CODELIST_URLS.OrganizationType,
 			CorporateRegistrar: CODELIST_URLS.CorporateRegistrar,
 		};
@@ -129,9 +157,10 @@ export function clearCodeListCache(tableName?: string): void {
 			console.log(`🗑️ Cleared cache for ${tableName}`);
 		}
 	} else {
-		Object.keys(inMemoryCache).forEach(key => delete inMemoryCache[key]);
-		Object.keys(localStorage).forEach(key => {
-			if (key.includes('codelist.commonapproach.org')) {
+		// Clear all caches
+		Object.keys(inMemoryCache).forEach((key) => delete inMemoryCache[key]);
+		Object.keys(localStorage).forEach((key) => {
+			if (key.includes("codelist.commonapproach.org")) {
 				localStorage.removeItem(key);
 			}
 		});
@@ -187,148 +216,240 @@ function parseXmlToCodeList(xmlData: string): CodeList[] {
 // TURTLE PARSER (for .ttl files) - TESTED AND VERIFIED
 // ============================================================================
 
+/**
+ * Checks if an entry is metadata/header that should be skipped
+ */
+function isMetadataEntry(identifier: string, name: string): boolean {
+	// Check if identifier is in known metadata list
+	if (METADATA_IDENTIFIERS.has(identifier)) {
+		return true;
+	}
+
+	// Check if name contains metadata keywords
+	return METADATA_KEYWORDS.some((keyword) => name.includes(keyword));
+}
+
 function parseTurtleToCodeList(ttlData: string, sourceUrl: string): CodeList[] {
 	const codeList: CodeList[] = [];
-	
-	// Extract base URI from @base declaration
-	let baseUri = "";
-	const baseMatch = ttlData.match(/@base\s*<([^>]+)>/m);
+
+	// Extract base URI from @prefix declaration
+	let baseUri = "https://codelist.commonapproach.org/codeLists/";
+
+	const baseMatch = ttlData.match(/@base\s+<([^>]+)>/m);
 	if (baseMatch) {
 		baseUri = baseMatch[1];
 	}
-	
-	// Get default prefix URI (the : prefix)
-	// Handle relative prefix like <#> by combining with base
-	const defaultPrefixMatch = ttlData.match(/@prefix\s*:\s*<([^>]+)>/m);
-	let defaultPrefixUri = "";
-	if (defaultPrefixMatch) {
-		if (defaultPrefixMatch[1] === '#') {
-			// Relative prefix - combine with base
-			defaultPrefixUri = baseUri + '#';
+
+	const baseUriMatch = ttlData.match(/@prefix\s*:\s*<([^>]+)>/m);
+	if (baseUriMatch) {
+		const val = baseUriMatch[1];
+		if (val === "#") {
+			if (!baseUri.endsWith("#") && !baseUri.endsWith("/")) {
+				baseUri += "#";
+			}
 		} else {
-			defaultPrefixUri = defaultPrefixMatch[1];
+			baseUri = val;
 		}
-	} else {
-		defaultPrefixUri = baseUri + '#';
 	}
 
-	// Collect all named prefixes for resolving URIs
-	const prefixes: Record<string, string> = {};
-	const prefixRegex = /@prefix\s+([a-zA-Z0-9_-]+):\s*<([^>]+)>/gm;
+	// 🔥 Parse ALL prefix declarations into a map for URI expansion
+	const prefixMap: Record<string, string> = {};
+	const prefixRegex = /@prefix\s+([a-zA-Z0-9_-]*)\s*:\s*<([^>]+)>\s*\./g;
 	let prefixMatch;
 	while ((prefixMatch = prefixRegex.exec(ttlData)) !== null) {
-		prefixes[prefixMatch[1]] = prefixMatch[2];
+		const prefix = prefixMatch[1]; // e.g., "iriscategory" or "" for default
+		const uri = prefixMatch[2]; // e.g., "https://codelist.commonapproach.org/IRISImpactCategory#"
+		prefixMap[prefix] = uri;
 	}
 
-	console.log(`\n=== Parsing TTL: ${sourceUrl} ===`);
+	console.log(`\n=== Parsing Turtle: ${sourceUrl} ===`);
 	console.log(`Base URI: ${baseUri}`);
-	console.log(`Default prefix URI: ${defaultPrefixUri}`);
+	console.log(`Prefix map:`, prefixMap);
+	console.log(`Data size: ${(ttlData.length / 1024).toFixed(2)} KB`);
 
-	const lines = ttlData.split('\n');
+	// 🔥 CRITICAL FIX: Check if this is IRIS file (uses full iris.thegiin.org URLs)
+	const isIRISFile = ttlData.includes("iris.thegiin.org");
+
+	if (isIRISFile) {
+		console.log(`🎯 Detected IRIS file - using full URL parsing`);
+	}
+
+	const lines = ttlData.split("\n");
 	let currentEntry: CodeList | null = null;
-	let currentBlock = '';
+	let currentBlock = "";
+	let entryCount = 0;
+	let skippedCount = 0;
 
 	for (let i = 0; i < lines.length; i++) {
 		const originalLine = lines[i];
 		const trimmedLine = originalLine.trim();
 
-		// Skip empty lines, comments, and declarations
-		if (!trimmedLine || trimmedLine.startsWith('#') || 
-			trimmedLine.startsWith('@prefix') || trimmedLine.startsWith('@base')) {
+		// Skip empty lines, comments, and prefix declarations
+		if (
+			!trimmedLine ||
+			trimmedLine.startsWith("#") ||
+			trimmedLine.startsWith("@prefix") ||
+			trimmedLine.startsWith("@base")
+		) {
 			continue;
 		}
 
-		// KEY: Check if line starts at column 0 (no leading whitespace)
-		// Entity definitions start at column 0, predicates are indented
-		const startsAtColumn0 = originalLine.length > 0 && 
-								originalLine[0] !== ' ' && 
-								originalLine[0] !== '\t';
+		// 🔥 CRITICAL: Try FULL URL format FIRST (for IRIS)
+		const fullUrlMatch = trimmedLine.match(/<(https?:\/\/[^>]+)>\s*$/);
 
-		let isNewEntity = false;
-		let entityId = "";
-		let entityIdentifier = "";
+		// Try PREFIX notation format (EDG, Corporate)
+		const localPrefixMatch = !fullUrlMatch ? trimmedLine.match(/^:([a-zA-Z0-9_-]+)(?:\s|$)/) : null;
 
-		if (startsAtColumn0) {
-			// Skip the <> empty base reference (ontology metadata block)
-			if (trimmedLine.startsWith('<>')) {
-				continue;
-			}
+		// Try EXTERNAL PREFIX notation format (iriscategory:Agriculture)
+		// Matches prefix:Identifier where prefix is alphanumeric
+		let externalPrefixMatch =
+			!fullUrlMatch && !localPrefixMatch
+				? trimmedLine.match(/^([a-zA-Z0-9_-]+:[a-zA-Z0-9_-]+)(?:\s|$)/)
+				: null;
 
-			// Pattern 1: Default prefix entity - :LocalName
-			// Examples: ":Other", ":ca", ":ab"
-			const defaultMatch = trimmedLine.match(/^:([a-zA-Z0-9_-]+)/);
-			if (defaultMatch) {
-				isNewEntity = true;
-				entityIdentifier = defaultMatch[1];
-				entityId = defaultPrefixUri + entityIdentifier;
-			}
-
-			// Pattern 2: Named prefix entity - prefix:LocalName
-			// Examples: "iriscategory:Agriculture"
-			if (!isNewEntity) {
-				const namedMatch = trimmedLine.match(/^([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+)/);
-				if (namedMatch && prefixes[namedMatch[1]]) {
-					isNewEntity = true;
-					entityIdentifier = namedMatch[2];
-					entityId = prefixes[namedMatch[1]] + entityIdentifier;
-				}
-			}
-
-			// Pattern 3: Full URL entity - <https://...>
-			if (!isNewEntity) {
-				const urlMatch = trimmedLine.match(/^<(https?:\/\/[^>]+)>/);
-				if (urlMatch) {
-					isNewEntity = true;
-					entityId = urlMatch[1];
-					// Extract identifier from URL
-					const parts = entityId.split(/[/#]/);
-					entityIdentifier = parts[parts.length - 1] || entityId;
-				}
+		// Filter out known property prefixes to avoid treating properties as new entries
+		if (externalPrefixMatch) {
+			const prefix = externalPrefixMatch[1].split(":")[0];
+			const IGNORED_PREFIXES = [
+				"skos",
+				"org",
+				"dcterms",
+				"cids",
+				"rdf",
+				"rdfs",
+				"owl",
+				"voaf",
+				"xsd",
+				"vann",
+				"prov",
+			];
+			if (IGNORED_PREFIXES.includes(prefix)) {
+				externalPrefixMatch = null;
 			}
 		}
 
-		if (isNewEntity) {
-			// Save previous entry if it has required data
+		if (fullUrlMatch || localPrefixMatch || externalPrefixMatch) {
+			// Save previous entry if it exists
 			if (currentEntry && currentEntry.hasName) {
-				codeList.push(currentEntry);
-				console.log(`  ✅ ${codeList.length}: ${currentEntry.hasIdentifier} → "${currentEntry.hasName}"`);
+				if (!isMetadataEntry(currentEntry.hasIdentifier, currentEntry.hasName)) {
+					codeList.push(currentEntry);
+					entryCount++;
+					console.log(
+						`  ✅ Entry ${entryCount}: ${currentEntry.hasIdentifier} - "${currentEntry.hasName}"`
+					);
+				} else {
+					skippedCount++;
+					console.log(`  ⏭️  Skipped metadata ${skippedCount}: ${currentEntry.hasIdentifier}`);
+				}
 			}
 
 			// Start new entry
-			currentEntry = {
-				"@id": entityId,
-				hasIdentifier: entityIdentifier,
-				hasName: "",
-			};
+			if (fullUrlMatch) {
+				// Full URL format (IRIS)
+				const fullUrl = fullUrlMatch[1];
+				const identifier = fullUrl.split("/").filter(Boolean).pop() || fullUrl;
+
+				currentEntry = {
+					"@id": fullUrl,
+					hasIdentifier: identifier,
+					hasName: "",
+				};
+				console.log(`  🔍 Found full URL: ${identifier}`);
+			} else if (localPrefixMatch) {
+				// Local Prefix notation format (:Identifier)
+				const identifier = localPrefixMatch[1];
+				currentEntry = {
+					"@id": baseUri + identifier,
+					hasIdentifier: identifier,
+					hasName: "",
+				};
+			} else if (externalPrefixMatch) {
+				// External Prefix notation format (prefix:Identifier)
+				const rawId = externalPrefixMatch[1]; // e.g. iriscategory:Agriculture
+				const [prefix, localName] = rawId.split(":");
+				const identifier = localName || rawId;
+
+				// 🔥 Expand the prefix to full URI using the prefix map
+				let fullUri = rawId; // default fallback
+				if (prefixMap[prefix]) {
+					fullUri = prefixMap[prefix] + localName;
+					console.log(`  🔗 Expanded ${rawId} → ${fullUri}`);
+				}
+
+				currentEntry = {
+					"@id": fullUri,
+					hasIdentifier: identifier,
+					hasName: "",
+				};
+			}
+
 			currentBlock = trimmedLine;
 		} else if (currentEntry) {
-			// Continue building current entry's block (indented predicate lines)
-			currentBlock += ' ' + trimmedLine;
-			
-			// Extract org:hasIdentifier (overrides parsed identifier)
-			const idMatch = currentBlock.match(/org:hasIdentifier\s+"([^"]+)"/);
-			if (idMatch) {
-				currentEntry.hasIdentifier = idMatch[1];
+			// Continue building current entry's block
+			currentBlock += " " + trimmedLine;
+		}
+
+		// Extract properties from accumulated block
+		if (currentEntry && currentBlock) {
+			// Override hasIdentifier if explicitly defined
+			const identifierMatch = currentBlock.match(
+				/(?:cids:hasIdentifier|org:hasIdentifier|skos:notation)\s+"([^"]+)"/
+			);
+			if (identifierMatch) {
+				currentEntry.hasIdentifier = identifierMatch[1];
 			}
-			
-			// Extract org:hasName (primary)
-			const nameMatch = currentBlock.match(/org:hasName\s+"([^"]+)"/);
-			if (nameMatch) {
-				currentEntry.hasName = nameMatch[1];
+
+			// Extract @type
+			if (!currentEntry["@type"]) {
+				const typeMatch = currentBlock.match(/(?:\sa\s|rdf:type\s)([^;.]+)/);
+				if (typeMatch) {
+					let typeVal = typeMatch[1].trim();
+					// Handle multiple types (comma separated)
+					// Clean up whitespace and newlines, ensure comma separation is clean
+					typeVal = typeVal.replace(/\s+/g, " ");
+					typeVal = typeVal
+						.split(",")
+						.map((t) => t.trim())
+						.join(", ");
+
+					currentEntry["@type"] = typeVal;
+				}
 			}
-			
-			// Extract cids:hasDescription
-			const descMatch = currentBlock.match(/cids:hasDescription\s+"([^"]+)"/);
-			if (descMatch) {
-				currentEntry.hasDescription = descMatch[1];
+
+			// Extract hasName from multiple possible predicates
+			if (!currentEntry.hasName) {
+				const nameMatch = currentBlock.match(
+					/(?:cids:hasName|org:hasName|rdfs:label|skos:prefLabel)\s+"([^"]+)"(?:@[a-z-]+)?/
+				);
+				if (nameMatch) {
+					currentEntry.hasName = nameMatch[1];
+				}
+			}
+
+			// Extract description from multiple possible predicates
+			if (!currentEntry.hasDescription) {
+				const descMatch = currentBlock.match(
+					/(?:cids:hasDescription|cids:hasDefinition|cids:hasCharacteristic|skos:definition)\s+"([^"]+)"(?:@[a-z-]+)?/
+				);
+				if (descMatch) {
+					currentEntry.hasDescription = descMatch[1];
+				}
 			}
 		}
 	}
 
 	// Don't forget the last entry
 	if (currentEntry && currentEntry.hasName) {
-		codeList.push(currentEntry);
-		console.log(`  ✅ ${codeList.length}: ${currentEntry.hasIdentifier} → "${currentEntry.hasName}"`);
+		if (!isMetadataEntry(currentEntry.hasIdentifier, currentEntry.hasName)) {
+			codeList.push(currentEntry);
+			entryCount++;
+			console.log(
+				`  ✅ Entry ${entryCount}: ${currentEntry.hasIdentifier} - "${currentEntry.hasName}"`
+			);
+		} else {
+			skippedCount++;
+			console.log(`  ⏭️  Skipped metadata: ${currentEntry.hasIdentifier}`);
+		}
 	}
 
 	console.log(`📊 Total parsed: ${codeList.length} entries`);
@@ -370,16 +491,17 @@ async function fetchAndParseCodeList(url: string): Promise<CodeList[]> {
 			console.log(`🔄 Trying GitHub fallback: ${fallbackUrl}`);
 			const fallbackResponse = await fetch(fallbackUrl);
 			if (!fallbackResponse.ok) {
-				throw new Error(`Fallback HTTP ${fallbackResponse.status}`);
+				console.error(`❌ Fallback also failed (HTTP ${fallbackResponse.status}) for ${url}`);
+				return []; // Return empty array instead of crashing
 			}
 			data = await fallbackResponse.text();
 			console.log(`✅ Fallback successful`);
 		}
 
 		// Parse based on file extension
-		if (url.endsWith('.ttl')) {
+		if (url.endsWith(".ttl")) {
 			codeList = parseTurtleToCodeList(data, url);
-		} else if (url.endsWith('.owl')) {
+		} else if (url.endsWith(".owl")) {
 			codeList = parseXmlToCodeList(data);
 		} else {
 			throw new Error(`Unsupported file format for ${url}`);
@@ -404,10 +526,14 @@ async function fetchAndParseCodeList(url: string): Promise<CodeList[]> {
 
 export async function getAllSectors(): Promise<CodeList[]> {
 	try {
-		console.log("\n🌍 === FETCHING ESDC SECTORS === 🌍");
-		const sectors = await fetchAndParseCodeList(CODELIST_URLS.ESDCSector);
-		console.log(`✨ Total Sectors: ${sectors.length}\n`);
-		return sectors;
+		console.log("\n🌍 === FETCHING ALL SECTORS === 🌍");
+
+		// Only pull in the newly revised ESDCSector list
+		const esdc = await fetchAndParseCodeList(CODELIST_URLS.ESDCSector);
+
+		console.log(`\n✨ Total Sectors: ${esdc.length}\n`);
+
+		return esdc;
 	} catch (error) {
 		console.error("❌ Error in getAllSectors():", error);
 		return [];
@@ -428,6 +554,24 @@ export async function getAllProvinceTerritory(): Promise<CodeList[]> {
 		return await fetchAndParseCodeList(CODELIST_URLS.ProvinceTerritory);
 	} catch (error) {
 		console.error("❌ Error fetching ProvinceTerritory:", error);
+		return [];
+	}
+}
+
+export async function getAllFundingState(): Promise<CodeList[]> {
+	try {
+		return await fetchAndParseCodeList(CODELIST_URLS.FundingState);
+	} catch (error) {
+		console.error("❌ Error fetching FundingState:", error);
+		return [];
+	}
+}
+
+export async function getAllSDGImpacts(): Promise<CodeList[]> {
+	try {
+		return await fetchAndParseCodeList(CODELIST_URLS.SDGImpacts);
+	} catch (error) {
+		console.error("❌ Error fetching SDGImpacts:", error);
 		return [];
 	}
 }
@@ -459,14 +603,26 @@ export async function getAllCorporateRegistrars(): Promise<CodeList[]> {
 	}
 }
 
+export async function getAllIRISImpactCategories(): Promise<CodeList[]> {
+	try {
+		return await fetchAndParseCodeList(CODELIST_URLS.IRISImpactCategory);
+	} catch (error) {
+		console.error("❌ Error fetching IRIS Impact Categories:", error);
+		return [];
+	}
+}
+
 export async function getCodeListByTableName(tableName: string): Promise<CodeList[]> {
 	const urlMap: Record<string, string> = {
 		Sector: CODELIST_URLS.ESDCSector,
 		PopulationServed: CODELIST_URLS.PopulationServed,
 		Locality: CODELIST_URLS.Locality,
 		ProvinceTerritory: CODELIST_URLS.ProvinceTerritory,
+		FundingState: CODELIST_URLS.FundingState,
+		SDGImpacts: CODELIST_URLS.SDGImpacts,
 		OrganizationType: CODELIST_URLS.OrganizationType,
 		CorporateRegistrar: CODELIST_URLS.CorporateRegistrar,
+		IRISImpactCategory: CODELIST_URLS.IRISImpactCategory,
 	};
 
 	const url = urlMap[tableName];

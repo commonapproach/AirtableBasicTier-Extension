@@ -12,6 +12,7 @@ import {
 	SFFModelType,
 } from "../models";
 import { FieldType } from "../models/Base";
+import { formatMessageToString } from "../../utils";
 
 type Operation = "import" | "export";
 
@@ -35,10 +36,10 @@ const KNOWN_EXTERNAL_TYPES = new Set<string>([
 	"i72:Population",
 ]);
 
-// Helper: extract the primary ontology type we care about (cids: or sff:) from @type which may be string or array
+// Helper: extract the primary ontology type we care about (cids:, sff:, or org:) from @type which may be string or array
 function getPrimaryStandardType(typeVal: any): string | null {
 	if (!typeVal) return null;
-	const isTarget = (t: string) => t.startsWith("cids:") || t.startsWith("sff:");
+	const isTarget = (t: string) => t.startsWith("cids:") || t.startsWith("sff:") || t.startsWith("org:");
 	if (typeof typeVal === "string") return isTarget(typeVal) ? typeVal : null;
 	if (Array.isArray(typeVal)) {
 		const found = typeVal.find((t) => typeof t === "string" && isTarget(t));
@@ -46,6 +47,8 @@ function getPrimaryStandardType(typeVal: any): string | null {
 	}
 	return null;
 }
+
+
 
 export async function validate(
 	tableData: TableInterface[],
@@ -119,9 +122,18 @@ async function validateRecords(tableData: TableInterface[], operation: Operation
 					.map((d) => (d.indexOf(":") !== -1 ? d.split(":")[1] : d))
 					.includes(field.name.indexOf(":") !== -1 ? field.name.split(":")[1] : field.name)
 			) {
+				// Check for alternative ID fields if @id is missing
+				if (field.name === "@id") {
+					const hasAlternativeId = Object.keys(data).some(key => 
+						key === "hasIdentifier" || key.endsWith(":hasIdentifier")
+					);
+					if (hasAlternativeId) continue;
+				}
+
 				if (operation === "import" && field.name !== "@id") {
 					validatorWarnings.add(
-						intl.formatMessage(
+						formatMessageToString(
+							intl,
 							{
 								id: "validation.messages.missingRequiredField",
 								defaultMessage:
@@ -136,7 +148,8 @@ async function validateRecords(tableData: TableInterface[], operation: Operation
 					);
 				} else {
 					validatorErrors.add(
-						intl.formatMessage(
+						formatMessageToString(
+							intl,
 							{
 								id: "validation.messages.missingRequiredField",
 								defaultMessage:
@@ -162,7 +175,8 @@ async function validateRecords(tableData: TableInterface[], operation: Operation
 						.includes(field.name.indexOf(":") !== -1 ? field.name.split(":")[1] : field.name)
 				) {
 					validatorWarnings.add(
-						intl.formatMessage(
+						formatMessageToString(
+							intl,
 							{
 								id: "validation.messages.missingRequiredField",
 								defaultMessage:
@@ -179,7 +193,8 @@ async function validateRecords(tableData: TableInterface[], operation: Operation
 				// @ts-ignore
 				if (data[field.name]?.length === 0) {
 					validatorWarnings.add(
-						intl.formatMessage(
+						formatMessageToString(
+							intl,
 							{
 								id: "validation.messages.emptyField",
 								defaultMessage: "Field <b>{fieldName}</b> is empty on table <b>{tableName}</b>",
@@ -202,27 +217,29 @@ async function validateRecords(tableData: TableInterface[], operation: Operation
 				((!data[field.name] && !data[field.name.split(":")[1]]) ||
 					isFieldValueNullOrEmpty(data[field.name] || data[field.name.split(":")[1]]))
 			) {
-				const msg = intl
-					.formatMessage(
-						{
-							id: "validation.messages.nullOrEmptyField",
-							defaultMessage:
-								"Field <b>{fieldName}</b> is null or empty on table <b>{tableName}</b>",
-						},
-						{
-							fieldName: field.displayName || field.name,
-							tableName,
-							b: (str) => `<b>${str}</b>`,
-						}
-					)
-					.toString();
-				
+				const msg = formatMessageToString(
+					intl,
+					{
+						id: "validation.messages.nullOrEmptyField",
+						defaultMessage:
+							"Field <b>{fieldName}</b> is null or empty on table <b>{tableName}</b>",
+					},
+					{
+						fieldName: field.displayName || field.name,
+						tableName,
+						b: (str) => `<b>${str}</b>`,
+					}
+				);
+
 				// Special handling for number fields that can be zero (EDGProfile.hasSize, TeamProfile.hasTeamSize)
 				const fieldValue = data[field.name] || data[field.name.split(":")[1]];
-				const isNumberFieldWithZero = field.type === "number" && fieldValue === 0;
-				
+				const isNumberFieldWithZero = field.type === "number" && (fieldValue as unknown) === 0;
+
 				// Allow zero values for hasSize and hasTeamSize - treat as warning instead of error
-				if (isNumberFieldWithZero && (field.displayName === "hasSize" || field.displayName === "hasTeamSize")) {
+				if (
+					isNumberFieldWithZero &&
+					(field.displayName === "hasSize" || field.displayName === "hasTeamSize")
+				) {
 					// Skip validation - zero is valid for these fields
 					continue;
 				}
@@ -262,7 +279,8 @@ async function validateRecords(tableData: TableInterface[], operation: Operation
 				const uniqueValues = new Set(fieldValue);
 				if (uniqueValues.size !== fieldValue.length) {
 					validatorWarnings.add(
-						intl.formatMessage(
+						formatMessageToString(
+							intl,
 							{
 								id: "validation.messages.duplicateFieldValues",
 								defaultMessage:
@@ -289,7 +307,8 @@ async function validateRecords(tableData: TableInterface[], operation: Operation
 					const parsed = Number(fieldValue);
 					if (isNaN(parsed)) {
 						validatorWarnings.add(
-							intl.formatMessage(
+							formatMessageToString(
+								intl,
 								{
 									id: "validation.messages.warning.invalidNumberTypeModel",
 									defaultMessage:
@@ -315,21 +334,20 @@ async function validateRecords(tableData: TableInterface[], operation: Operation
 						intl
 					);
 					if (!uniqueResult.isUnique && uniqueResult.reason === "duplicate") {
-						const msg = intl
-							.formatMessage(
-								{
-									id: "validation.messages.duplicateUniqueFieldValue",
-									defaultMessage:
-										"Duplicate value for unique field <b>{fieldName}</b>: <b>{fieldValue}</b> in table <b>{tableName}</b>",
-								},
-								{
-									fieldName: fieldDisplayName,
-									fieldValue: fieldValue ? fieldValue.toString() : "null",
-									tableName,
-									b: (str) => `<b>${str}</b>`,
-								}
-							)
-							.toString();
+						const msg = formatMessageToString(
+							intl,
+							{
+								id: "validation.messages.duplicateUniqueFieldValue",
+								defaultMessage:
+									"Duplicate value for unique field <b>{fieldName}</b>: <b>{fieldValue}</b> in table <b>{tableName}</b>",
+							},
+							{
+								fieldName: fieldDisplayName,
+								fieldValue: fieldValue ? fieldValue.toString() : "null",
+								tableName,
+								b: (str) => `<b>${str}</b>`,
+							}
+						);
 						if (fieldName !== "@id") {
 							validatorWarnings.add(msg);
 						} else {
@@ -341,7 +359,8 @@ async function validateRecords(tableData: TableInterface[], operation: Operation
 				if (fieldProps?.notNull) {
 					if (fieldValue === "" || !fieldValue) {
 						validatorWarnings.add(
-							intl.formatMessage(
+							formatMessageToString(
+								intl,
 								{
 									id: "validation.messages.warning.nullOrEmptyField",
 									defaultMessage:
@@ -360,7 +379,8 @@ async function validateRecords(tableData: TableInterface[], operation: Operation
 				if (fieldProps?.required) {
 					if (fieldValue === "" || !fieldValue) {
 						validatorWarnings.add(
-							intl.formatMessage(
+							formatMessageToString(
+								intl,
 								{
 									id: "validation.messages.warning.missingRequiredField",
 									defaultMessage:
@@ -397,7 +417,8 @@ async function validateRecords(tableData: TableInterface[], operation: Operation
 						}
 						if (shouldWarn) {
 							validatorWarnings.add(
-								intl.formatMessage(
+								formatMessageToString(
+									intl,
 									{
 										id: "validation.messages.warning.invalidSelectField",
 										defaultMessage:
@@ -434,7 +455,8 @@ async function validateRecords(tableData: TableInterface[], operation: Operation
 						}
 						if (shouldWarn) {
 							validatorWarnings.add(
-								intl.formatMessage(
+								formatMessageToString(
+									intl,
 									{
 										id: "validation.messages.warning.invalidSelectField",
 										defaultMessage:
@@ -465,7 +487,8 @@ async function validateRecords(tableData: TableInterface[], operation: Operation
 						const value = fieldValue;
 						if (value && fieldType === "xsd:string" && typeof value !== "string") {
 							validatorWarnings.add(
-								intl.formatMessage(
+								formatMessageToString(
+									intl,
 									{
 										id: "validation.messages.warning.invalidStringType",
 										defaultMessage:
@@ -486,7 +509,8 @@ async function validateRecords(tableData: TableInterface[], operation: Operation
 								new URL(value);
 							} catch (error) {
 								validatorWarnings.add(
-									intl.formatMessage(
+									formatMessageToString(
+										intl,
 										{
 											id: "validation.messages.warning.invalidUrlType",
 											defaultMessage:
@@ -507,7 +531,8 @@ async function validateRecords(tableData: TableInterface[], operation: Operation
 							const numValue = +value;
 							if (isNaN(numValue) || !Number.isInteger(numValue) || numValue < 0) {
 								validatorWarnings.add(
-									intl.formatMessage(
+									formatMessageToString(
+										intl,
 										{
 											id: "validation.messages.warning.invalidNumberType",
 											defaultMessage:
@@ -523,7 +548,8 @@ async function validateRecords(tableData: TableInterface[], operation: Operation
 							}
 						} else if (fieldType === "xsd:boolean" && typeof value !== "boolean") {
 							validatorWarnings.add(
-								intl.formatMessage(
+								formatMessageToString(
+									intl,
 									{
 										id: "validation.messages.warning.invalidBooleanType",
 										defaultMessage:
@@ -544,7 +570,8 @@ async function validateRecords(tableData: TableInterface[], operation: Operation
 
 							if (!isValidDate) {
 								validatorWarnings.add(
-									intl.formatMessage(
+									formatMessageToString(
+										intl,
 										{
 											id: "validation.messages.warning.invalidDateFormat",
 											defaultMessage:
@@ -584,7 +611,8 @@ function validateUnique(
 		urlObject = new URL(id);
 	} catch (error) {
 		validatorErrors.add(
-			intl.formatMessage(
+			formatMessageToString(
+				intl,
 				{
 					id: "validation.messages.invalidIdFormat",
 					defaultMessage:
@@ -635,8 +663,8 @@ function validateTypeProp(data: any, intl: IntlShape): boolean {
 	const typeVal = data["@type"];
 	let mainType: string | null = null;
 
-	// Recognize both cids: and sff: namespaces
-	const isStandard = (t: string) => t.startsWith("cids:") || t.startsWith("sff:");
+	// Recognize cids:, sff:, and org: namespaces (org: is used for OrganizationID and related types)
+	const isStandard = (t: string) => t.startsWith("cids:") || t.startsWith("sff:") || t.startsWith("org:");
 	if (typeof typeVal === "string") {
 		mainType = isStandard(typeVal) ? typeVal : null;
 	} else if (Array.isArray(typeVal) && typeVal.length > 0) {
@@ -664,7 +692,8 @@ function validateTypeProp(data: any, intl: IntlShape): boolean {
 		// Suppress the warning for known external types we intentionally include (e.g., i72 units)
 		if (!externalType || !KNOWN_EXTERNAL_TYPES.has(externalType)) {
 			validatorWarnings.add(
-				intl.formatMessage(
+				formatMessageToString(
+					intl,
 					{
 						id: "validation.messages.unrecognizedTypeProperty",
 						defaultMessage:
@@ -712,7 +741,8 @@ function validateTypeProp(data: any, intl: IntlShape): boolean {
 	const tableName = mainType.split(":")[1];
 	if (!map[tableName as ModelType] && !mapSFFModel[tableName as SFFModelType]) {
 		validatorWarnings.add(
-			intl.formatMessage(
+			formatMessageToString(
+				intl,
 				{
 					id: "validation.messages.unrecognizedTypeProperty",
 					defaultMessage:
@@ -775,20 +805,23 @@ async function validateLinkedFields(
 			}
 
 			if (data[fieldName].length === 0) {
-				const msg = intl
-					.formatMessage(
-						{
-							id: "validation.messages.missingLinkedField",
-							defaultMessage: "{tableName} <b>{name}</b> has no {fieldName}",
-						},
-						{
-							tableName,
-							name: (data["org:hasLegalName"] || data["hasLegalName"] || data["hasName"]) as string,
-							fieldName,
-							b: (str) => `<b>${str}</b>`,
-						}
-					)
-					.toString();
+				const msg = formatMessageToString(
+					intl,
+					{
+						id: "validation.messages.missingLinkedField",
+						defaultMessage: "{tableName} <b>{name}</b> has no {fieldName}",
+					},
+					{
+						tableName,
+						name: (data["org:hasLegalName"] ||
+							data["hasLegalName"] ||
+							data["hasName"] ||
+							data["hasIdentifier"] ||
+							data["@id"]) as string,
+						fieldName,
+						b: (str) => `<b>${str}</b>`,
+					}
+				);
 				if (field.required && operation === "export") {
 					validatorErrors.add(msg);
 				} else if (field.required || field.semiRequired) {
@@ -799,7 +832,8 @@ async function validateLinkedFields(
 			if (isString && data[fieldName].length > 1) {
 				if (operation === "import") {
 					validatorWarnings.add(
-						intl.formatMessage(
+						formatMessageToString(
+							intl,
 							{
 								id: "validation.messages.multipleValuesWarning",
 								defaultMessage:
@@ -816,7 +850,8 @@ async function validateLinkedFields(
 					);
 				} else {
 					validatorErrors.add(
-						intl.formatMessage(
+						formatMessageToString(
+							intl,
 							{
 								id: "validation.messages.multipleValues",
 								defaultMessage:
@@ -864,7 +899,8 @@ async function validateLinkedFields(
 			data[fieldName].forEach((item) => {
 				if (!linkedIds.includes(item)) {
 					validatorWarnings.add(
-						intl.formatMessage(
+						formatMessageToString(
+							intl,
 							{
 								id: "validation.messages.linkedFieldNotFound",
 								defaultMessage:
@@ -878,7 +914,7 @@ async function validateLinkedFields(
 								linkedTable,
 								b: (str: string) => `<b>${str}</b>`,
 							}
-						) as string
+						)
 					);
 				}
 			});
@@ -918,7 +954,8 @@ function validateIfIdIsValidUrl(
 		} catch (error) {
 			if (operation === "import") {
 				validatorWarnings.add(
-					intl.formatMessage(
+					formatMessageToString(
+						intl,
 						{
 							id: "validation.messages.invalidIdFormat",
 							defaultMessage:
@@ -934,7 +971,8 @@ function validateIfIdIsValidUrl(
 				return;
 			}
 			validatorErrors.add(
-				intl.formatMessage(
+				formatMessageToString(
+					intl,
 					{
 						id: "validation.messages.invalidIdFormat",
 						defaultMessage:
