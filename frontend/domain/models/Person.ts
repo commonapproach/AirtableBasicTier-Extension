@@ -17,8 +17,7 @@ export class Person extends Base {
 				semiRequired: true,
 			},
 			{
-				name: "foaf:givenName",
-				displayName: "givenName",
+				name: "givenName",
 				type: "string",
 				representedType: "string",
 				unique: false,
@@ -27,8 +26,7 @@ export class Person extends Base {
 				semiRequired: true,
 			},
 			{
-				name: "foaf:familyName",
-				displayName: "familyName",
+				name: "familyName",
 				type: "string",
 				representedType: "string",
 				defaultValue: "",
@@ -38,8 +36,7 @@ export class Person extends Base {
 				semiRequired: true,
 			},
 			{
-				name: "ic:hasEmail",
-				displayName: "hasEmail",
+				name: "hasEmail",
 				type: "string",
 				representedType: "string",
 				defaultValue: "",

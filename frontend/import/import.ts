@@ -29,10 +29,10 @@ function normalizeValue(val: any): string {
 	return String(val).trim();
 }
 
-// Helper: extract a primary standard type (cids:, sff:, or org:) from @type which may be string or array
+// Helper: extract a primary standard type (cids:, sff:) from @type which may be string or array
 function getPrimaryStandardType(typeVal: any): string | null {
 	if (!typeVal) return null;
-	const isTarget = (t: string) => t.startsWith("cids:") || t.startsWith("sff:") || t.startsWith("org:");
+	const isTarget = (t: string) => t.startsWith("cids:") || t.startsWith("sff:");
 	if (typeof typeVal === "string") return isTarget(typeVal) ? typeVal : null;
 	if (Array.isArray(typeVal)) {
 		const found = typeVal.find((t) => typeof t === "string" && isTarget(t));
@@ -318,7 +318,7 @@ async function importFileData(base: Base, jsonData: any, setDialogContent: any, 
 			? jsonData.filter((data) => {
 					const suffix = getCidsTableSuffix(data["@type"]);
 					return suffix ? Object.keys(fullMap).includes(suffix) : false;
-			})
+				})
 			: jsonData;
 		await importByData(base, filteredItems, intl);
 	} catch (error) {

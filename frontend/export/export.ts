@@ -15,22 +15,14 @@ import { validate } from "../domain/validation/validator";
 import { checkPrimaryField } from "../helpers/checkPrimaryField";
 import { downloadJSONLD, formatMessageToString, getActualFieldType } from "../utils";
 
-// Resolve the Airtable field name for a model field: prefer displayName; otherwise, strip prefix before ':'
+// Resolve the Airtable field name for a model field: prefer displayName; fallback to name.
 function getAirtableFieldName(field: FieldType): string {
 	if (field.displayName && field.displayName.length > 0) return field.displayName;
-	const n = field.name || "";
-	return n.includes(":") ? n.split(":")[1] : n;
+	return field.name;
 }
 
 function getExportFieldName(field: FieldType): string {
-	const fieldName = field.name || "";
-	if (fieldName.startsWith("@")) {
-		return fieldName;
-	}
-	if (fieldName.includes(":")) {
-		return fieldName.split(":")[1];
-	}
-	return fieldName;
+	return field.name;
 }
 
 export async function exportData(
@@ -165,10 +157,10 @@ export async function exportData(
 				table.name === "Population"
 					? "i72:Population"
 					: table.name === "Person"
-					? "cids:Person"
-					: isSFFTable
-					? `sff:${table.name}`
-					: `cids:${table.name}`;
+						? "cids:Person"
+						: isSFFTable
+							? `sff:${table.name}`
+							: `cids:${table.name}`;
 			let row: any = {
 				"@context": contextUrl,
 				"@type": baseType,

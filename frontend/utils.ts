@@ -767,23 +767,23 @@ export function convertOrganizationIDFields(obj: any): any {
 				);
 			}
 
-			// Convert 'identifier' to 'org:hasIdentifier' if present
+			// Convert 'identifier' or 'org:hasIdentifier' to 'hasIdentifier' if present
 			if (
-				Object.prototype.hasOwnProperty.call(obj, "identifier") &&
-				!Object.prototype.hasOwnProperty.call(obj, "org:hasIdentifier") &&
+				(Object.prototype.hasOwnProperty.call(obj, "identifier") ||
+					Object.prototype.hasOwnProperty.call(obj, "org:hasIdentifier")) &&
 				!Object.prototype.hasOwnProperty.call(obj, "hasIdentifier")
 			) {
-				obj["org:hasIdentifier"] = obj["identifier"];
+				obj["hasIdentifier"] = obj["identifier"] || obj["org:hasIdentifier"];
 				delete obj["identifier"];
 			}
 
 			// Convert 'issuedBy' to 'org:issuedBy' if present
 			if (
-				Object.prototype.hasOwnProperty.call(obj, "issuedBy") &&
-				!Object.prototype.hasOwnProperty.call(obj, "org:issuedBy")
+				Object.prototype.hasOwnProperty.call(obj, "org:issuedBy") &&
+				!Object.prototype.hasOwnProperty.call(obj, "issuedBy")
 			) {
-				obj["org:issuedBy"] = obj["issuedBy"];
-				delete obj["issuedBy"];
+				obj["issuedBy"] = obj["org:issuedBy"];
+				delete obj["org:issuedBy"];
 			}
 		}
 

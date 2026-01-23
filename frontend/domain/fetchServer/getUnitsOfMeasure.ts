@@ -129,8 +129,8 @@ async function ensureCatalogLoaded(): Promise<void> {
 	// Try persisted cache first
 	if (loadFromLocalStorageCache()) return;
 	const ttlUrlCandidates = [
-		"https://codelist.commonapproach.org/codeLists/UnitsOfMeasureList.ttl",
-		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/UnitOfMeasure/UnitsOfMeasureList.ttl",
+		"https://codelist.commonapproach.org/UnitsOfMeasureList.ttl",
+		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/UnitsOfMeasureList.ttl",
 	];
 	for (const url of ttlUrlCandidates) {
 		try {

@@ -23,8 +23,7 @@ export class Indicator extends Base {
 				semiRequired: false,
 			},
 			{
-				name: "org:hasName",
-				displayName: "hasName",
+				name: "hasName",
 				type: "string",
 				representedType: "string",
 				unique: true,
@@ -44,7 +43,6 @@ export class Indicator extends Base {
 			},
 			{
 				name: "unitDescription",
-				displayName: "unitDescription",
 				type: "string",
 				representedType: "string",
 				defaultValue: "",
@@ -54,8 +52,7 @@ export class Indicator extends Base {
 				semiRequired: true,
 			},
 			{
-				name: "i72:unit_of_measure",
-				displayName: "unit_of_measure",
+				name: "unit_of_measure",
 				type: "select",
 				representedType: "string",
 				defaultValue: "",
