@@ -18,8 +18,7 @@ export class Characteristic extends Base {
 				semiRequired: true,
 			},
 			{
-				name: "org:hasName",
-				displayName: "hasName",
+				name: "hasName",
 				type: "string",
 				representedType: "string",
 				defaultValue: "",

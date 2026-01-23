@@ -1,6 +1,6 @@
 import { Base } from "./Base";
-import { Organization } from "./Organization";
 import { CorporateRegistrar } from "./CorporateRegistrar";
+import { Organization } from "./Organization";
 
 export class OrganizationID extends Base {
 	static className: string = "OrganizationID";
@@ -20,7 +20,6 @@ export class OrganizationID extends Base {
 			},
 			{
 				name: "forOrganization",
-				displayName: "forOrganization",
 				type: "link",
 				representedType: "string",
 				defaultValue: "",
@@ -31,8 +30,7 @@ export class OrganizationID extends Base {
 				semiRequired: true,
 			},
 			{
-				name: "org:hasIdentifier",
-				displayName: "hasIdentifier",
+				name: "hasIdentifier",
 				type: "string",
 				representedType: "string",
 				defaultValue: "",
@@ -42,8 +40,7 @@ export class OrganizationID extends Base {
 				semiRequired: true,
 			},
 			{
-				name: "org:issuedBy",
-				displayName: "issuedBy",
+				name: "issuedBy",
 				type: "link",
 				representedType: "string",
 				defaultValue: "",

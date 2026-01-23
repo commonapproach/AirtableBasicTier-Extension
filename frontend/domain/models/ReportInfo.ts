@@ -18,8 +18,7 @@ export class ReportInfo extends Base {
 				semiRequired: false,
 			},
 			{
-				name: "org:hasName",
-				displayName: "hasName",
+				name: "hasName",
 				type: "string",
 				representedType: "string",
 				unique: true,
@@ -39,8 +38,7 @@ export class ReportInfo extends Base {
 				semiRequired: true,
 			},
 			{
-				name: "prov:startedAtTime",
-				displayName: "startedAtTime",
+				name: "startedAtTime",
 				type: "datetime",
 				representedType: "string",
 				defaultValue: "",
@@ -50,8 +48,7 @@ export class ReportInfo extends Base {
 				semiRequired: true,
 			},
 			{
-				name: "prov:endedAtTime",
-				displayName: "endedAtTime",
+				name: "endedAtTime",
 				type: "datetime",
 				representedType: "string",
 				defaultValue: "",
