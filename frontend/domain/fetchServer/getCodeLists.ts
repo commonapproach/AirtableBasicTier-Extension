@@ -40,19 +40,19 @@ const CODELIST_URLS = {
 /** GitHub fallback URLs for redundancy */
 const GITHUB_FALLBACK_URLS: Record<string, string> = {
 	[CODELIST_URLS.ESDCSector]:
-		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/ESDCSector/ESDCSector.ttl",
+		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/ESDCSector.ttl",
 	[CODELIST_URLS.PopulationServed]:
-		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/PopulationServed/PopulationServed.ttl",
+		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/PopulationServed.ttl",
 	[CODELIST_URLS.ProvinceTerritory]:
-		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/ProvinceTerritory/ProvinceTerritory.ttl",
+		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/ProvinceTerritory.ttl",
 	[CODELIST_URLS.FundingState]:
-		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/FundingState/FundingState.ttl",
+		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/FundingState.ttl",
 	[CODELIST_URLS.SDGImpacts]:
-		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/SDGImpacts/SDGImpacts.ttl",
+		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/SDGImpacts.ttl",
 	[CODELIST_URLS.OrganizationType]:
-		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/OrgTypeGOC/OrgTypeGOC.ttl",
+		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/OrgTypeGOC.ttl",
 	[CODELIST_URLS.Locality]:
-		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/Locality/LocalityStatsCan.ttl",
+		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/LocalityStatsCan.ttl",
 	[CODELIST_URLS.CorporateRegistrar]:
 		"https://raw.githubusercontent.com/commonapproach/CodeLists/main/CanadianCorporateRegistries.ttl",
 	[CODELIST_URLS.IRISImpactCategory]:

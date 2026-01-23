@@ -22,15 +22,15 @@ export interface SeliGLIData {
 	indicators: SeliIndicator[];
 }
 
-const SELI_GLI_URL = "https://codelist.commonapproach.org/SELI-GLI/SELI-GLI.ttl";
+const SELI_GLI_URL = "https://codelist.commonapproach.org/SELI-GLI.ttl";
 const SELI_GLI_GITHUB_FALLBACK_URL =
-	"https://raw.githubusercontent.com/commonapproach/CodeLists/main/SELI-GLI/SELI-GLI.ttl";
+	"https://raw.githubusercontent.com/commonapproach/CodeLists/main/SELI-GLI.ttl";
 const CACHE_KEY = "seli_gli_cache";
 const CACHE_EXPIRATION = 24 * 60 * 60 * 1000;
 
 function parseTurtleToSeliGLI(ttl: string): SeliGLIData {
 	// Dynamically extract base URI from @prefix : <...> .
-	let baseUri = "https://codelist.commonapproach.org/codeLists/SELI/"; // fallback
+	let baseUri = "https://codelist.commonapproach.org/SELI-GLI"; // fallback
 	const baseUriMatch = ttl.match(/^@prefix\s*:\s*<([^>]+)>/m);
 	if (baseUriMatch) {
 		baseUri = baseUriMatch[1];
