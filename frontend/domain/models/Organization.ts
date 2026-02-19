@@ -20,8 +20,7 @@ export class Organization extends Base {
 				semiRequired: false,
 			},
 			{
-				name: "org:hasLegalName",
-				displayName: "hasLegalName",
+				name: "hasLegalName",
 				type: "string",
 				representedType: "string",
 				unique: true,

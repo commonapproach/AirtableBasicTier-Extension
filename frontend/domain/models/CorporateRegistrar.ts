@@ -16,7 +16,7 @@ export class CorporateRegistrar extends Base {
 				required: true,
 				semiRequired: false,
 			},
-            {
+			{
 				name: "hasIdentifier",
 				type: "string",
 				representedType: "string",
@@ -37,8 +37,7 @@ export class CorporateRegistrar extends Base {
 				semiRequired: false,
 			},
 			{
-				name: "cids:hasDescription",
-				displayName: "hasDescription",
+				name: "hasDescription",
 				type: "text",
 				representedType: "string",
 				defaultValue: "",

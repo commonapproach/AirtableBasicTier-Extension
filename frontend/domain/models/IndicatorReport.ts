@@ -19,8 +19,7 @@ export class IndicatorReport extends Base {
 				semiRequired: false,
 			},
 			{
-				name: "org:hasName",
-				displayName: "hasName",
+				name: "hasName",
 				type: "string",
 				representedType: "string",
 				unique: true,
@@ -39,13 +38,14 @@ export class IndicatorReport extends Base {
 				semiRequired: false,
 			},
 			{
-				name: "i72:value",
+				name: "value",
+				displayName: "i72:value",
 				type: "object",
 				objectType: "i72:Measure",
 				representedType: "object",
 				properties: [
 					{
-						name: "i72:hasNumericalValue",
+						name: "hasNumericalValue",
 						displayName: "value",
 						type: "string",
 						representedType: "string",
@@ -57,8 +57,8 @@ export class IndicatorReport extends Base {
 					},
 				],
 				defaultValue: {
-					"i72:hasNumericalValue": "",
-					"i72:unit_of_measure": "",
+					hasNumericalValue: "",
+					unit_of_measure: "",
 				},
 				unique: false,
 				notNull: true,
@@ -66,7 +66,7 @@ export class IndicatorReport extends Base {
 				semiRequired: false,
 			},
 			{
-				name: "prov:startedAtTime",
+				name: "startedAtTime",
 				displayName: "startedAtTime",
 				type: "datetime",
 				representedType: "string",
@@ -77,7 +77,7 @@ export class IndicatorReport extends Base {
 				semiRequired: true,
 			},
 			{
-				name: "prov:endedAtTime",
+				name: "endedAtTime",
 				displayName: "endedAtTime",
 				type: "datetime",
 				representedType: "string",
@@ -106,7 +106,7 @@ export class IndicatorReport extends Base {
 				link: { table: Organization, field: "hasIndicatorReport" },
 				unique: false,
 				notNull: false,
-				required: true, 
+				required: true,
 				semiRequired: false,
 			},
 		];

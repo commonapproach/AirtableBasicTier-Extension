@@ -18,7 +18,6 @@ export class Address extends Base {
 			},
 			{
 				name: "streetAddress",
-				displayName: "streetAddress",
 				type: "text",
 				representedType: "string",
 				defaultValue: "",
@@ -29,7 +28,6 @@ export class Address extends Base {
 			},
 			{
 				name: "extendedAddress",
-				displayName: "extendedAddress",
 				type: "string",
 				representedType: "string",
 				defaultValue: "",
@@ -40,7 +38,6 @@ export class Address extends Base {
 			},
 			{
 				name: "addressLocality",
-				displayName: "addressLocality",
 				type: "string",
 				representedType: "string",
 				defaultValue: "",
@@ -51,7 +48,6 @@ export class Address extends Base {
 			},
 			{
 				name: "addressRegion",
-				displayName: "addressRegion",
 				type: "string",
 				representedType: "string",
 				defaultValue: "",
@@ -62,7 +58,6 @@ export class Address extends Base {
 			},
 			{
 				name: "postalCode",
-				displayName: "postalCode",
 				type: "string",
 				representedType: "string",
 				defaultValue: "",
@@ -73,7 +68,6 @@ export class Address extends Base {
 			},
 			{
 				name: "addressCountry",
-				displayName: "addressCountry",
 				type: "string",
 				representedType: "string",
 				defaultValue: "",
@@ -84,7 +78,6 @@ export class Address extends Base {
 			},
 			{
 				name: "postOfficeBoxNumber",
-				displayName: "postOfficeBoxNumber",
 				type: "string",
 				representedType: "string",
 				defaultValue: "",

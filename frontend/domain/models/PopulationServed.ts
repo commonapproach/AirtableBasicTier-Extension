@@ -19,7 +19,7 @@ export class PopulationServed extends Base {
 			{
 				name: "@type",
 				type: "string",
-				representedType: "array", 
+				representedType: "array",
 				defaultValue: [],
 				unique: false,
 				notNull: false,
@@ -37,8 +37,7 @@ export class PopulationServed extends Base {
 				semiRequired: true,
 			},
 			{
-				name: "org:hasName",
-				displayName: "hasName",
+				name: "hasName",
 				type: "string",
 				representedType: "string",
 				defaultValue: "",
