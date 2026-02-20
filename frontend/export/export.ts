@@ -158,9 +158,11 @@ export async function exportData(
 					? "i72:Population"
 					: table.name === "Person"
 						? "cids:Person"
-						: isSFFTable
-							? `sff:${table.name}`
-							: `cids:${table.name}`;
+						: table.name === "OrganizationID" 
+               				? "org:OrganizationID" 
+							: isSFFTable
+								? `sff:${table.name}`
+								: `cids:${table.name}`;
 			let row: any = {
 				"@context": contextUrl,
 				"@type": baseType,
@@ -478,12 +480,12 @@ export async function exportData(
 				: item?.["@type"] === "cids:IndicatorReport"
 		) {
 			const indicatorId = item["forIndicator"];
-			const valueObj = item?.["i72:value"]; // Some exports may embed object; our exporter currently emits objects via getObjectFieldsRecursively
-			if (valueObj && !valueObj["i72:unit_of_measure"]) {
+			const valueObj = item?.["value"]; 
+			if (valueObj && !valueObj["unit_of_measure"]) {
 				const fallback =
 					(typeof indicatorId === "string" && indicatorUnitById[indicatorId]) ||
 					UNIT_IRI.UNSPECIFIED;
-				valueObj["i72:unit_of_measure"] = fallback;
+				valueObj["unit_of_measure"] = fallback;
 				usedUnitIris.add(fallback);
 			}
 		}
@@ -766,7 +768,6 @@ function getObjectFieldsRecursively(record: Record, field: FieldType, row: any, 
 
 	if (field.type === "object") {
 		row[field.name] = {
-			"@context": contextUrl,
 			"@type": field.objectType,
 		};
 
