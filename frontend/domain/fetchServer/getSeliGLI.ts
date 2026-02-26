@@ -29,57 +29,66 @@ const CACHE_KEY = "seli_gli_cache";
 const CACHE_EXPIRATION = 24 * 60 * 60 * 1000;
 
 function parseTurtleToSeliGLI(ttl: string): SeliGLIData {
-	// Dynamically extract base URI from @prefix : <...> .
-	let baseUri = "https://codelist.commonapproach.org/SELI-GLI"; // fallback
-	const baseUriMatch = ttl.match(/^@prefix\s*:\s*<([^>]+)>/m);
-	if (baseUriMatch) {
-		baseUri = baseUriMatch[1];
-	}
+	// New format uses @base and @prefix : <#>
+	// @base <https://codelist.commonapproach.org/SELI-GLI> .
+	// :Theme1 resolves to https://codelist.commonapproach.org/SELI-GLI#Theme1
+	const baseUriMatch = ttl.match(/@base\s*<([^>]+)>/);
+	const baseUri = baseUriMatch ? baseUriMatch[1] : "https://codelist.commonapproach.org/SELI-GLI";
+	const fragmentBase = baseUri + "#";
 
-	// Generic Turtle parser for cids: properties
 	const themes: SeliTheme[] = [];
 	const outcomes: SeliOutcome[] = [];
 	const indicators: SeliIndicator[] = [];
 
-	// Split into subject blocks (Theme, Outcome, Indicator, etc.)
-	const subjectBlockRegex = /:(\w+)\s+a cids:(\w+)\s*;([\s\S]*?)(?=\n\s*:[\w]+\s+a cids:|$)/g;
-	let m;
-	while ((m = subjectBlockRegex.exec(ttl))) {
-		const id = m[1];
-		const type = m[2];
-		const propsBlock = m[3];
-		const props: Record<string, any> = {};
-		// Add @id property with full URI (dynamically from baseUri)
-		props["@id"] = baseUri + id;
+	// Split into subject blocks — each starts with :IdentifierN
+	// Blocks are separated by blank lines or next :Identifier
+	const blockRegex = /^(:[\w]+)\s*\n([\s\S]*?)(?=\n^:[\w]|\Z)/gm;
+	// Simpler approach: split on lines that start with ":"
+	const blocks = ttl.split(/\n(?=:[\w]+\s*\n\s+a\s+cids:)/);
 
-		// Find all cids:property value pairs
-		const propRegex = /cids:(\w+)\s+((?:"[^"]+")|(?:[:\w\d,\s]+))/g;
-		let pm;
-		while ((pm = propRegex.exec(propsBlock))) {
-			const key = pm[1];
-			let value = pm[2].trim();
-			if (value.startsWith('"') && value.endsWith('"')) {
-				// String value
-				value = value.slice(1, -1);
-			} else if (value.startsWith(":")) {
-				// Reference(s), possibly comma-separated - convert to full URIs
-				const refs = value.split(",").map((s) => baseUri + s.trim().replace(":", ""));
-				value = refs.length === 1 ? refs[0] : refs;
-			}
-			props[key] = value;
-		}
+	for (const block of blocks) {
+		// Get subject id
+		const subjectMatch = block.match(/^:([\w]+)/);
+		if (!subjectMatch) continue;
+		const localId = subjectMatch[1];
+		const fullId = fragmentBase + localId;
 
-		// Assign to correct array based on type
+		// Determine type
+		const typeMatch = block.match(/a\s+cids:(Theme|Outcome|Indicator)[,\s;]/);
+		if (!typeMatch) continue;
+		const type = typeMatch[1];
+
+		// Extract org:hasName (new format)
+		const nameMatch = block.match(/org:hasName\s+"([^"]+)"/);
+		if (!nameMatch) continue;
+		const hasName = nameMatch[1];
+
+		// Extract cids:hasDescription
+		const descMatch = block.match(/cids:hasDescription\s+"([^"]+)"/);
+		const hasDescription = descMatch ? descMatch[1] : undefined;
+
 		if (type === "Theme") {
-			themes.push(props as SeliTheme);
+			themes.push({ "@id": fullId, hasName });
 		} else if (type === "Outcome") {
-			// Ensure hasIndicator is always an array
-			if (props.hasIndicator && !Array.isArray(props.hasIndicator)) {
-				props.hasIndicator = [props.hasIndicator];
+			// Extract forTheme
+			const forThemeMatch = block.match(/cids:forTheme\s+:([\w]+)/);
+			const forTheme = forThemeMatch ? fragmentBase + forThemeMatch[1] : "";
+
+			// Extract hasIndicator (comma-separated list)
+			const hasIndicatorMatch = block.match(/cids:hasIndicator\s+((?::([\w]+)(?:\s*,\s*)?)+)/);
+			let hasIndicator: string[] = [];
+			if (hasIndicatorMatch) {
+				hasIndicator = [...hasIndicatorMatch[1].matchAll(/:([\w]+)/g)]
+					.map((m) => fragmentBase + m[1]);
 			}
-			outcomes.push(props as SeliOutcome);
+
+			outcomes.push({ "@id": fullId, hasName, forTheme, hasIndicator });
 		} else if (type === "Indicator") {
-			indicators.push(props as SeliIndicator);
+			// Extract forOutcome
+			const forOutcomeMatch = block.match(/cids:forOutcome\s+:([\w]+)/);
+			const forOutcome = forOutcomeMatch ? fragmentBase + forOutcomeMatch[1] : "";
+
+			indicators.push({ "@id": fullId, hasName, hasDescription, forOutcome });
 		}
 	}
 
