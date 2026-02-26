@@ -174,7 +174,16 @@ export function clearCodeListCache(tableName?: string): void {
 
 function parseXmlToCodeList(xmlData: string): CodeList[] {
 	const parser = new XMLParser({ ignoreAttributes: false });
-	const jsonData = parser.parse(xmlData);
+	let jsonData: any;
+	try {
+        jsonData = parser.parse(xmlData);
+    } catch (e) {
+        if (e instanceof RangeError) {
+            console.error("❌ XML parsing failed: invalid numeric entity code point in XML data.", e.message);
+            return []; 
+        }
+        throw e; 
+    }
 
 	const codeList: CodeList[] = [];
 	const descriptions = jsonData["rdf:RDF"]?.["rdf:Description"] || [];

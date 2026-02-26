@@ -22,7 +22,7 @@ export class IndicatorReport extends Base {
 				name: "hasName",
 				type: "string",
 				representedType: "string",
-				unique: true,
+				unique: false,
 				notNull: true,
 				required: true,
 				semiRequired: false,

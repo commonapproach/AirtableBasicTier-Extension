@@ -505,7 +505,7 @@ function Main() {
 					}}
 				>
 					<img
-						src="https://www.commonapproach.org/wp-content/uploads/2022/02/Common-Approach-logo_symbol-only.png"
+						src="https://www.commonapproach.org/wp-content/uploads/2026/02/Common-Approach-logo_symbol-only.png"
 						alt="Common Approach To Impact Measurement"
 						width={200}
 					/>

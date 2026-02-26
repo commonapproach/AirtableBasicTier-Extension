@@ -32,7 +32,7 @@ function normalizeValue(val: any): string {
 // Helper: extract a primary standard type (cids:, sff:) from @type which may be string or array
 function getPrimaryStandardType(typeVal: any): string | null {
 	if (!typeVal) return null;
-	const isTarget = (t: string) => t.startsWith("cids:") || t.startsWith("sff:");
+	const isTarget = (t: string) => t.startsWith("cids:") || t.startsWith("sff:") || t.startsWith("org:");
 	if (typeof typeVal === "string") return isTarget(typeVal) ? typeVal : null;
 	if (Array.isArray(typeVal)) {
 		const found = typeVal.find((t) => typeof t === "string" && isTarget(t));
