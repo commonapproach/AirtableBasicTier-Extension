@@ -123,7 +123,17 @@ export async function importData(
 		return;
 	}
 
+	// DIAG: before parseJsonLd
+	const preParseIRs = jsonData.filter((d: any) => String(JSON.stringify(d["@type"] || "")).includes("IndicatorReport"));
+	console.log(`[DIAG] BEFORE parseJsonLd: total=${jsonData.length}, IndicatorReports=${preParseIRs.length}`);
+	preParseIRs.forEach((ir: any) => console.log(`  [DIAG] PRE-PARSE IR: @type=${JSON.stringify(ir["@type"])} | @id=${ir["@id"]}`));
+
 	jsonData = await parseJsonLd(jsonData);
+
+	// DIAG: after parseJsonLd
+	const postParseIRs = jsonData.filter((d: any) => String(JSON.stringify(d["@type"] || "")).includes("IndicatorReport"));
+	console.log(`[DIAG] AFTER parseJsonLd: total=${jsonData.length}, IndicatorReports=${postParseIRs.length}`);
+	postParseIRs.forEach((ir: any) => console.log(`  [DIAG] POST-PARSE IR: @type=${JSON.stringify(ir["@type"])} | @id=${ir["@id"]}`));
 
 	// Convert old i72:numerical_value/numerical_value to i72:hasNumericalValue before any validation
 	jsonData = convertNumericalValueToHasNumericalValue(jsonData);
@@ -160,13 +170,10 @@ export async function importData(
 				(Array.isArray(obj["@type"]) &&
 					obj["@type"].some((t: string) => t.toLowerCase().includes("address"))))
 		) {
-			const original = JSON.stringify(obj); // Capture original state
+			const original = JSON.stringify(obj);
 			const converted = convertIcAddressToPostalAddress(obj);
-
-			// Check if conversion happened by comparing original vs converted
 			const conversionHappened = JSON.stringify(converted) !== original;
 			if (conversionHappened) convertedAddress = true;
-
 			return converted;
 		}
 		return obj;
@@ -317,9 +324,18 @@ async function importFileData(base: Base, jsonData: any, setDialogContent: any, 
 		const filteredItems = Array.isArray(jsonData)
 			? jsonData.filter((data) => {
 					const suffix = getCidsTableSuffix(data["@type"]);
-					return suffix ? Object.keys(fullMap).includes(suffix) : false;
+					if (suffix && Object.keys(fullMap).includes(suffix)) return true;
+					// Fallback: handle @type arrays where getCidsTableSuffix fails to find a cids:/sff: prefix
+					if (Array.isArray(data["@type"])) {
+						return data["@type"].some((t: string) => {
+							const s = typeof t === "string" && t.includes(":") ? t.split(":")[1] : t;
+							return s && Object.keys(fullMap).includes(s);
+						});
+					}
+					return false;
 				})
 			: jsonData;
+		console.log(`[DIAG] filteredItems total: ${filteredItems.length}, IndicatorReports: ${filteredItems.filter((d: any) => String(JSON.stringify(d["@type"])).includes("IndicatorReport")).length}`);
 		await importByData(base, filteredItems, intl);
 	} catch (error) {
 		setDialogContent(
@@ -382,6 +398,9 @@ async function writeTable(base: Base, tableData: TableInterface[]): Promise<void
 		records: Array<{ fields: { [key: string]: unknown } }>;
 	}[] = [];
 
+	const irTableData = tableData.filter(d => String(JSON.stringify(d["@type"])).includes("IndicatorReport"));
+	console.log(`[DIAG] writeTable received ${tableData.length} items, ${irTableData.length} IndicatorReports`);
+
 	for (const data of tableData) {
 		const tableName = getCidsTableSuffix(data["@type"]) || "";
 		// Skip items with no recognized CIDS table type
@@ -393,7 +412,7 @@ async function writeTable(base: Base, tableData: TableInterface[]): Promise<void
 		}
 
 		let record: { [key: string]: unknown } = {};
-		Object.entries(data).forEach(async ([key, value]) => {
+		for (let [key, value] of Object.entries(data)) {
 			if (key.includes(":") && !key.startsWith("@")) {
 				const originalKey = key;
 				key = key.split(":")[1];
@@ -403,7 +422,7 @@ async function writeTable(base: Base, tableData: TableInterface[]): Promise<void
 			}
 
 			if (key === "@context" || !checkIfFieldIsRecognized(tableName, key)) {
-				return;
+				continue;
 			}
 
 			let cid;
@@ -413,7 +432,7 @@ async function writeTable(base: Base, tableData: TableInterface[]): Promise<void
 				cid = new mapSFFModel[tableName as SFFModelType]();
 			} else {
 				// Unknown class; skip
-				return;
+				continue;
 			}
 
 			for (const field of cid.getAllFields()) {
@@ -502,7 +521,11 @@ async function writeTable(base: Base, tableData: TableInterface[]): Promise<void
 					record[fieldName] = newValue;
 				}
 			}
-		});
+		}
+
+		if (tableName === "IndicatorReport") {
+			console.log(`[DIAG] Built IR record for ${data["@id"]}: @id=${record["@id"]}, hasName=${record["hasName"]}`);
+		}
 
 		const batch = recordBatches.find((batch) => batch.tableName === tableName);
 		if (batch) {
@@ -530,11 +553,25 @@ async function writeTable(base: Base, tableData: TableInterface[]): Promise<void
 					recordsToBeCreated.push(record);
 				}
 			}
+			if (batch.tableName === "IndicatorReport") {
+				console.log(`[DIAG] IR batch: ${recordsToBeUpdated.length} to update, ${recordsToBeCreated.length} to create`);
+				recordsToBeCreated.forEach(r => console.log(`  [DIAG] Creating IR: ${r.fields["@id"]}, hasName: ${r.fields["hasName"]}`));
+				recordsToBeUpdated.forEach(r => console.log(`  [DIAG] Updating IR: ${r.id}`));
+			}
 			if (recordsToBeUpdated.length > 0) {
 				await table.updateRecordsAsync(recordsToBeUpdated);
 			}
 			if (recordsToBeCreated.length > 0) {
-				await table.createRecordsAsync(recordsToBeCreated);
+				try {
+					await table.createRecordsAsync(recordsToBeCreated);
+					if (batch.tableName === "IndicatorReport") {
+						console.log(`[DIAG] createRecordsAsync SUCCESS for ${recordsToBeCreated.length} IR records`);
+					}
+				} catch (err) {
+					console.error(`[DIAG] createRecordsAsync FAILED for ${batch.tableName}:`, err);
+					console.error(`[DIAG] Failed records:`, JSON.stringify(recordsToBeCreated.slice(0, 3)));
+					throw err;
+				}
 			}
 		});
 	}
@@ -939,11 +976,8 @@ function transformObjectFieldIfWrongFormat(jsonData: TableInterface[]) {
 					data[key] = fieldValue;
 				}
 			} else if (field?.type === "link" && typeof value === "object" && !Array.isArray(value)) {
-				// Allow link fields provided as an object, e.g., {"@id": "..."}
-				// Always normalize the record field to the string @id value
 				let id = value["@id"] as string | undefined;
 				if (!id) {
-					// If there is no explicit @id, try to derive one only when a @type exists
 					const typeSuffix =
 						getCidsTableSuffix(value["@type"]) ||
 						(typeof value["@type"] === "string" ? (value["@type"] as string) : "");
@@ -955,12 +989,9 @@ function transformObjectFieldIfWrongFormat(jsonData: TableInterface[]) {
 				if (id) {
 					data[key] = id;
 				} else {
-					// If we still don't have an id, drop the value to avoid invalid data
 					data[key] = undefined;
 				}
 
-				// Only add the nested object to the dataset when it has a @type (to avoid
-				// introducing objects that fail validation due to missing @type), and avoid duplicates
 				if (value && value["@type"] && id) {
 					const alreadyExists = jsonData.some((d) => d && d["@id"] === id);
 					if (!alreadyExists) {
@@ -968,7 +999,6 @@ function transformObjectFieldIfWrongFormat(jsonData: TableInterface[]) {
 					}
 				}
 			} else if (field?.type === "link" && Array.isArray(value)) {
-				// Handle arrays of objects for link fields, e.g., [{"@id": "..."}, {"@id": "..."}]
 				const processedIds: string[] = [];
 
 				for (const item of value) {
@@ -976,7 +1006,6 @@ function transformObjectFieldIfWrongFormat(jsonData: TableInterface[]) {
 						const obj = item as any;
 						let id = obj["@id"] as string | undefined;
 						if (!id) {
-							// If there is no explicit @id, try to derive one only when a @type exists
 							const typeSuffix =
 								getCidsTableSuffix(obj["@type"]) ||
 								(typeof obj["@type"] === "string" ? (obj["@type"] as string) : "");
@@ -989,7 +1018,6 @@ function transformObjectFieldIfWrongFormat(jsonData: TableInterface[]) {
 						if (id) {
 							processedIds.push(id);
 
-							// Only add the nested object to the dataset when it has a @type and avoid duplicates
 							if (obj["@type"]) {
 								const alreadyExists = jsonData.some((d) => d && d["@id"] === id);
 								if (!alreadyExists) {
@@ -998,32 +1026,26 @@ function transformObjectFieldIfWrongFormat(jsonData: TableInterface[]) {
 							}
 						}
 					} else if (typeof item === "string") {
-						// Already a string ID, keep it as is
 						processedIds.push(item);
 					}
 				}
 
-				// Replace the field value with the array of IDs
 				data[key] = processedIds;
 			} else if (
 				(field?.type === "select" || field?.type === "multiselect") &&
 				typeof value === "object" &&
 				!Array.isArray(value)
 			) {
-				// Handle select/multiselect fields provided as an object, e.g., {"@id": "..."}
-				// Extract the @id and use it as the select option value
 				const id = value["@id"] as string | undefined;
 				if (id) {
 					data[key] = id;
 				} else {
-					// If no @id, drop the value to avoid invalid data
 					data[key] = undefined;
 				}
 			} else if (
 				(field?.type === "select" || field?.type === "multiselect") &&
 				Array.isArray(value)
 			) {
-				// Handle arrays of objects for select/multiselect fields
 				const processedIds: string[] = [];
 
 				for (const item of value) {
@@ -1040,7 +1062,6 @@ function transformObjectFieldIfWrongFormat(jsonData: TableInterface[]) {
 
 				data[key] = processedIds;
 			}
-			// No else clause - original behavior: don't normalize other fields
 		}
 	}
 	return jsonData;

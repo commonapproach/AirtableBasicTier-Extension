@@ -342,6 +342,8 @@ export const handleFileChange = async (
 		reader.onload = async (e) => {
 			try {
 				const data = JSON.parse(e.target.result as any);
+				console.log(`[DIAG] Raw file: isArray=${Array.isArray(data)}, keys=${Array.isArray(data) ? 'N/A' : Object.keys(data).join(',')}, length=${Array.isArray(data) ? data.length : 'N/A'}`);
+				if (data["@graph"]) console.log(`[DIAG] @graph length: ${data["@graph"].length}`);
 				onSuccess(data);
 			} catch (error) {
 				onError(
