@@ -772,7 +772,7 @@ async function validateLinkedFields(
 			!tableName ||
 			(!Object.keys(map).includes(tableName) && !Object.keys(mapSFFModel).includes(tableName))
 		) {
-			return;
+			continue; // ← FIXED: was `return`, which exited the whole function early
 		}
 
 		// Initialize the schema for the table
@@ -787,7 +787,7 @@ async function validateLinkedFields(
 		// for each field that has type link, check if all linked ids exists
 		const fields = cid.getAllFields();
 		const linkedFields = fields.filter((field) => field.type === "link");
-		linkedFields.forEach(async (field) => {
+		for (const field of linkedFields) { // ← FIXED: was `linkedFields.forEach(async (field) => {`
 			const fieldName = field.name;
 			if (!data[fieldName]) {
 				data[fieldName] = [];
@@ -920,7 +920,7 @@ async function validateLinkedFields(
 			if ((isString || field.representedType === "string") && operation === "export") {
 				data[fieldName] = data[fieldName].length > 0 ? data[fieldName][0] : "";
 			}
-		});
+		} 
 	}
 }
 
