@@ -8,18 +8,25 @@ export interface SeliOutcome {
 	hasName: string;
 	forTheme: string; // @id of Theme
 	hasIndicator: string[]; // @ids of Indicators
+	forOrganization?: string;
 }
 export interface SeliIndicator {
 	"@id": string;
 	hasName: string;
 	hasDescription?: string;
 	forOutcome: string; // @id of Outcome
+	forOrganization?: string;
+}
+export interface SeliOrganization {  // added (new interface)
+    "@id": string;
+    hasLegalName: string;
 }
 
 export interface SeliGLIData {
 	themes: SeliTheme[];
 	outcomes: SeliOutcome[];
 	indicators: SeliIndicator[];
+	organization: SeliOrganization | null;
 }
 
 const SELI_GLI_URL = "https://codelist.commonapproach.org/SELI-GLI.ttl";
@@ -36,6 +43,14 @@ function parseTurtleToSeliGLI(ttl: string): SeliGLIData {
 	const baseUri = baseUriMatch ? baseUriMatch[1] : "https://codelist.commonapproach.org/SELI-GLI";
 	const fragmentBase = baseUri + "#";
 
+	const cidsPrefixMatch = ttl.match(/@prefix\s+cids:\s*<([^>]+)>/);  
+	const cidsPrefix = cidsPrefixMatch ? cidsPrefixMatch[1] : "https://ontology.commonapproach.org/cids#";  
+	
+	let organization: SeliOrganization | null = null;  
+	const esdcMatch = ttl.match(/cids:esdc[\s\S]*?org:hasLegalName\s+"([^"]+)"/);  
+	if (esdcMatch) {  
+		organization = { "@id": `${cidsPrefix}esdc`, hasLegalName: esdcMatch[1] };  
+	} 
 	const themes: SeliTheme[] = [];
 	const outcomes: SeliOutcome[] = [];
 	const indicators: SeliIndicator[] = [];
@@ -66,6 +81,8 @@ function parseTurtleToSeliGLI(ttl: string): SeliGLIData {
 		// Extract cids:hasDescription
 		const descMatch = block.match(/cids:hasDescription\s+"([^"]+)"/);
 		const hasDescription = descMatch ? descMatch[1] : undefined;
+		const forOrgMatch = block.match(/cids:forOrganization\s+cids:([\w]+)/);  
+		const forOrganization = forOrgMatch ? `${cidsPrefix}${forOrgMatch[1]}` : undefined;
 
 		if (type === "Theme") {
 			themes.push({ "@id": fullId, hasName });
@@ -82,17 +99,16 @@ function parseTurtleToSeliGLI(ttl: string): SeliGLIData {
 					.map((m) => fragmentBase + m[1]);
 			}
 
-			outcomes.push({ "@id": fullId, hasName, forTheme, hasIndicator });
+			outcomes.push({ "@id": fullId, hasName, forTheme, hasIndicator, forOrganization });
 		} else if (type === "Indicator") {
 			// Extract forOutcome
 			const forOutcomeMatch = block.match(/cids:forOutcome\s+:([\w]+)/);
 			const forOutcome = forOutcomeMatch ? fragmentBase + forOutcomeMatch[1] : "";
 
-			indicators.push({ "@id": fullId, hasName, hasDescription, forOutcome });
+			indicators.push({ "@id": fullId, hasName, hasDescription, forOutcome, forOrganization });
 		}
 	}
-
-	return { themes, outcomes, indicators };
+	return { themes, outcomes, indicators, organization };
 }
 
 export async function fetchAndParseSeliGLI(): Promise<SeliGLIData> {

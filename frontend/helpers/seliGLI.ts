@@ -2,7 +2,7 @@ import { Base } from "@airtable/blocks/models";
 import { fetchAndParseSeliGLI, SeliGLIData } from "../domain/fetchServer/getSeliGLI";
 
 export async function populateSeliGLI(base: Base) {
-	const { themes, outcomes, indicators }: SeliGLIData = await fetchAndParseSeliGLI();
+	const { themes, outcomes, indicators, organization }: SeliGLIData = await fetchAndParseSeliGLI();
 
 	// Helper to get model fields and link info
 	function getTableFieldMap(table) {
@@ -58,6 +58,11 @@ export async function populateSeliGLI(base: Base) {
 			);
 		}
 	}
+	const organizationTable = base.getTableByNameIfExists("Organization");  
+	if (!organizationTable) throw new Error("Table Organization not found");  
+	if (organization) {  
+		await upsertRecords(organizationTable, [organization]);  
+	}  
 
 	const themeTable = base.getTableByNameIfExists("Theme");
 	if (!themeTable) throw new Error("Table Theme not found");
@@ -136,11 +141,16 @@ export async function populateSeliGLI(base: Base) {
 			}
 		}
 	}
-
+	const organizationIdMap = {};  
+	(await organizationTable.selectRecordsAsync()).records.forEach((r) => {  
+		organizationIdMap[r.getCellValueAsString("@id")] = r.id;  
+	});  
+	
 	const allIdMaps = {
 		Theme: themeIdMap,
 		Outcome: outcomeIdMap,
 		Indicator: indicatorIdMap,
+		Organization: organizationIdMap,
 	};
 
 	await updateLinkFields(outcomeTable, outcomes, outcomeIdMap, allIdMaps);
