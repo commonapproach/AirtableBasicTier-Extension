@@ -10,6 +10,7 @@ import { validate } from "../domain/validation/validator";
 import { checkPrimaryField } from "../helpers/checkPrimaryField";
 import { createSFFModuleTables } from "../helpers/createSFFModuleTables";
 import { createTables } from "../helpers/createTables";
+import { populateSeliGLI } from "../helpers/seliGLI";
 import {
 	convertForFunderIdToForOrganization,
 	convertIcAddressToPostalAddress,
@@ -383,6 +384,17 @@ async function importByData(base: Base, jsonData: any, intl: IntlShape) {
 			await createSFFModuleTables(intl);
 			break;
 		}
+	}
+
+	// Auto-populate SELI-GLI if any records reference SELI-GLI indicators
+	const hasSeliGliRefs = jsonData.some((data: any) => {
+		const forIndicator = data["forIndicator"];
+		if (!forIndicator) return false;
+		const values = Array.isArray(forIndicator) ? forIndicator : [forIndicator];
+		return values.some((v: string) => typeof v === "string" && v.includes("codelist.commonapproach.org/SELI-GLI"));
+	});
+	if (hasSeliGliRefs) {
+		await populateSeliGLI(base);
 	}
 
 	// Write Simple Records to Tables
