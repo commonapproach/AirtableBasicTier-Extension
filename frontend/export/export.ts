@@ -378,12 +378,14 @@ export async function exportData(
 					const fieldValue = record.getCellValueAsString(airtableName) ?? "";
 					if (fieldValue && typeof fieldValue === "string") {
 						isEmpty = false;
-
-						// get local timezone
 						const localTimezone = moment.tz.guess();
-						const date = moment(fieldValue).tz(localTimezone).format("YYYY-MM-DDTHH:mm:ssZ");
-
-						row[exportFieldName] = date;
+						const parsed = moment(fieldValue).tz(localTimezone);
+						if (field.name === "startedAtTime") {
+							parsed.seconds(1);
+						} else if (field.name === "endedAtTime") {
+							parsed.seconds(59);
+						}
+						row[exportFieldName] = parsed.format("YYYY-MM-DDTHH:mm:ssZ");
 					} else {
 						row[exportFieldName] = "";
 					}
@@ -421,6 +423,9 @@ export async function exportData(
 						} else {
 							exportValue = fieldValue ? [fieldValue] : field.defaultValue;
 						}
+					} else if (field.representedType === "number") {
+						const num = parseFloat(fieldValue as string);
+						exportValue = isNaN(num) ? field.defaultValue : num;
 					} else {
 						exportValue = fieldValue ? fieldValue.toString() : field.defaultValue;
 					}
