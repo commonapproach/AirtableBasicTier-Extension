@@ -195,7 +195,7 @@ function parseTtlToCatalog(ttl: string): {
 		const typeMatches = [...block.matchAll(/rdf:type\s+(\w+:\w+)/g)].map((tm) => tm[1]);
 		const symbolMatch = block.match(/i72:symbol\s+"([^"]+)"@en\s*;/);
 
-		const def: any = { "@id": subjectIri, "rdfs:label": label };
+		const def: any = { "@id": subjectIri, "label": label };
 		if (typeMatches.length > 0) def["@type"] = typeMatches[0];
 		if (symbolMatch) def["i72:symbol"] = symbolMatch[1];
 		definitions[subjectIri] = def;
@@ -209,38 +209,38 @@ export const UNIT_DEFINITIONS: Record<string, any> = {
 	[UNIT_IRI.COUNT]: {
 		"@id": UNIT_IRI.COUNT,
 		"@type": "i72:Cardinality_unit",
-		"rdfs:label": "Count",
+		"label": "Count",
 		"i72:symbol": "count",
 		"owl:sameAs": "http://ontology.eil.utoronto.ca/ISO21972/iso21972#population_cardinality_unit",
 	},
 	[UNIT_IRI.PERCENT]: {
 		"@id": UNIT_IRI.PERCENT,
 		"@type": "i72:Singular_unit",
-		"rdfs:label": "Percent",
+		"label": "Percent",
 		"i72:symbol": "%",
 	},
 	[UNIT_IRI.RATIO]: {
 		"@id": UNIT_IRI.RATIO,
 		"@type": "i72:Compound_unit",
-		"rdfs:label": "Ratio",
+		"label": "Ratio",
 		"i72:symbol": "ratio",
 	},
 	[UNIT_IRI.SCORE]: {
 		"@id": UNIT_IRI.SCORE,
 		"@type": "i72:Singular_unit",
-		"rdfs:label": "Score",
+		"label": "Score",
 		"i72:symbol": "score",
 	},
 	[UNIT_IRI.CAD]: {
 		"@id": UNIT_IRI.CAD,
 		"@type": "i72:Monetary_unit",
-		"rdfs:label": "Canadian Dollar",
+		"label": "Canadian Dollar",
 		"i72:symbol": "$CAD",
 	},
 	[UNIT_IRI.CAD_MILLIONS]: {
 		"@id": UNIT_IRI.CAD_MILLIONS,
 		"@type": "i72:Unit_multiple_or_submultiple",
-		"rdfs:label": "Millions of Canadian Dollars",
+		"label": "Millions of Canadian Dollars",
 		"i72:symbol": "$CAD(M)",
 		"i72:prefix": "i72:mega",
 		"i72:singular_unit": UNIT_IRI.CAD,
@@ -248,13 +248,13 @@ export const UNIT_DEFINITIONS: Record<string, any> = {
 	[UNIT_IRI.DAY]: {
 		"@id": UNIT_IRI.DAY,
 		"@type": "i72:Singular_unit",
-		"rdfs:label": "Days",
+		"label": "Days",
 		"i72:symbol": "days",
 	},
 	[UNIT_IRI.KILOGRAM]: {
 		"@id": UNIT_IRI.KILOGRAM,
 		"@type": "i72:Unit_multiple_or_submultiple",
-		"rdfs:label": "Kilogram",
+		"label": "Kilogram",
 		"i72:symbol": "kg",
 		"i72:prefix": "i72:kilo",
 		"i72:singular_unit": "i72:gram",
@@ -262,7 +262,7 @@ export const UNIT_DEFINITIONS: Record<string, any> = {
 	[UNIT_IRI.KWH]: {
 		"@id": UNIT_IRI.KWH,
 		"@type": "i72:Unit_multiplication",
-		"rdfs:label": "Kilowatt-hour",
+		"label": "Kilowatt-hour",
 		"i72:symbol": "kWh",
 		"i72:term_1": "i72:kilowatt",
 		"i72:term_2": "i72:hour",
@@ -270,13 +270,13 @@ export const UNIT_DEFINITIONS: Record<string, any> = {
 	[UNIT_IRI.TONNE]: {
 		"@id": UNIT_IRI.TONNE,
 		"@type": "i72:Singular_unit",
-		"rdfs:label": "Tonne",
+		"label": "Tonne",
 		"i72:symbol": "t",
 	},
 	[UNIT_IRI.MEGATONNE]: {
 		"@id": UNIT_IRI.MEGATONNE,
 		"@type": "i72:Unit_multiple_or_submultiple",
-		"rdfs:label": "Megatonne",
+		"label": "Megatonne",
 		"i72:symbol": "Mt",
 		"i72:prefix": "i72:mega",
 		"i72:singular_unit": UNIT_IRI.TONNE,
@@ -284,7 +284,7 @@ export const UNIT_DEFINITIONS: Record<string, any> = {
 	[UNIT_IRI.MEGAWATT]: {
 		"@id": UNIT_IRI.MEGAWATT,
 		"@type": "i72:Unit_multiple_or_submultiple",
-		"rdfs:label": "Megawatt",
+		"label": "Megawatt",
 		"i72:symbol": "MW",
 		"i72:prefix": "i72:mega",
 		"i72:singular_unit": "i72:watt",
@@ -292,7 +292,7 @@ export const UNIT_DEFINITIONS: Record<string, any> = {
 	[UNIT_IRI.MEGAWATT_HOUR]: {
 		"@id": UNIT_IRI.MEGAWATT_HOUR,
 		"@type": "i72:Unit_multiplication",
-		"rdfs:label": "Megawatt-hour",
+		"label": "Megawatt-hour",
 		"i72:symbol": "MWh",
 		"i72:term_1": UNIT_IRI.MEGAWATT,
 		"i72:term_2": "i72:hour",
@@ -300,7 +300,7 @@ export const UNIT_DEFINITIONS: Record<string, any> = {
 	[UNIT_IRI.SQUARE_METER]: {
 		"@id": UNIT_IRI.SQUARE_METER,
 		"@type": "i72:Unit_exponentiation",
-		"rdfs:label": "Square Meter",
+		"label": "Square Meter",
 		"i72:symbol": "m^2",
 		"i72:base": "i72:metre",
 		"i72:exponent": 2,
@@ -308,7 +308,7 @@ export const UNIT_DEFINITIONS: Record<string, any> = {
 	[UNIT_IRI.CUBIC_METER]: {
 		"@id": UNIT_IRI.CUBIC_METER,
 		"@type": "i72:Unit_exponentiation",
-		"rdfs:label": "Cubic Meter",
+		"label": "Cubic Meter",
 		"i72:symbol": "m^3",
 		"i72:base": "i72:metre",
 		"i72:exponent": 3,
@@ -316,7 +316,7 @@ export const UNIT_DEFINITIONS: Record<string, any> = {
 	[UNIT_IRI.SQUARE_FOOT]: {
 		"@id": UNIT_IRI.SQUARE_FOOT,
 		"@type": "i72:Unit_exponentiation",
-		"rdfs:label": "Square Foot",
+		"label": "Square Foot",
 		"i72:symbol": "sq ft",
 		"i72:base": UNIT_IRI.FOOT,
 		"i72:exponent": 2,
@@ -324,12 +324,12 @@ export const UNIT_DEFINITIONS: Record<string, any> = {
 	[UNIT_IRI.FOOT]: {
 		"@id": UNIT_IRI.FOOT,
 		"@type": "i72:Singular_unit",
-		"rdfs:label": "Foot",
+		"label": "Foot",
 		"i72:symbol": "ft",
 	},
 	[UNIT_IRI.UNSPECIFIED]: {
 		"@id": UNIT_IRI.UNSPECIFIED,
 		"@type": "i72:Singular_unit",
-		"rdfs:label": "Unspecified Unit",
+		"label": "Unspecified Unit",
 	},
 };
