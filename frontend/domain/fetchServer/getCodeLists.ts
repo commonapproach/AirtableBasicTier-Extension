@@ -173,16 +173,21 @@ export function clearCodeListCache(tableName?: string): void {
 // ============================================================================
 
 function parseXmlToCodeList(xmlData: string): CodeList[] {
-	const parser = new XMLParser({ ignoreAttributes: false });
-	let jsonData: any;
-	try {
+    const parser = new XMLParser({
+        ignoreAttributes: false,
+        htmlEntities: false,        // workaround for CVE-2026-33036
+        processEntities: false,     // disable numeric entity processing entirely — safe for .owl codelists
+    });
+
+    let jsonData: any;
+    try {
         jsonData = parser.parse(xmlData);
     } catch (e) {
         if (e instanceof RangeError) {
-            console.error("❌ XML parsing failed: invalid numeric entity code point in XML data.", e.message);
-            return []; 
+            console.error("❌ XML parsing failed: invalid numeric entity code point.", e.message);
+            return [];
         }
-        throw e; 
+        throw e;
     }
 
 	const codeList: CodeList[] = [];

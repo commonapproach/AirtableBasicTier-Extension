@@ -1,5 +1,5 @@
 import { Base } from "@airtable/blocks/models";
-import { fetchAndParseSeliGLISFI, SeliGLISFIData } from "../domain/fetchServer/getSeliGLISFI";
+import { fetchAndParseSeliGLISFI, SeliGLISFIData } from "../domain/fetchServer/getSELIGLISFI";
 
 export async function populateSeliGLISFI(base: Base) {
 	const { themes, outcomes, indicators, organization }: SeliGLISFIData =
