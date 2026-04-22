@@ -36,6 +36,12 @@ const KNOWN_EXTERNAL_TYPES = new Set<string>([
 	"i72:Population",
 ]);
 
+const EXTERNAL_CODELIST_URI_PREFIXES = [
+    "https://codelist.commonapproach.org/",
+    "http://codelist.commonapproach.org/",
+    "https://metadata.un.org/sdg/",
+];
+
 // Helper: extract the primary ontology type we care about (cids:, sff:, or org:) from @type which may be string or array
 function getPrimaryStandardType(typeVal: any): string | null {
 	if (!typeVal) return null;
@@ -822,9 +828,10 @@ async function validateLinkedFields(
 						b: (str) => `<b>${str}</b>`,
 					}
 				);
-				if (field.required || field.semiRequired) {
-					validatorWarnings.add(msg);
-				}
+				const isIndicatorTheme = tableName === "Indicator" && fieldName === "forTheme";
+   				 if ((field.required || field.semiRequired) && !isIndicatorTheme) {
+        			validatorWarnings.add(msg);
+   				 }
 			}
 
 			if (isString && data[fieldName].length > 1) {
@@ -896,6 +903,8 @@ async function validateLinkedFields(
 
 			data[fieldName].forEach((item) => {
 				if (!linkedIds.includes(item)) {
+					// Don't warn if the linked item is an external codelist URI
+					if (EXTERNAL_CODELIST_URI_PREFIXES.some((prefix) => item.startsWith(prefix))) return;
 					validatorWarnings.add(
 						formatMessageToString(
 							intl,

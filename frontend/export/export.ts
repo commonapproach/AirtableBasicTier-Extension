@@ -69,7 +69,12 @@ export async function exportData(
 			return;
 		}
 	}
-
+	const EXTERNAL_CODELIST_URI_PREFIXES = [
+		"https://codelist.commonapproach.org/",
+		"http://codelist.commonapproach.org/",
+		"https://metadata.un.org/sdg/",
+	  ];
+	  
 	const primaryFieldErrors = await checkPrimaryField(base, intl);
 	if (primaryFieldErrors.length > 0) {
 		setDialogContent(
@@ -148,7 +153,10 @@ export async function exportData(
 			if (record.isDeleted || !table.fields.some((field) => record.getCellValue(field.name))) {
 				continue;
 			}
-
+			const recordId = record.getCellValueAsString("@id");
+			if (EXTERNAL_CODELIST_URI_PREFIXES.some((prefix) => recordId.startsWith(prefix))) {
+			  continue;
+			}
 			// Determine the correct @type namespace.
 			// Previously everything (except Population) was exported as cids:ClassName which was incorrect for SFF module tables.
 			// Customer request: SFF tables (those only in mapSFFModel) must use the sff: namespace.
@@ -158,11 +166,13 @@ export async function exportData(
 					? "i72:Population"
 					: table.name === "Person"
 						? "cids:Person"
-						: table.name === "OrganizationID" 
-               				? "org:OrganizationID" 
-							: isSFFTable
-								? `sff:${table.name}`
-								: `cids:${table.name}`;
+						: table.name === "Characteristic"
+                			? "cids:Characteristic"
+							: table.name === "OrganizationID" 
+               					? "org:OrganizationID" 
+								: isSFFTable
+									? `sff:${table.name}`
+									: `cids:${table.name}`;
 			let row: any = {
 				"@context": contextUrl,
 				"@type": baseType,
@@ -429,7 +439,12 @@ export async function exportData(
 					} else {
 						exportValue = fieldValue ? fieldValue.toString() : field.defaultValue;
 					}
-					row[exportFieldName] = exportValue;
+					if (field.name === "unitDescription") {
+						row[exportFieldName] = exportValue ?? "";
+						isEmpty = false;
+					} else {
+						row[exportFieldName] = exportValue;
+					}
 				}
 			}
 			// No automatic population or multi-typing logic beyond Indicator cardinality; Population exported only from Population table.
@@ -443,7 +458,7 @@ export async function exportData(
 						if (
 							typeof v === "string" &&
 							v.trim() === "" &&
-							entry[0] !== "hasNumericalValue" // Keep as "" to distinguish missing vs zero/unknown
+							entry[0] !== "hasNumericalValue" && entry[0] !== "unitDescription"
 						)
 							return false;
 						if (Array.isArray(v) && v.length === 0) return false;
@@ -598,7 +613,7 @@ function getFileName(orgName: string): string {
 // Recursively remove empty string, null, undefined, and empty arrays/objects from export objects.
 // Preserve i72:hasNumericalValue when it's an empty string (intentional signal).
 function deepCleanExportObjects(items: any[]): any[] {
-	const shouldKeepEmptyStringKey = (key: string) => key === "hasNumericalValue";
+	const shouldKeepEmptyStringKey = (key: string) => key === "hasNumericalValue"|| key === "unitDescription";
 	function clean(value: any, parentKey?: string): any {
 		if (Array.isArray(value)) {
 			const cleanedArr = value
