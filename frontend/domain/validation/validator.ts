@@ -895,7 +895,14 @@ async function validateLinkedFields(
 			}
 
 			data[fieldName].forEach((item) => {
-				if (!linkedIds.includes(item)) {
+				// Suppress warnings for external codelist URIs — these are valid
+				// references to SELI-GLI, SELI-GLI-SFI, and SDG external indicators
+				const isExternalCodelistUri =
+					typeof item === "string" && (
+						item.startsWith("https://codelist.commonapproach.org/") ||
+						item.startsWith("https://metadata.un.org/sdg/")
+					);
+				if (!linkedIds.includes(item) && !isExternalCodelistUri) {
 					validatorWarnings.add(
 						formatMessageToString(
 							intl,

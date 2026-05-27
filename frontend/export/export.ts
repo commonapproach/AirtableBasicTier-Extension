@@ -14,8 +14,8 @@ import { FieldType } from "../domain/models/Base";
 import { validate } from "../domain/validation/validator";
 import { checkPrimaryField } from "../helpers/checkPrimaryField";
 import { downloadJSONLD, formatMessageToString, getActualFieldType } from "../utils";
+import { ExportScope, isRecordInScope, resolveExportScope } from "./resolveexportscope";
 
-// Resolve the Airtable field name for a model field: prefer displayName; fallback to name.
 function getAirtableFieldName(field: FieldType): string {
 	if (field.displayName && field.displayName.length > 0) return field.displayName;
 	return field.name;
@@ -25,118 +25,42 @@ function getExportFieldName(field: FieldType): string {
 	return field.name;
 }
 
-export async function exportData(
-	base: Base,
-	setDialogContent: (
-		header: string,
-		text: string,
-		open: boolean,
-		nextCallback?: () => void
-	) => void,
-	orgName: string,
-	intl: IntlShape
-): Promise<void> {
-	const tables = base.tables;
-	let data = [];
+// ─── Shared serialisation logic ───────────────────────────────────────────────
+// Builds the export data array and runs validation. Used by both the review
+// screen (preview warnings) and exportData (download). Returns raw warning
+// strings without HTML so the caller can format them as needed.
 
+export async function buildExportData(
+	base: Base,
+	intl: IntlShape,
+	selectedOrgIds?: string[],
+	selectedYears?: number[]
+): Promise<{
+	data: any[];
+	errors: string[];
+	warnings: string[];
+}> {
+	const tables = base.tables;
+	let data: any[] = [];
 	let fullMap = map;
 
-	// Check if any table of the SFF module is created
-	const tableNamesOnBase = tables.map((table) => table.name);
+	const tableNamesOnBase = tables.map((t) => t.name);
 	const sffModuleTables = Object.keys(mapSFFModel);
-	if (sffModuleTables.some((table) => tableNamesOnBase.includes(table))) {
+	if (sffModuleTables.some((t) => tableNamesOnBase.includes(t))) {
 		fullMap = { ...map, ...mapSFFModel };
 	}
 
-	const tableNames = tables.map((item) => item.name);
-	for (const [key] of Object.entries(map)) {
-		if (!tableNames.includes(key)) {
-			setDialogContent(
-				intl.formatMessage({
-					id: "generics.error",
-					defaultMessage: "Error",
-				}),
-				formatMessageToString(
-					intl,
-					{
-						id: "export.messages.error.missingTable",
-						defaultMessage: `Table <b>{tableName}</b> is missing. Please create the tables first.`,
-					},
-					{ tableName: key, b: (str) => `<b>${str}</b>` }
-				),
-				true
-			);
-			return;
-		}
-	}
-
-	const primaryFieldErrors = await checkPrimaryField(base, intl);
-	if (primaryFieldErrors.length > 0) {
-		setDialogContent(
-			intl.formatMessage({
-				id: "generics.error",
-				defaultMessage: "Error",
-			}),
-			primaryFieldErrors.join("<hr/>"),
-			true
-		);
-		return;
-	}
-
-	// Validate field types
-	for (const table of tables) {
-		if (!Object.keys(fullMap).includes(table.name)) {
-			continue;
-		}
-
-		const cid = new fullMap[table.name]();
-		for (const field of cid.getAllFields()) {
-			const airtableName = getAirtableFieldName(field);
-			const airtableField = table.fields.find((f) => f.name === airtableName);
-			if (airtableField) {
-				const expectedType = getActualFieldType(field.type);
-				const isLinkField = expectedType === "multipleRecordLinks";
-				const isAllowedLinkType =
-					isLinkField &&
-					(airtableField.type === "formula" || airtableField.type === "multipleLookupValues");
-
-				if (airtableField.type !== expectedType && !isAllowedLinkType) {
-					setDialogContent(
-						intl.formatMessage({
-							id: "generics.error",
-							defaultMessage: "Error",
-						}),
-						formatMessageToString(
-							intl,
-							{
-								id: "export.messages.error.invalidFieldType",
-								defaultMessage: `Field <b>{fieldName}</b> in table <b>{tableName}</b> has an invalid type. Expected type: <b>{expectedType}</b>. Please change the field type.`,
-							},
-							{
-								fieldName: field.displayName || field.name,
-								tableName: table.name,
-								expectedType,
-								b: (str) => `<b>${str}</b>`,
-							}
-						),
-						true
-					);
-					return;
-				}
-			}
-		}
-	}
+	const scope: ExportScope | null =
+		selectedOrgIds?.length && selectedYears?.length
+			? await resolveExportScope(base, selectedOrgIds, selectedYears)
+			: null;
 
 	const changeOnDefaultCodeListsWarning: string[] = [];
 
 	for (const table of tables) {
-		// If the table is not in the map, skip it
-		if (!Object.keys(fullMap).includes(table.name)) {
-			continue;
-		}
+		if (!Object.keys(fullMap).includes(table.name)) continue;
 
 		const records = (await table.selectRecordsAsync()).records;
-
 		let codeList: CodeList[] | null = null;
 		if (predefinedCodeLists.includes(table.name)) {
 			codeList = await getCodeListByTableName(table.name);
@@ -144,34 +68,27 @@ export async function exportData(
 
 		const cid = new fullMap[table.name]();
 		for (const record of records) {
-			// Skip deleted records and records with no values
 			if (record.isDeleted || !table.fields.some((field) => record.getCellValue(field.name))) {
 				continue;
 			}
+			const recordAtId = record.getCellValueAsString("@id");
+			if (!isRecordInScope(scope, table.name, recordAtId)) continue;
 
-			// Determine the correct @type namespace.
-			// Previously everything (except Population) was exported as cids:ClassName which was incorrect for SFF module tables.
-			// Customer request: SFF tables (those only in mapSFFModel) must use the sff: namespace.
 			const isSFFTable = Object.prototype.hasOwnProperty.call(mapSFFModel, table.name);
 			const baseType =
 				table.name === "Population"
 					? "i72:Population"
 					: table.name === "Person"
 						? "cids:Person"
-						: table.name === "OrganizationID" 
-               				? "org:OrganizationID" 
+						: table.name === "OrganizationID"
+							? "org:OrganizationID"
 							: isSFFTable
 								? `sff:${table.name}`
 								: `cids:${table.name}`;
-			let row: any = {
-				"@context": contextUrl,
-				"@type": baseType,
-			};
 
-			let isEmpty = true; // Flag to check if the row is empty
+			let row: any = { "@context": contextUrl, "@type": baseType };
+			let isEmpty = true;
 
-			// Check if the record is in the predefined code list skip if it is
-			// And show a warning message and skip if there are changes
 			if (codeList && record.getCellValueAsString("@id")) {
 				const existingItem = codeList.find(
 					(item) => item["@id"] === record.getCellValueAsString("@id")
@@ -179,29 +96,18 @@ export async function exportData(
 				if (existingItem) {
 					let hasChanges = false;
 					for (const fieldName of Object.keys(existingItem)) {
-						// Skip @type field as it might not exist in the table
 						if (fieldName === "@type") continue;
-
-						// Check if field exists in table before getting value
-						// Use getFieldByNameIfExists to safely check existence
 						const field = table.getFieldByNameIfExists(fieldName);
 						if (!field) continue;
-
 						const recordValue = record.getCellValue(field.id);
 						const existingValue = existingItem[fieldName];
-
 						const normalizeValue = (val: any): string => {
 							if (val === null || val === undefined) return "";
-							// Handle Airtable cell values that are objects with 'name' property
 							if (typeof val === "object" && val.name) return String(val.name).trim();
 							if (typeof val === "object") return JSON.stringify(val);
 							return String(val).trim();
 						};
-
-						const recordValueNormalized = normalizeValue(recordValue);
-						const existingValueNormalized = normalizeValue(existingValue);
-
-						if (recordValueNormalized !== existingValueNormalized) {
+						if (normalizeValue(recordValue) !== normalizeValue(existingValue)) {
 							hasChanges = true;
 							break;
 						}
@@ -226,12 +132,10 @@ export async function exportData(
 				}
 			}
 
-			// If records has all values, except for the @id, equal to a code list item, warn the user
 			if (codeList) {
 				const existingItem = codeList.find((item) =>
 					Object.keys(item).every((key) => {
 						if (key === "@id" || key === "@type") return true;
-						// Check if field exists before accessing
 						if (!table.getFieldByNameIfExists(key)) return true;
 						return record.getCellValueAsString(key) === item[key].toString();
 					})
@@ -239,28 +143,18 @@ export async function exportData(
 				if (existingItem) {
 					let hasChanges = false;
 					for (const fieldName of Object.keys(existingItem)) {
-						// Skip @type field
 						if (fieldName === "@type") continue;
-
-						// Check if field exists in table before getting value
 						const field = table.getFieldByNameIfExists(fieldName);
 						if (!field) continue;
-
 						const recordValue = record.getCellValue(field.id);
 						const existingValue = existingItem[fieldName];
-
 						const normalizeValue = (val: any): string => {
 							if (val === null || val === undefined) return "";
-							// Handle Airtable cell values that are objects with 'name' property
 							if (typeof val === "object" && val.name) return String(val.name).trim();
 							if (typeof val === "object") return JSON.stringify(val);
 							return String(val).trim();
 						};
-
-						const recordValueNormalized = normalizeValue(recordValue);
-						const existingValueNormalized = normalizeValue(existingValue);
-
-						if (recordValueNormalized !== existingValueNormalized) {
+						if (normalizeValue(recordValue) !== normalizeValue(existingValue)) {
 							hasChanges = true;
 							break;
 						}
@@ -285,9 +179,6 @@ export async function exportData(
 				}
 			}
 
-			// Helper state when exporting Indicators
-			// for potential multi-typing e.g., i72:Cardinality (no direct use variable required)
-
 			for (const field of cid.getTopLevelFields()) {
 				const airtableName = getAirtableFieldName(field);
 				const exportFieldName = getExportFieldName(field);
@@ -295,9 +186,7 @@ export async function exportData(
 					const value: any = record.getCellValue(airtableName);
 					if (field.representedType === "array") {
 						const fieldValue = value?.map((item: LinkedCellInterface) => item.name) ?? [];
-						if (fieldValue && fieldValue.length > 0) {
-							isEmpty = false;
-						}
+						if (fieldValue && fieldValue.length > 0) isEmpty = false;
 						row[exportFieldName] = fieldValue;
 					} else if (field.representedType === "string") {
 						let fieldValue;
@@ -308,22 +197,17 @@ export async function exportData(
 						} else {
 							fieldValue = field?.defaultValue;
 						}
-
 						if (fieldValue) {
 							isEmpty = false;
-							// If this is the Indicator's cardinality_of link, add multi-typing i72:Cardinality
 							if (field.name === "i72:cardinality_of") {
 								const currentType = row["@type"];
 								const types = Array.isArray(currentType) ? currentType : [currentType];
 								if (!types.includes("i72:Cardinality")) {
 									row["@type"] = [...types, "i72:Cardinality"];
 								}
-								row[exportFieldName] = fieldValue.toString();
-							} else {
-								row[exportFieldName] = fieldValue.toString();
 							}
+							row[exportFieldName] = fieldValue.toString();
 						} else {
-							// No value
 							row[exportFieldName] = field?.defaultValue ?? "";
 						}
 					}
@@ -333,9 +217,7 @@ export async function exportData(
 					isEmpty = newIsEmpty;
 				} else if (field.type === "select") {
 					const fieldValue = record.getCellValue(airtableName) ?? "";
-					if (fieldValue && fieldValue["name"]) {
-						isEmpty = false;
-					}
+					if (fieldValue && fieldValue["name"]) isEmpty = false;
 					let optionField;
 					if (field.getOptionsAsync) {
 						const options = await field.getOptionsAsync();
@@ -352,9 +234,7 @@ export async function exportData(
 					}
 				} else if (field.type === "multiselect") {
 					const fieldValue = record.getCellValue(airtableName) ?? [];
-					if (fieldValue && (fieldValue as { name: string }[]).length > 0) {
-						isEmpty = false;
-					}
+					if (fieldValue && (fieldValue as { name: string }[]).length > 0) isEmpty = false;
 					let optionField;
 					if (field.getOptionsAsync) {
 						const options = await field.getOptionsAsync();
@@ -380,11 +260,8 @@ export async function exportData(
 						isEmpty = false;
 						const localTimezone = moment.tz.guess();
 						const parsed = moment(fieldValue).tz(localTimezone);
-						if (field.name === "startedAtTime") {
-							parsed.seconds(1);
-						} else if (field.name === "endedAtTime") {
-							parsed.seconds(59);
-						}
+						if (field.name === "startedAtTime") parsed.seconds(1);
+						else if (field.name === "endedAtTime") parsed.seconds(59);
 						row[exportFieldName] = parsed.format("YYYY-MM-DDTHH:mm:ssZ");
 					} else {
 						row[exportFieldName] = "";
@@ -393,23 +270,16 @@ export async function exportData(
 					const fieldValue = record.getCellValueAsString(airtableName) ?? "";
 					if (fieldValue && typeof fieldValue === "string") {
 						isEmpty = false;
-
-						// get local timezone
 						const localTimezone = moment.tz.guess();
-						const date = moment(fieldValue).tz(localTimezone).format("YYYY-MM-DD");
-
-						row[exportFieldName] = date;
+						row[exportFieldName] = moment(fieldValue).tz(localTimezone).format("YYYY-MM-DD");
 					} else {
 						row[exportFieldName] = "";
 					}
 				} else if (field.type === "boolean") {
-					const fieldValue = record.getCellValue(airtableName) ?? false;
-					row[exportFieldName] = fieldValue ? true : false;
+					row[exportFieldName] = record.getCellValue(airtableName) ? true : false;
 				} else {
 					const fieldValue = record.getCellValue(airtableName) ?? field.defaultValue;
-					if (fieldValue) {
-						isEmpty = false;
-					}
+					if (fieldValue) isEmpty = false;
 					let exportValue = fieldValue;
 					if (Array.isArray(fieldValue) && field.representedType === "array") {
 						exportValue = fieldValue;
@@ -432,19 +302,13 @@ export async function exportData(
 					row[exportFieldName] = exportValue;
 				}
 			}
-			// No automatic population or multi-typing logic beyond Indicator cardinality; Population exported only from Population table.
 
 			if (!isEmpty) {
-				// Remove empty string/null/empty array properties; exception: preserve empty Measure numerical value (i72:hasNumericalValue)
 				const cleaned = Object.fromEntries(
 					Object.entries(row).filter((entry) => {
 						const v = entry[1];
 						if (v === null || v === undefined) return false;
-						if (
-							typeof v === "string" &&
-							v.trim() === "" &&
-							entry[0] !== "hasNumericalValue" // Keep as "" to distinguish missing vs zero/unknown
-						)
+						if (typeof v === "string" && v.trim() === "" && entry[0] !== "hasNumericalValue")
 							return false;
 						if (Array.isArray(v) && v.length === 0) return false;
 						return true;
@@ -455,7 +319,7 @@ export async function exportData(
 		}
 	}
 
-	// Ensure each IndicatorReport value has a unit_of_measure; default to Indicator's or unspecified
+	// Unit injection
 	const indicatorUnitById: { [key: string]: string } = {};
 	const usedUnitIris: Set<string> = new Set();
 	for (const item of data) {
@@ -470,9 +334,7 @@ export async function exportData(
 					existing && typeof existing === "string" && existing.trim().length > 0
 						? existing
 						: UNIT_IRI.UNSPECIFIED;
-				if (!existing) {
-					item["unit_of_measure"] = resolved;
-				}
+				if (!existing) item["unit_of_measure"] = resolved;
 				indicatorUnitById[item["@id"]] = resolved;
 				usedUnitIris.add(resolved);
 			}
@@ -485,7 +347,7 @@ export async function exportData(
 				: item?.["@type"] === "cids:IndicatorReport"
 		) {
 			const indicatorId = item["forIndicator"];
-			const valueObj = item?.["value"]; 
+			const valueObj = item?.["value"];
 			if (valueObj && !valueObj["unit_of_measure"]) {
 				const fallback =
 					(typeof indicatorId === "string" && indicatorUnitById[indicatorId]) ||
@@ -495,8 +357,6 @@ export async function exportData(
 			}
 		}
 	}
-
-	// Inject unit definition objects for any used units, plus related cids units referenced by those definitions
 	const queue: string[] = Array.from(usedUnitIris);
 	const seen: Set<string> = new Set();
 	while (queue.length > 0) {
@@ -507,7 +367,6 @@ export async function exportData(
 		if (def) {
 			const already = data.some((d) => d && d["@id"] === iri);
 			if (!already) data.push({ "@context": contextUrl, ...def });
-			// Enqueue related cids unit IRIs referenced by this definition
 			for (const val of Object.values(def)) {
 				if (
 					typeof val === "string" &&
@@ -520,52 +379,138 @@ export async function exportData(
 	}
 
 	const { errors, warnings } = await validate(data, "export", intl);
-
-	const emptyTableWarning = await checkForEmptyTables(base, intl);
+	const emptyTableWarning = await checkForEmptyTables(base, intl, scope);
 	const allWarnings = [
 		...checkForNotExportedFields(base, intl),
 		...warnings,
 		...emptyTableWarning,
 		...changeOnDefaultCodeListsWarning,
-	]
-		.filter(Boolean)
-		.join("<hr/>");
+	].filter(Boolean);
+
+	return { data, errors, warnings: allWarnings };
+}
+
+// ─── Main export function ─────────────────────────────────────────────────────
+
+export async function exportData(
+	base: Base,
+	setDialogContent: (header: string, text: string, open: boolean, nextCallback?: () => void) => void,
+	orgName: string,
+	intl: IntlShape,
+	selectedOrgIds?: string[],
+	selectedYears?: number[],
+	skipWarningDialog = false
+): Promise<void> {
+	const tables = base.tables;
+
+	// Table existence check
+	let fullMap = map;
+	const tableNamesOnBase = tables.map((t) => t.name);
+	if (Object.keys(mapSFFModel).some((t) => tableNamesOnBase.includes(t))) {
+		fullMap = { ...map, ...mapSFFModel };
+	}
+	const tableNames = tables.map((t) => t.name);
+	for (const [key] of Object.entries(map)) {
+		if (!tableNames.includes(key)) {
+			setDialogContent(
+				intl.formatMessage({ id: "generics.error", defaultMessage: "Error" }),
+				formatMessageToString(
+					intl,
+					{
+						id: "export.messages.error.missingTable",
+						defaultMessage: `Table <b>{tableName}</b> is missing. Please create the tables first.`,
+					},
+					{ tableName: key, b: (str) => `<b>${str}</b>` }
+				),
+				true
+			);
+			return;
+		}
+	}
+
+	// Field type validation
+	for (const table of tables) {
+		if (!Object.keys(fullMap).includes(table.name)) continue;
+		const cid = new fullMap[table.name]();
+		for (const field of cid.getAllFields()) {
+			const airtableName = getAirtableFieldName(field);
+			const airtableField = table.fields.find((f) => f.name === airtableName);
+			if (airtableField) {
+				const expectedType = getActualFieldType(field.type);
+				const isLinkField = expectedType === "multipleRecordLinks";
+				const isAllowedLinkType =
+					isLinkField &&
+					(airtableField.type === "formula" || airtableField.type === "multipleLookupValues");
+				if (airtableField.type !== expectedType && !isAllowedLinkType) {
+					setDialogContent(
+						intl.formatMessage({ id: "generics.error", defaultMessage: "Error" }),
+						formatMessageToString(
+							intl,
+							{
+								id: "export.messages.error.invalidFieldType",
+								defaultMessage: `Field <b>{fieldName}</b> in table <b>{tableName}</b> has an invalid type. Expected type: <b>{expectedType}</b>. Please change the field type.`,
+							},
+							{
+								fieldName: field.displayName || field.name,
+								tableName: table.name,
+								expectedType,
+								b: (str) => `<b>${str}</b>`,
+							}
+						),
+						true
+					);
+					return;
+				}
+			}
+		}
+	}
+
+	const primaryFieldErrors = await checkPrimaryField(base, intl);
+	if (primaryFieldErrors.length > 0) {
+		setDialogContent(
+			intl.formatMessage({ id: "generics.error", defaultMessage: "Error" }),
+			primaryFieldErrors.join("<hr/>"),
+			true
+		);
+		return;
+	}
+
+	// Build data + run validator
+	const { data, errors, warnings } = await buildExportData(
+		base,
+		intl,
+		selectedOrgIds,
+		selectedYears
+	);
+
+	const allWarnings = warnings.join("<hr/>");
 
 	if (errors.length > 0) {
 		setDialogContent(
-			intl.formatMessage({
-				id: "generics.error",
-				defaultMessage: "Error",
-			}),
+			intl.formatMessage({ id: "generics.error", defaultMessage: "Error" }),
 			errors.map((item) => `<p>${item}</p>`).join(""),
 			true
 		);
 		return;
 	}
 
-	if (allWarnings.length > 0) {
+	// If warnings were already shown in the wizard, skip the interstitial dialog
+	if (allWarnings.length > 0 && !skipWarningDialog) {
 		setDialogContent(
-			intl.formatMessage({
-				id: "generics.warning",
-				defaultMessage: "Warning",
-			}),
+			intl.formatMessage({ id: "generics.warning", defaultMessage: "Warning" }),
 			allWarnings,
 			true,
 			() => {
-				// Final deep clean before download (after user confirms warnings)
 				const cleanedData = deepCleanExportObjects(data);
 				setDialogContent(
-					intl.formatMessage({
-						id: "generics.warning",
-						defaultMessage: "Warning",
-					}),
+					intl.formatMessage({ id: "generics.warning", defaultMessage: "Warning" }),
 					intl.formatMessage({
 						id: "export.messages.warning.continue",
 						defaultMessage: "<p>Do you want to export anyway?</p>",
 					}),
 					true,
 					() => {
-						downloadJSONLD(cleanedData, `${getFileName(orgName)}.json`);
+						downloadJSONLD(cleanedData, `${orgName}.json`);
 						setDialogContent("", "", false);
 					}
 				);
@@ -573,35 +518,17 @@ export async function exportData(
 		);
 		return;
 	}
-	const cleanedDataNoWarnings = deepCleanExportObjects(data);
-	downloadJSONLD(cleanedDataNoWarnings, `${getFileName(orgName)}.json`);
+
+	downloadJSONLD(deepCleanExportObjects(data), `${orgName}.json`);
 }
 
-function getFileName(orgName: string): string {
-	const date = new Date();
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-	// Get the year, month, and day from the date
-	const year = date.getFullYear();
-	const month = date.getMonth() + 1; // Add 1 because months are 0-indexed.
-	const day = date.getDate();
-
-	// Format month and day to ensure they are two digits
-	const monthFormatted = month < 10 ? "0" + month : month;
-	const dayFormatted = day < 10 ? "0" + day : day;
-
-	// Concatenate the components to form the desired format (YYYYMMDD)
-	const timestamp = `${year}${monthFormatted}${dayFormatted}`;
-
-	return `CIDSBasic${orgName}${timestamp}`;
-}
-
-// Recursively remove empty string, null, undefined, and empty arrays/objects from export objects.
-// Preserve i72:hasNumericalValue when it's an empty string (intentional signal).
 function deepCleanExportObjects(items: any[]): any[] {
 	const shouldKeepEmptyStringKey = (key: string) => key === "hasNumericalValue";
 	function clean(value: any, parentKey?: string): any {
 		if (Array.isArray(value)) {
-			const cleanedArr = value
+			return value
 				.map((v) => clean(v))
 				.filter(
 					(v) =>
@@ -612,16 +539,14 @@ function deepCleanExportObjects(items: any[]): any[] {
 							(typeof v === "object" && !Array.isArray(v) && Object.keys(v).length === 0)
 						)
 				);
-			return cleanedArr;
 		}
 		if (value && typeof value === "object") {
 			const entries = Object.entries(value)
 				.map(([k, v]) => [k, clean(v, k)] as [string, any])
 				.filter(([k, v]) => {
 					if (v === null || v === undefined) return false;
-					if (typeof v === "string") {
-						if (v.trim() === "" && !shouldKeepEmptyStringKey(k)) return false;
-					}
+					if (typeof v === "string" && v.trim() === "" && !shouldKeepEmptyStringKey(k))
+						return false;
 					if (Array.isArray(v) && v.length === 0) return false;
 					if (typeof v === "object" && !Array.isArray(v) && Object.keys(v).length === 0)
 						return false;
@@ -642,25 +567,16 @@ function deepCleanExportObjects(items: any[]): any[] {
 }
 
 function checkForNotExportedFields(base: Base, intl: IntlShape) {
-	let warnings: string[] = [];
+	const warnings: string[] = [];
 	const fullMap = { ...map, ...mapSFFModel };
 	for (const table of base.tables) {
-		if (!Object.keys(fullMap).includes(table.name)) {
-			continue;
-		}
+		if (!Object.keys(fullMap).includes(table.name)) continue;
 		const cid = new fullMap[table.name]();
 		const internalFields = cid.getAllFields().map((item) => item.displayName || item.name);
 		const externalFields = table.fields.map((item) => item.name);
-
 		for (const field of externalFields) {
-			if (table.name === "Organization") {
-				console.log("External field being checked:", field);
-				console.log("Ignored fields for Organization:", ignoredFields["Organization"]);
-				console.log("Will skip this field?", ignoredFields["Organization"]?.includes(field));
-			}
-			if (Object.keys(fullMap).includes(field) || ignoredFields[table.name]?.includes(field)) {
+			if (Object.keys(fullMap).includes(field) || ignoredFields[table.name]?.includes(field))
 				continue;
-			}
 			if (!internalFields.includes(field)) {
 				warnings.push(
 					formatMessageToString(
@@ -681,13 +597,12 @@ function checkForNotExportedFields(base: Base, intl: IntlShape) {
 	return warnings;
 }
 
-async function checkForEmptyTables(base: Base, intl: IntlShape) {
-	let warnings: string[] = [];
+async function checkForEmptyTables(base: Base, intl: IntlShape, scope: ExportScope | null) {
+	if (scope) return [];
+	const warnings: string[] = [];
 	const fullMap = { ...map, ...mapSFFModel };
 	for (const table of base.tables) {
-		if (!Object.keys(fullMap).includes(table.name)) {
-			continue;
-		}
+		if (!Object.keys(fullMap).includes(table.name)) continue;
 		const records = await table.selectRecordsAsync();
 		if (records.records.length === 0) {
 			warnings.push(
@@ -696,10 +611,7 @@ async function checkForEmptyTables(base: Base, intl: IntlShape) {
 						id: "export.messages.warning.emptyTable",
 						defaultMessage: `Table <b>{tableName}</b> is empty`,
 					},
-					{
-						tableName: table.name,
-						b: (str) => `<b>${str}</b>`,
-					}
+					{ tableName: table.name, b: (str) => `<b>${str}</b>` }
 				)
 			);
 		}
@@ -717,47 +629,33 @@ function getObjectFieldsRecursively(record: Record, field: FieldType, row: any, 
 			if (field.representedType === "array") {
 				const fieldValue =
 					value?.map((item: LinkedCellInterface) => item.name) ?? field?.defaultValue;
-				if (fieldValue && fieldValue.length > 0) {
-					isEmpty = false;
-				}
+				if (fieldValue && fieldValue.length > 0) isEmpty = false;
 				row[exportFieldName] = fieldValue;
 			} else if (field.representedType === "string") {
 				const fieldValue = value ? value[0]?.name : field?.defaultValue;
-				if (fieldValue) {
-					isEmpty = false;
-				}
+				if (fieldValue) isEmpty = false;
 				row[exportFieldName] = fieldValue.toString();
 			}
 		} else if (field.type === "datetime") {
 			if (value && typeof value === "string") {
 				isEmpty = false;
-
-				// get local timezone
 				const localTimezone = moment.tz.guess();
-				const date = moment(value).tz(localTimezone).format("YYYY-MM-DDTHH:mm:ssZ");
-
-				row[exportFieldName] = date;
+				row[exportFieldName] = moment(value).tz(localTimezone).format("YYYY-MM-DDTHH:mm:ssZ");
 			} else {
 				row[exportFieldName] = "";
 			}
 		} else if (field.type === "date") {
 			if (value && typeof value === "string") {
 				isEmpty = false;
-
-				// get local timezone
 				const localTimezone = moment.tz.guess();
-				const date = moment(value).tz(localTimezone).format("YYYY-MM-DD");
-
-				row[exportFieldName] = date;
+				row[exportFieldName] = moment(value).tz(localTimezone).format("YYYY-MM-DD");
 			} else {
 				row[exportFieldName] = "";
 			}
 		} else if (field.type === "boolean") {
 			row[exportFieldName] = value ? true : false;
 		} else {
-			if (value) {
-				isEmpty = false;
-			}
+			if (value) isEmpty = false;
 			let exportValue = value;
 			if (Array.isArray(value) && field.representedType === "array") {
 				exportValue = value;
@@ -772,12 +670,8 @@ function getObjectFieldsRecursively(record: Record, field: FieldType, row: any, 
 	}
 
 	if (field.type === "object") {
-		row[field.name] = {
-			"@type": field.objectType,
-		};
-
+		row[field.name] = { "@type": field.objectType };
 		for (const property of field.properties) {
-			// Call the function recursively
 			const [newRow, newIsEmpty] = getObjectFieldsRecursively(
 				record,
 				property,
