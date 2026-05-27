@@ -699,7 +699,7 @@ function Main() {
 					fontSize={"0.75rem"}
 					style={{ marginTop: 12, color: "#999999" }}
 				>
-					Version 1.0.0
+					Version 1.1.0
 				</Text>
 				</div>
 			</div>
