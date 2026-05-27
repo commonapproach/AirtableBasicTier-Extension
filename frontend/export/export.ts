@@ -82,9 +82,11 @@ export async function buildExportData(
 						? "cids:Person"
 						: table.name === "OrganizationID"
 							? "org:OrganizationID"
-							: isSFFTable
-								? `sff:${table.name}`
-								: `cids:${table.name}`;
+							: table.name === "Characteristic"
+                    			? "cids:Characteristic" 
+								: isSFFTable
+									? `sff:${table.name}`
+									: `cids:${table.name}`;
 
 			let row: any = { "@context": contextUrl, "@type": baseType };
 			let isEmpty = true;

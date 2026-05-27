@@ -61,13 +61,11 @@ export async function resolveExportScope(
 		const irAtId = ir.getCellValueAsString("@id");
 		if (!irAtId) continue;
 
-		// Check org
 		const linkedOrgs = ir.getCellValue("forOrganization") as { id: string }[] | null;
 		if (!linkedOrgs?.length) continue;
 		const orgAtId = orgAirtableIdToAtId.get(linkedOrgs[0].id);
 		if (!orgAtId || !orgIdSet.has(orgAtId)) continue;
 
-		// Check year via endedAtTime
 		let year: number | null = null;
 		const endedRaw = ir.getCellValue("endedAtTime") as string | null;
 		if (endedRaw) {
@@ -78,7 +76,6 @@ export async function resolveExportScope(
 
 		survivingIRIds.add(irAtId);
 
-		// Track which Indicators have surviving IRs
 		const linkedIndicators = ir.getCellValue("forIndicator") as { id: string; name: string }[] | null;
 		if (linkedIndicators?.length) {
 			for (const lnk of linkedIndicators) {
@@ -189,8 +186,9 @@ export async function resolveExportScope(
 		otherIds.set("Population", ids);
 	}
 
-	// SFF tables with direct forOrganization — excludes FundingStatus (links via forOrganizationProfile)
-	for (const tableName of ["OrganizationID", "OrganizationProfile", "ReportInfo"]) {
+	// SFF tables with direct forOrganization
+	// FundingStatus uses forOrganization directly (confirmed from model)
+	for (const tableName of ["OrganizationID", "OrganizationProfile", "ReportInfo", "FundingStatus"]) {
 		const tbl = base.getTableByNameIfExists(tableName);
 		if (!tbl) continue;
 		const records = await tbl.selectRecordsAsync();
@@ -206,9 +204,9 @@ export async function resolveExportScope(
 		otherIds.set(tableName, ids);
 	}
 
-	// Person, Characteristic, and FundingStatus — transitive via OrganizationProfile
+	// Person and Characteristic — transitive via OrganizationProfile
 	const orgProfileIds = otherIds.get("OrganizationProfile") ?? new Set<string>();
-	for (const tableName of ["Person", "Characteristic", "FundingStatus"]) {
+	for (const tableName of ["Person", "Characteristic"]) {
 		const tbl = base.getTableByNameIfExists(tableName);
 		if (!tbl) continue;
 		const records = await tbl.selectRecordsAsync();
@@ -225,8 +223,7 @@ export async function resolveExportScope(
 	}
 
 	// TeamProfile — forward traversal from OrganizationProfile via hasManagementTeamProfile
-	// and hasBoardProfile link fields. This replaces the previous pass-through in
-	// isRecordInScope which was leaking all TeamProfiles regardless of org.
+	// and hasBoardProfile link fields
 	const teamProfileIds = new Set<string>();
 	const orgProfileTbl = base.getTableByNameIfExists("OrganizationProfile");
 	if (orgProfileTbl) {
@@ -261,6 +258,40 @@ export async function resolveExportScope(
 		}
 	}
 	otherIds.set("EDGProfile", edgProfileIds);
+
+	// FundingState — include only those referenced by in-scope FundingStatus.hasFundingState
+	const fundingStateIds = new Set<string>();
+	const fundingStatusTbl = base.getTableByNameIfExists("FundingStatus");
+	const inScopeFundingStatusIds = otherIds.get("FundingStatus") ?? new Set<string>();
+	if (fundingStatusTbl && inScopeFundingStatusIds.size > 0) {
+		const records = await fundingStatusTbl.selectRecordsAsync();
+		for (const r of records.records) {
+			const atId = r.getCellValueAsString("@id");
+			if (!atId || !inScopeFundingStatusIds.has(atId)) continue;
+			const linked = r.getCellValue("hasFundingState") as { id: string; name: string }[] | null;
+			if (!linked?.length) continue;
+			for (const lnk of linked) {
+				if (lnk.name) fundingStateIds.add(lnk.name);
+			}
+		}
+	}
+	otherIds.set("FundingState", fundingStateIds);
+
+	// Sector — include only those referenced by in-scope OrganizationProfile.sectorServed
+	const sectorIds = new Set<string>();
+	if (orgProfileTbl) {
+		const orgProfileRecords = await orgProfileTbl.selectRecordsAsync();
+		for (const r of orgProfileRecords.records) {
+			const profileAtId = r.getCellValueAsString("@id");
+			if (!profileAtId || !orgProfileIds.has(profileAtId)) continue;
+			const linked = r.getCellValue("sectorServed") as { id: string; name: string }[] | null;
+			if (!linked?.length) continue;
+			for (const lnk of linked) {
+				if (lnk.name) sectorIds.add(lnk.name);
+			}
+		}
+	}
+	otherIds.set("Sector", sectorIds);
 
 	return {
 		indicatorReportIds: survivingIRIds,
