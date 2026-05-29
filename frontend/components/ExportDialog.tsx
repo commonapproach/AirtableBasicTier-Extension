@@ -31,7 +31,6 @@ function isCodelistOrg(orgId: string): boolean {
 	return CODELIST_PREFIXES.some((prefix) => orgId.startsWith(prefix));
 }
 
-// Strip HTML tags for plain-text display inside the wizard
 function stripHtml(s: string): string {
 	return s.replace(/<[^>]*>/g, "");
 }
@@ -378,7 +377,6 @@ const ExportDialog: React.FC<ExportDialogProps> = ({
 			setEffectiveIrCount(totalIrs);
 			setScopeWarnings(sWarns);
 
-			// Run full validator on the scoped data so quality warnings appear now
 			if (effective.length > 0) {
 				const effectiveOrgIds = effective.map((o) => o.orgId);
 				const { errors, warnings } = await buildExportData(
@@ -403,9 +401,9 @@ const ExportDialog: React.FC<ExportDialogProps> = ({
 		const date = new Date();
 		const dateSuffix = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
 		if (effectiveOrgs.length === 1) {
-			return `CIDSBasic${effectiveOrgs[0].hasLegalName.replace(/[^\w]/gi, "").slice(0, 40)}${dateSuffix}`;
+			return `${effectiveOrgs[0].hasLegalName.replace(/[^\w]/gi, "").slice(0, 40)}${dateSuffix}`;
 		}
-		return `CIDSBasicMultipleOrgs${dateSuffix}`;
+		return `MultipleOrgs${dateSuffix}`;
 	}, [effectiveOrgs]);
 
 	// ── Export ────────────────────────────────────────────────────────────────
@@ -425,7 +423,7 @@ const ExportDialog: React.FC<ExportDialogProps> = ({
 				intl,
 				effectiveOrgIds,
 				Array.from(selectedYears),
-				true // warnings already shown in wizard — skip interstitial dialog
+				true
 			);
 		} catch (error) {
 			setDialogContent(
@@ -596,7 +594,6 @@ const ExportDialog: React.FC<ExportDialogProps> = ({
 						</div>
 					) : (
 						<>
-							{/* Summary */}
 							<div style={{ marginBottom: 16 }}>
 								<div style={{ fontSize: 14, marginBottom: 6 }}>
 									<span style={{ fontWeight: 700 }}>
@@ -617,7 +614,6 @@ const ExportDialog: React.FC<ExportDialogProps> = ({
 								</div>
 							</div>
 
-							{/* Warnings section */}
 							{hasAnyWarnings && (
 								<div
 									style={{
@@ -683,8 +679,7 @@ const ExportDialog: React.FC<ExportDialogProps> = ({
 						Name Your Export
 					</Text>
 					<Text style={{ fontSize: 14, color: "#444", marginBottom: 16 }}>
-						Enter a name for the exported file. It will be saved as a{" "}
-						<span style={{ fontWeight: 600 }}>.json</span> file.
+						Enter a name for the exported impact data capsule.
 					</Text>
 
 					<input
@@ -702,7 +697,6 @@ const ExportDialog: React.FC<ExportDialogProps> = ({
 						}}
 					/>
 
-					{/* Mini summary */}
 					<div
 						style={{
 							marginTop: 12,
